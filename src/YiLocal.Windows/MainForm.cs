@@ -30,7 +30,7 @@ public sealed class MainForm : Form
     long lastMetrics;
     long firstTime;
     int frameCount;
-    bool closing, closed, exporting;
+    bool closing, closed, exporting, importing;
     readonly CancellationTokenSource exportStop = new();
     readonly System.Windows.Forms.Timer timer = new() { Interval = 40 };
     readonly TabControl tabs = new() { Dock = DockStyle.Fill };
@@ -56,6 +56,7 @@ public sealed class MainForm : Form
     readonly TextBox cameraName = new() { Width = 280 };
     readonly TextBox key = new() { Width = 280, UseSystemPasswordChar = true };
     readonly Label pairing = new() { AutoSize = true, MaximumSize = new Size(760, 0) };
+    readonly FlowLayoutPanel pairingControls = Column();
     [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
 
     public MainForm()
@@ -154,31 +155,52 @@ public sealed class MainForm : Form
         {
             if (session is not null)
             {
-                await session.DisposeAsync(); session = null; ClearPreview(); cameraControls.Enabled = false; record.Enabled = false;
-                connect.Text = "Connect camera"; status.Text = "Disconnected. Recordings are saved."; return;
+                await DisconnectAsync(); status.Text = "Disconnected. Recordings are saved."; return;
             }
             if (profile is null) { tabs.SelectedIndex = 3; throw new InvalidOperationException("Import a paired device profile or enter its device key first."); }
             preferences.Ffmpeg = ffmpeg.Text.Trim();
-            session = new CameraSession(profile);
-            session.Status += text => Ui(() => status.Text = text);
+            var active = new CameraSession(profile); session = active;
+            session.Status += text => Ui(() => { if (session == active) status.Text = text; });
+            session.PairingRejected += () => Ui(() => _ = Guard(async () =>
+            {
+                if (session != active) return;
+                await DisconnectAsync(); tabs.SelectedIndex = 3;
+                pairing.Text = "The camera rejected the saved device key. Open this camera's live view in YI IoT, then click Import from running YI IoT below. No new camera pairing is needed.";
+                status.Text = "Device key rejected. Refresh it in Camera setup; automatic retries have stopped.";
+            }));
             session.Settings += settings =>
             {
+                if (session != active) return;
                 ClearPreview(); firstTime = 0; frameCount = 0;
                 Ui(() =>
                 {
+                    if (session != active) return;
                     cameraControls.Enabled = settings is not null; night.Enabled = tracking.Enabled = settings is not null;
                     if (settings is not null) { night.SelectedIndex = settings.NightVision is <= 2 ? settings.NightVision : -1; tracking.Checked = settings.Tracking != 0; }
                 });
             };
-            session.RecordingChanged += active => Ui(() =>
+            session.RecordingChanged += recordingActive => Ui(() =>
             {
-                record.Text = active ? "Stop recording" : "Start recording"; recordState.Text = active ? "● Recording to local disk" : "Recording is off";
-                recordState.ForeColor = active ? Color.Firebrick : Color.DarkSlateGray;
-                SetThreadExecutionState(active ? 0x80000001u : 0x80000000u);
+                if (session != active) return;
+                record.Text = recordingActive ? "Stop recording" : "Start recording"; recordState.Text = recordingActive ? "● Recording to local disk" : "Recording is off";
+                recordState.ForeColor = recordingActive ? Color.Firebrick : Color.DarkSlateGray;
+                SetThreadExecutionState(recordingActive ? 0x80000001u : 0x80000000u);
             });
             session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
         }
-        finally { connect.Enabled = true; }
+        finally { connect.Enabled = !importing; }
+    }
+    async Task DisconnectAsync()
+    {
+        var previous = session; session = null;
+        try { if (previous is not null) await previous.DisposeAsync(); }
+        finally
+        {
+            ClearPreview(); cameraControls.Enabled = record.Enabled = false;
+            connect.Text = "Connect camera"; record.Text = "Start recording";
+            recordState.Text = "Recording is off"; recordState.ForeColor = Color.DarkSlateGray;
+            SetThreadExecutionState(0x80000000);
+        }
     }
     void ClearPreview()
     {
@@ -287,39 +309,66 @@ public sealed class MainForm : Form
     void ShowProfile()
     {
         ip.Text = profile?.Ip ?? ""; cameraName.Text = profile?.Name ?? "Camera"; key.Clear();
-        pairing.Text = profile is null ? "No saved camera. Import an encrypted pairing profile from the Python prototype, or enter a known 15-byte device key."
+        pairing.Text = profile is null ? "No saved camera. Enter its LAN address, open its live view in YI IoT, and import the existing pairing below."
             : $"Saved camera: {profile.Name}. Its device key is encrypted for this Windows account. No cloud account login is used.";
     }
     void BuildCamera()
     {
-        var body = Column(); Page("Camera setup").Controls.Add(body); body.Controls.Add(pairing);
+        var body = pairingControls; Page("Camera setup").Controls.Add(body); body.Controls.Add(pairing);
         body.Controls.Add(Label("Camera name")); body.Controls.Add(cameraName); body.Controls.Add(Label("Camera IPv4 address on your LAN")); body.Controls.Add(ip);
+        body.Controls.Add(Button("Import from running YI IoT", () => _ = Guard(() => UpdatePairingAsync(token =>
+            VendorClientImporter.ReadProfileAsync(ip.Text.Trim(), cameraName.Text.Trim(), profile?.Uid, token)))));
+        body.Controls.Add(Label("Open this camera's live view in YI IoT first. Import checks the key against the camera before replacing your saved profile and connecting. An active recording is finished before import. You do not need to pair the camera again."));
         body.Controls.Add(Label("Device pairing key · leave blank to keep the saved key")); body.Controls.Add(key);
-        body.Controls.Add(Button("Save camera", () => _ = Guard(() =>
+        body.Controls.Add(Button("Verify and save camera", () => _ = Guard(() => UpdatePairingAsync(_ =>
         {
-            if (session is not null) throw new InvalidOperationException("Disconnect before changing the saved camera.");
             string password = key.Text.Length > 0 ? key.Text : profile?.Password ?? "";
-            using var validation = new CameraClient(ip.Text.Trim(), password);
-            profile = new DeviceProfile { Ip = ip.Text.Trim(), Name = cameraName.Text.Trim(), Password = password,
-                Uid = key.Text.Length == 0 ? profile?.Uid : null };
-            profile.Save(); ShowProfile(); status.Text = "Encrypted camera profile saved."; return Task.CompletedTask;
-        })));
-        body.Controls.Add(Button("Import encrypted pairing profile…", () => _ = Guard(() =>
+            return Task.FromResult(new DeviceProfile { Ip = ip.Text.Trim(), Name = cameraName.Text.Trim(), Password = password,
+                Uid = key.Text.Length == 0 ? profile?.Uid : null });
+        }))));
+        body.Controls.Add(Button("Import encrypted pairing profile…", () => _ = Guard(async () =>
         {
-            if (session is not null) throw new InvalidOperationException("Disconnect before importing another camera.");
             using var dialog = new OpenFileDialog { Filter = "Encrypted Windows profile|*.dpapi" };
-            if (dialog.ShowDialog(this) != DialogResult.OK) return Task.CompletedTask;
-            var imported = DeviceProfile.Load(dialog.FileName); using var validation = new CameraClient(imported.Ip, imported.Password, imported.Uid);
-            imported.Save(); profile = imported; ShowProfile(); status.Text = "Pairing imported; the vendor app can remain closed."; return Task.CompletedTask;
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            await UpdatePairingAsync(_ => Task.FromResult(DeviceProfile.Load(dialog.FileName)));
         })));
-        body.Controls.Add(Label("Fresh QR pairing is not implemented. Preserve the camera's existing pairing. The Python reference includes an optional one-time key importer for the verified vendor PC client."));
+        body.Controls.Add(Label($"Direct import supports YI IoT PC {VendorClientImporter.SupportedVersion}. It reads the existing pairing without changing the vendor app. After a successful import you can close YI IoT. Fresh QR pairing is not implemented."));
         body.Controls.Add(Label("Compatibility: initially tested on the Anyka-family YI IoT camera reporting hardware 253. Audio and native 4K capture are not implemented."));
+    }
+    async Task UpdatePairingAsync(Func<CancellationToken, Task<DeviceProfile>> read)
+    {
+        if (importing) return;
+        importing = true; pairingControls.Enabled = connect.Enabled = record.Enabled = false;
+        bool resumeRecording = session?.Recording == true;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+        try
+        {
+            try
+            {
+                await DisconnectAsync();
+                status.Text = "Reading the pairing; the saved profile is kept until verification succeeds…";
+                var candidate = await read(timeout.Token);
+                status.Text = "Checking the imported key against the LAN camera…";
+                profile = await PairingImport.VerifyAndSaveAsync(candidate, timeout.Token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException((e is OperationCanceledException ? "Pairing import timed out." : e.Message) +
+                    " The saved camera profile was not replaced.", e);
+            }
+            ShowProfile(); tabs.SelectedIndex = 0;
+            status.Text = "Pairing verified and saved. Connecting locally…";
+            await ToggleConnection();
+            if (resumeRecording) session?.StartRecording(preferences.Folder, preferences.Storage);
+        }
+        finally { importing = false; pairingControls.Enabled = connect.Enabled = true; }
     }
     async void OnClosing(object? sender, FormClosingEventArgs e)
     {
         if (closed) return;
         e.Cancel = true;
         if (closing) return;
+        if (importing) { status.Text = "Finishing pairing verification. Please wait before closing."; return; }
         if (exporting) { status.Text = "An export is running. Wait for it to finish before closing."; return; }
         closing = true; Enabled = false; status.Text = "Saving recording and disconnecting…";
         try { if (session is not null) await session.DisposeAsync(); }

@@ -26,5 +26,18 @@ already paired camera, and must save outside the source checkout. Do not reset o
 flash a camera just to test a control. Track unsupported models explicitly rather
 than assuming shared branding implies the same protocol.
 
+The native pairing tests use synthetic process-memory fixtures and fake keys.
+They cover inactive/mismatched/changing objects, ambiguous candidates, rejected
+authentication, timeouts, cancellation, and keeping the old profile on failure.
+To check the version-guarded importer against your own running vendor live view:
+
+```powershell
+dotnet run --project tests/YiLocal.Checks -- --inspect-import <your-encrypted-profile.dpapi>
+```
+
+This optional read-only check prints only whether the identity and key match the
+profile. It does not save the key or contact the camera. Use the Windows app to
+test authenticated import under the network allowance for its executable.
+
 The source archive should be created with `git archive`, never by zipping the
 working directory. The working directory may contain ignored private research.

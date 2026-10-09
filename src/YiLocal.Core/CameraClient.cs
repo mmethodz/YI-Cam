@@ -14,6 +14,12 @@ public sealed record VideoFrame(byte[] Data, ushort Sequence, int Width, int Hei
     uint Milliseconds, bool Keyframe, byte Generation, ushort Codec);
 public sealed record CameraSettings(byte Hardware, byte NightVision, byte Tracking);
 
+public sealed class CameraAuthenticationException(uint result) : UnauthorizedAccessException(
+    $"Camera rejected the device key ({result})." + (result == 1 ? " Refresh the saved key in Camera setup using Import from running YI IoT." : ""))
+{
+    public uint Result { get; } = result;
+}
+
 public static class Wire
 {
     public static ushort U16(ReadOnlySpan<byte> b) => BinaryPrimitives.ReadUInt16BigEndian(b);
@@ -181,7 +187,7 @@ public sealed class CameraClient : IDisposable
         try
         {
             var reply = await completion.Task.WaitAsync(TimeSpan.FromSeconds(4), cancellation);
-            if (reply.AuthenticationResult != 0) throw new UnauthorizedAccessException($"Camera rejected the device key ({reply.AuthenticationResult}).");
+            if (reply.AuthenticationResult != 0) throw new CameraAuthenticationException(reply.AuthenticationResult);
             if (reply.Unsupported != 0) throw new NotSupportedException($"Camera does not support command 0x{command:x4}.");
             return reply;
         }

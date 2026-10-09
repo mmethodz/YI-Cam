@@ -9,6 +9,16 @@ static void Reject(Action action, string message)
 }
 static VideoFrame Frame(ushort seq, bool key = false, uint ms = 100000) => new([0, 0, 0, 1, key ? (byte)0x65 : (byte)0x41, 1], seq, 1280, 720, 1, ms, key, 1, 78);
 
+if (args.Length > 0 && args[0] == "--inspect-import")
+{
+    if (args.Length != 2) throw new ArgumentException("--inspect-import <encrypted-profile-to-compare>");
+    var saved = DeviceProfile.Load(args[1]);
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+    var imported = await VendorClientImporter.ReadProfileAsync(saved.Ip, saved.Name, saved.Uid, timeout.Token);
+    Console.WriteLine($"Read a matching live pairing. Same identity: {saved.Uid == imported.Uid}; same key: {saved.Password == imported.Password}. No profile was changed.");
+    return;
+}
+
 if (args.Length > 0 && args[0] == "--mux-fixture")
 {
     if (args.Length != 3) throw new ArgumentException("--mux-fixture <160x90-annex-b-with-AUD> <output-folder>");
@@ -61,6 +71,7 @@ if (args.Length > 0 && args[0] == "--live")
     return;
 }
 
+await PairingChecks.RunAsync();
 var channel = new ReliableChannel();
 var message = Wire.Join([2, 3, 0, 0], Wire.U32(5), [1, 2, 3, 4, 5]);
 Check(channel.Feed(1, message[6..]).Count == 0, "Out-of-order fragment escaped.");
@@ -102,4 +113,4 @@ finally
     Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     Directory.Delete(folder, true);
 }
-Console.WriteLine("All native protocol, timing, storage, and writer-exclusion checks passed.");
+Console.WriteLine("All native pairing, protocol, timing, storage, and writer-exclusion checks passed.");

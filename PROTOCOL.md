@@ -60,6 +60,48 @@ Replies replace the authentication field with a big-endian result32 at offset 8.
 Zero indicates accepted authentication. Reject nonzero authentication results and
 unsupported-command responses. Do not infer command success from a UDP ACK alone.
 
+An outdated saved key produced result `1` on the test camera after a power cycle
+and move. The already paired vendor app held a different key that authenticated
+successfully to the same pinned identity. The native app stops retrying result
+`1` and offers key import. This observation does not establish the refresh
+protocol, its cloud dependencies, or that every reboot rotates keys.
+
+## Importing an existing vendor pairing on Windows
+
+`VendorClientImporter` supports the 32-bit PC build `1.0.1.1_202209261648` only,
+guarded by the executable SHA-256:
+
+```text
+f6f9c422fa046f66d032a919e85444c195084c019efc959971a1213f46f32c46
+```
+
+The 64-bit native app opens the running client with `PROCESS_QUERY_INFORMATION`
+and `PROCESS_VM_READ`. It scans committed, writable private memory in bounded
+chunks for the camera object's vtable pointer at main-module RVA `0xA46758`.
+It does not inject, hook, or write to the vendor process. No memory dump is saved.
+
+The verified object layout is:
+
+| Offset | Field |
+| --- | --- |
+| `0x00` | 32-bit vtable pointer |
+| `0x04` | MSVC `std::string` camera identity |
+| `0xB0` | MSVC `std::string` device key (15 ASCII bytes) |
+| `0x14C` | Signed session handle; a negative value is inactive |
+
+For this string layout, length is at `+16` and capacity at `+20`. Capacity below
+16 uses inline storage; larger capacity uses the pointer at `+0`. Check bounds,
+terminators, and object consistency across two reads. The textual identity is
+`prefix-serial-suffix`, with the serial decimal-padded to at least six digits.
+Convert to the wire UID as two eight-byte zero-padded ASCII fields surrounding a
+big-endian 32-bit serial. Match the saved UID when available; reject ambiguity.
+
+An object with a nonnegative session handle is only an import candidate. The key
+must pass an authenticated LAN firmware query against its UID before the DPAPI
+profile is replaced. This also rejects stale heap objects. These offsets are not
+assumed valid for other vendor builds. The optional Python importer uses Frida
+with the same executable hash guard; normal native operation does not use it.
+
 ## Verified command formats
 
 All listed integers are big-endian. A returned settings structure has light mode

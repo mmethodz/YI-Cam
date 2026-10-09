@@ -18,6 +18,7 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action<CameraSettings?>? Settings;
     public event Action<VideoFrame, long, int>? Frame;
     public event Action<bool>? RecordingChanged;
+    public event Action? PairingRejected;
     public CameraSession(DeviceProfile profile) { this.profile = profile; }
     public void Start() { if (run is not null) throw new InvalidOperationException(); run = Task.Run(RunAsync); }
     public async Task SetQualityAsync(byte value)
@@ -92,10 +93,17 @@ public sealed class CameraSession : IAsyncDisposable
                 if (!stop.IsCancellationRequested) throw new IOException("Camera stream ended.");
             }
             catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }
+            catch (CameraAuthenticationException e) when (e.Result == 1)
+            {
+                Status?.Invoke(e.Message);
+                PairingRejected?.Invoke();
+                break; // A rejected saved key needs refreshing, not an endless reconnect loop.
+            }
             catch (Exception e) { Status?.Invoke("Disconnected: " + e.Message + " Retrying in 3 seconds."); }
             finally
             {
                 Client = null;
+                Settings?.Invoke(null);
                 try { CloseSegment(); }
                 catch (Exception e)
                 {

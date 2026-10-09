@@ -17,8 +17,10 @@ audio, and native 4K capture are not implemented.
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 2. Run **Build Windows.cmd**, then **Start Windows.cmd**.
-3. In **Camera setup**, import an existing `.dpapi` profile from the Python
-   prototype under the same Windows account, or enter a known device pairing key.
+3. Open the camera's live view in the already paired YI IoT PC app. In YI Local's
+   **Camera setup**, enter the camera's LAN address and click **Import from running
+   YI IoT**. This verifies and saves the key, then connects. You can also import an
+   existing `.dpapi` profile under the same Windows account or enter a known key.
 4. Choose an [FFmpeg executable](https://ffmpeg.org/download.html) in **Storage**
    for live preview and 4K export. Original-stream recording itself is native C#
    and does not need FFmpeg. A sibling `ffmpeg.exe` is detected automatically.
@@ -76,7 +78,8 @@ stream, not a claimed hardware maximum.
   format. Use separate folders for simultaneous independent sessions.
 - Windows is kept awake during recording. Closing the app finishes the current
   clip. Connection loss finishes a clip and retries; an armed recording resumes
-  after a new keyframe.
+  after a new keyframe. A rejected device key stops retries and opens Camera setup
+  so its saved pairing can be refreshed.
 
 The C# muxer writes one fragment per picture; Python uses keyframe fragments.
 Completed fragments can remain readable after a crash, but the last fragment may
@@ -89,7 +92,29 @@ B frames; other codec/reordering formats need explicit support.
 
 The camera requires a **device pairing key**, not the user's account password.
 Normal operation uses that saved key to authenticate directly to the LAN camera.
-The camera identity is pinned after an authenticated connection.
+The camera identity is pinned after an authenticated connection. Account pairing
+and the current device key are separate: an existing vendor pairing can remain
+valid while the key saved by this app becomes outdated.
+
+**If the camera rejects the device key:** open its live view in the vendor PC app,
+then use **Camera setup → Import from running YI IoT** in the Windows app. There is
+no need to reset the camera or repeat QR pairing. The native importer requires
+the verified 32-bit YI IoT PC client `1.0.1.1_202209261648`, running under the same
+Windows account. It checks the executable's SHA-256, reads the matching live
+camera's pairing with read-only process access, and authenticates directly to
+that camera before saving. It needs neither Python nor Frida and does not inject
+code or change the vendor process. Close the vendor app after a successful import.
+
+Imported profiles and manually entered keys are verified before replacing an
+existing profile. Failed or canceled imports preserve it. Import finishes an
+active recording; after success, an armed recorder resumes in a new clip.
+
+A different key was observed after the test camera was power-cycled and moved;
+the vendor client reconnected using its existing pairing. The mechanism that
+refreshes this key has not yet been established. Independent, automatic key
+refresh is **not implemented**; when a saved key stops working, this recovery
+currently depends on a working vendor live view or another valid device key.
+This does not establish that every power cycle changes the key.
 
 WinForms saves the profile using current-user Windows DPAPI under
 `%LOCALAPPDATA%\YI Local\device.dpapi`. The Python prototype uses
@@ -97,7 +122,7 @@ WinForms saves the profile using current-user Windows DPAPI under
 automatically on first launch. DPAPI files are tied to the Windows account and
 are not portable plain-text exports. Keys are never printed in application logs.
 
-The Python prototype can optionally import a key once from an already paired,
+The Python prototype can optionally import a key from an already paired,
 running YI IOT PC live view:
 
 ```powershell
@@ -107,8 +132,9 @@ running YI IOT PC live view:
 Use **Camera setup → Import** in the Python app. The importer checks the executable
 SHA-256 and only supports the tested 32-bit client `1.0.1.1_202209261648`. It reads
 the existing local pairing and does not modify the installed vendor executable.
-Close the vendor app after import, then import the encrypted profile into WinForms.
-Importing again with an existing saved profile is supported. The candidate key
+The Python and Windows applications keep separate profiles; refresh each one
+when needed, or import the updated encrypted file. Importing again with an existing
+saved profile is supported. The candidate key
 must authenticate before the saved profile is replaced; failed imports preserve
 it. Restart the Python app after updating its source so it loads the current importer.
 
@@ -141,10 +167,10 @@ desktop integration remains unverified.
 
 | Path | Purpose |
 | --- | --- |
-| `src/YiLocal.Core` | Native LAN protocol, frame ordering, MP4 muxer, storage catalogue |
+| `src/YiLocal.Core` | Native LAN protocol, verified pairing import, frame ordering, MP4 muxer, storage catalogue |
 | `src/YiLocal.Windows` | WinForms UI, preview and export adapters |
 | `yicam` | Python protocol prototype, GUI and CLI |
-| `tests/YiLocal.Checks` | Native protocol, timing, storage and optional hardware checks |
+| `tests/YiLocal.Checks` | Native pairing, protocol, timing, storage and optional hardware checks |
 | `tests/test_*.py` | Python transport and retention tests |
 | `scripts/check_media_integration.py` | Synthetic native muxing and independent PyAV decode test |
 | [PROTOCOL.md](PROTOCOL.md) | Observed wire formats, command IDs and uncertainty |
