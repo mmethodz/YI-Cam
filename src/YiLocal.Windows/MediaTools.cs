@@ -66,6 +66,27 @@ internal static class MediaTools
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
+    public static async Task<Bitmap> Thumbnail(string executable, string path, double seconds, CancellationToken cancellation)
+    {
+        var info = StartInfo(executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-ss", seconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+            "-i", path, "-map", "0:v:0", "-frames:v", "1", "-vf", "scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2",
+            "-an", "-f", "image2pipe", "-vcodec", "png", "pipe:1");
+        info.RedirectStandardOutput = true;
+        using var process = new Process { StartInfo = info };
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation); timeout.CancelAfter(10000);
+        process.Start(); var errors = process.StandardError.ReadToEndAsync(timeout.Token);
+        using var registration = timeout.Token.Register(() => { try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } });
+        using var memory = new MemoryStream(); var buffer = new byte[8192];
+        int count;
+        while ((count = await process.StandardOutput.BaseStream.ReadAsync(buffer, timeout.Token)) > 0)
+        {
+            if (memory.Length + count > 1024 * 1024) { process.Kill(true); throw new IOException("Thumbnail exceeded its bound."); }
+            memory.Write(buffer, 0, count);
+        }
+        await process.WaitForExitAsync(timeout.Token);
+        if (process.ExitCode != 0) throw new IOException("Thumbnail unavailable: " + await errors);
+        memory.Position = 0; using var image = Image.FromStream(memory); return new Bitmap(image);
+    }
 }
 
 internal sealed class VideoPreview : IDisposable

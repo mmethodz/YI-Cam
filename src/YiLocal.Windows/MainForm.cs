@@ -45,7 +45,7 @@ public sealed partial class MainForm : Form
     readonly ComboBox night = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 218, Enabled = false };
     readonly CheckBox tracking = new() { Text = "Motion tracking", AutoSize = true, Enabled = false };
     readonly FlowLayoutPanel cameraControls = new() { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, Enabled = false };
-    readonly ListView clips = new() { View = View.Details, FullRowSelect = true, MultiSelect = false, Dock = DockStyle.Fill, HideSelection = false };
+    readonly RecordingListView clips = new() { View = View.Details, FullRowSelect = true, MultiSelect = false, Dock = DockStyle.Fill, HideSelection = false };
     readonly TextBox folder = new() { Width = 610 };
     readonly TextBox ffmpeg = new() { Width = 610 };
     readonly NumericUpDown quota = Number(0.1m, 100000, 20);
@@ -88,6 +88,7 @@ public sealed partial class MainForm : Form
         ShowCaptureOptions();
         timer.Tick += (_, _) =>
         {
+            UpdatePlayback();
             Bitmap? next; lock (previewLock) next = preview?.Take();
             if (next is not null) { var prior = picture.Image; picture.Image = next; prior?.Dispose(); }
         };
@@ -238,68 +239,6 @@ public sealed partial class MainForm : Form
             Ui(() => metrics.Text = $"{frame.Width} × {frame.Height}  ·  {fps:0.0} source fps  ·  Local LAN" + (string.IsNullOrEmpty(preferences.Ffmpeg) ? "  ·  Select FFmpeg for preview" : ""));
         }
     }
-    void BuildRecordings()
-    {
-        var page = Page("Recordings"); var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
-        layout.RowStyles.Add(new(SizeType.Percent, 100)); layout.RowStyles.Add(new(SizeType.AutoSize));
-        foreach (var (text, width) in new[] { ("Recorded", 175), ("Duration", 90), ("Resolution", 100), ("Size", 95), ("Status", 135), ("Filename", 380) }) clips.Columns.Add(text, width);
-        layout.Controls.Add(clips, 0, 0); var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
-        buttons.Controls.Add(Button("Refresh", RefreshClips));
-        buttons.Controls.Add(Button("Play", () => ClipAction((lib, clip) => { if (!clip.Exists) throw new IOException("File is missing."); Process.Start(new ProcessStartInfo(lib.ClipPath(clip.Name)) { UseShellExecute = true }); })));
-        buttons.Controls.Add(Button("Protect / unprotect", () => ClipAction((lib, clip) => lib.Protect(clip.Name, !clip.Protected))));
-        buttons.Controls.Add(Button("Export original…", () => _ = Export(false)));
-        buttons.Controls.Add(Button("Export 4K (upscaled)…", () => _ = Export(true)));
-        buttons.Controls.Add(Button("Delete…", () => ClipAction((lib, clip) =>
-        {
-            if (clip.Protected || !clip.Complete) throw new InvalidOperationException("Only finished, unprotected recordings can be deleted.");
-            if (MessageBox.Show(this, "Permanently delete this recording?\n" + clip.Name, "Delete recording", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes) lib.Delete(clip.Name);
-        })));
-        buttons.Controls.Add(Button("Open folder", () => _ = Guard(() => { Directory.CreateDirectory(preferences.Folder); Process.Start(new ProcessStartInfo(preferences.Folder) { UseShellExecute = true }); return Task.CompletedTask; })));
-        layout.Controls.Add(buttons, 0, 1); page.Controls.Add(layout);
-        tabs.SelectedIndexChanged += (_, _) => { if (tabs.SelectedIndex == 1) RefreshClips(); };
-    }
-    void RefreshClips()
-    {
-        try
-        {
-            using var library = new RecordingLibrary(preferences.Folder); clips.BeginUpdate(); clips.Items.Clear();
-            foreach (var clip in library.Clips())
-            {
-                var item = new ListViewItem([DateTimeOffset.FromUnixTimeMilliseconds((long)(clip.Started * 1000)).LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                    TimeSpan.FromSeconds(clip.Duration).ToString(@"hh\:mm\:ss"), $"{clip.Width} × {clip.Height}", $"{clip.Bytes / 1048576.0:0.0} MiB",
-                    !clip.Exists ? "Missing" : !clip.Complete ? "Active / interrupted" : clip.Protected ? "Protected" : "Saved", clip.Name]) { Tag = clip };
-                clips.Items.Add(item);
-            }
-        }
-        catch (Exception e) { status.Text = e.Message; }
-        finally { clips.EndUpdate(); }
-    }
-    void ClipAction(Action<RecordingLibrary, Clip> action) => _ = Guard(() =>
-    {
-        if (exporting) throw new InvalidOperationException("Wait for the export to finish before changing clips.");
-        if (clips.SelectedItems.Count == 0) return Task.CompletedTask;
-        using var library = new RecordingLibrary(preferences.Folder); action(library, (Clip)clips.SelectedItems[0].Tag!); RefreshClips(); return Task.CompletedTask;
-    });
-    async Task Export(bool upscale) => await Guard(async () =>
-    {
-        if (exporting || clips.SelectedItems.Count == 0) return;
-        var clip = (Clip)clips.SelectedItems[0].Tag!;
-        if (!clip.Complete || !clip.Exists) throw new IOException("Choose a completed recording.");
-        if (upscale && !File.Exists(preferences.Ffmpeg)) throw new IOException("Choose an FFmpeg executable in Storage first.");
-        using var dialog = new SaveFileDialog { Filter = "MP4 video|*.mp4", FileName = (upscale ? "4K_upscaled_" : "Export_") + clip.Name };
-        if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        if (File.Exists(dialog.FileName)) throw new IOException("Choose a new filename; exports do not overwrite existing files.");
-        using var library = new RecordingLibrary(preferences.Folder);
-        bool previousProtection = clip.Protected; library.Protect(clip.Name, true); exporting = true;
-        try
-        {
-            status.Text = upscale ? "Exporting 4K upscale…" : "Exporting original…";
-            if (upscale) await MediaTools.Export4K(preferences.Ffmpeg!, library.ClipPath(clip.Name), dialog.FileName, exportStop.Token);
-            else await Task.Run(() => File.Copy(library.ClipPath(clip.Name), dialog.FileName, false));
-            status.Text = "Export saved: " + dialog.FileName;
-        }
-        finally { library.Protect(clip.Name, previousProtection); exporting = false; RefreshClips(); }
-    });
     void BuildStorage()
     {
         var body = Column(); Page("Storage").Controls.Add(body);
@@ -316,7 +255,7 @@ public sealed partial class MainForm : Form
             if (session?.Recording == true || exporting) throw new InvalidOperationException("Stop recording and let exports finish before changing storage.");
             var policy = new StoragePolicy((double)quota.Value, (double)free.Value, (double)segment.Value, recycle.Checked, (int)days.Value); policy.Validate();
             preferences.Folder = Path.GetFullPath(folder.Text.Trim()); preferences.Ffmpeg = ffmpeg.Text.Trim(); preferences.Storage = policy;
-            Directory.CreateDirectory(preferences.Folder); preferences.Save(); ClearPreview(); status.Text = "Storage settings saved."; return Task.CompletedTask;
+            StopPlayback(); Directory.CreateDirectory(preferences.Folder); preferences.Save(); ClearPreview(); status.Text = "Storage settings saved."; return Task.CompletedTask;
         })));
     }
     void ShowProfile()
@@ -389,7 +328,7 @@ public sealed partial class MainForm : Form
         catch (Exception error) { MessageBox.Show(this, "The recording could not be finalized: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {
-            timer.Stop(); timer.Dispose(); ClearPreview(); ClearAudio(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();
+            timer.Stop(); timer.Dispose(); StopPlayback(); thumbnailStop?.Cancel(); thumbnailStop?.Dispose(); thumbnails.Dispose(); ClearPreview(); ClearAudio(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();
         }
     }
 }

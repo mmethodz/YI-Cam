@@ -113,7 +113,11 @@ examples and their limits are in [recording measurements](docs/RECORDING.md).
   deleted when needed. An optional maximum age can also trigger recycling.
 - Only files registered in the folder's SQLite catalogue are managed. Unrelated
   videos, exports, active clips, and protected clips are excluded from recycling.
-- The recording library can play, protect, export, and explicitly delete clips.
+- The **Recordings** tab has thumbnails, metadata, date/time, camera, protection
+  and recording-type filters, plus embedded playback with pause and seeking.
+  Protect, export and delete operate on the same catalogue. Active playback and
+  export reserve their clips against recycling without changing protection.
+  See [browser/player details](docs/BROWSER.md).
 - One recorder may write to a library at a time. Python and C# share its catalogue
   format. Use separate folders for simultaneous independent sessions.
 - Windows is kept awake during recording. Closing the app finishes the current

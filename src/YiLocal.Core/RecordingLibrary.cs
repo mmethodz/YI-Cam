@@ -15,7 +15,7 @@ public sealed record StoragePolicy(double QuotaGiB = 20, double MinimumFreeGiB =
     }
 }
 public sealed record Clip(string Name, double Started, double Duration, int Width, int Height,
-    long Bytes, bool Complete, bool Protected, bool Exists, ClipMetadata? Metadata = null);
+    long Bytes, bool Complete, bool Protected, bool Exists, ClipMetadata? Metadata = null, bool InUse = false);
 
 /// <summary>Use one instance per thread. Shares the Python catalogue format.</summary>
 public sealed partial class RecordingLibrary : IDisposable
@@ -34,6 +34,7 @@ public sealed partial class RecordingLibrary : IDisposable
         // Separate table leaves the existing Python catalogue schema and older readers intact.
         Execute("CREATE TABLE IF NOT EXISTS clip_details (name TEXT PRIMARY KEY, camera TEXT NOT NULL, profile TEXT NOT NULL, kind TEXT NOT NULL, target_fps REAL, capture_duration REAL DEFAULT 0, frames INTEGER DEFAULT 0)");
         Execute("CREATE TABLE IF NOT EXISTS clip_audio (name TEXT PRIMARY KEY, description TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS clip_leases (name TEXT NOT NULL, owner TEXT NOT NULL, expires INTEGER NOT NULL, PRIMARY KEY(name,owner))");
     }
     void Execute(string sql, params (string, object)[] values)
     {
@@ -68,7 +69,7 @@ public sealed partial class RecordingLibrary : IDisposable
     }
     public List<Clip> Clips()
     {
-        using var cmd = connection.CreateCommand(); cmd.CommandText = "SELECT c.*,d.camera,d.profile,d.kind,d.target_fps,d.capture_duration,d.frames,a.description FROM clips c LEFT JOIN clip_details d ON c.name=d.name LEFT JOIN clip_audio a ON c.name=a.name ORDER BY c.started DESC";
+        using var cmd = connection.CreateCommand(); cmd.CommandText = "SELECT c.*,d.camera,d.profile,d.kind,d.target_fps,d.capture_duration,d.frames,a.description,EXISTS(SELECT 1 FROM clip_leases l WHERE l.name=c.name AND l.expires>unixepoch()) FROM clips c LEFT JOIN clip_details d ON c.name=d.name LEFT JOIN clip_audio a ON c.name=a.name ORDER BY c.started DESC";
         using var reader = cmd.ExecuteReader(); var result = new List<Clip>();
         while (reader.Read())
         {
@@ -78,7 +79,7 @@ public sealed partial class RecordingLibrary : IDisposable
             result.Add(new(name, reader.GetDouble(1), reader.GetDouble(2), reader.GetInt32(3), reader.GetInt32(4),
                 size, reader.GetInt32(6) != 0, reader.GetInt32(7) != 0, exists,
                 reader.IsDBNull(8) ? null : new(reader.GetString(8), reader.GetString(9), reader.GetString(10),
-                    reader.IsDBNull(11) ? null : reader.GetDouble(11), reader.GetDouble(12), reader.GetInt64(13), reader.IsDBNull(14) ? null : reader.GetString(14))));
+                    reader.IsDBNull(11) ? null : reader.GetDouble(11), reader.GetDouble(12), reader.GetInt64(13), reader.IsDBNull(14) ? null : reader.GetString(14)), reader.GetInt32(15) != 0));
         }
         return result;
     }
@@ -91,13 +92,14 @@ public sealed partial class RecordingLibrary : IDisposable
         // IMMEDIATE transaction excludes a simultaneous protect operation during recycling.
         using var tx = connection.BeginTransaction(deferred: false);
         using var cmd = connection.CreateCommand(); cmd.Transaction = tx;
-        cmd.CommandText = "SELECT complete,protected FROM clips WHERE name=$n"; cmd.Parameters.AddWithValue("$n", name);
+        cmd.CommandText = "SELECT complete,protected,EXISTS(SELECT 1 FROM clip_leases l WHERE l.name=clips.name AND l.expires>unixepoch()) FROM clips WHERE name=$n"; cmd.Parameters.AddWithValue("$n", name);
         using (var reader = cmd.ExecuteReader())
-            if (!reader.Read() || reader.GetInt32(0) == 0 || reader.GetInt32(1) != 0)
-                throw new InvalidOperationException("Only finished, unprotected recordings can be deleted.");
+            if (!reader.Read() || reader.GetInt32(0) == 0 || reader.GetInt32(1) != 0 || reader.GetInt32(2) != 0)
+                throw new InvalidOperationException("Only finished, unprotected recordings that are not in use can be deleted.");
         File.Delete(ClipPath(name));
         cmd.CommandText = "DELETE FROM clip_details WHERE name=$n"; cmd.ExecuteNonQuery();
         cmd.CommandText = "DELETE FROM clip_audio WHERE name=$n"; cmd.ExecuteNonQuery();
+        cmd.CommandText = "DELETE FROM clip_leases WHERE name=$n"; cmd.ExecuteNonQuery();
         cmd.CommandText = "DELETE FROM clips WHERE name=$n"; cmd.ExecuteNonQuery(); tx.Commit();
     }
     public int Enforce(StoragePolicy policy, string? active = null, long reserve = 1024 * 1024,
@@ -112,14 +114,30 @@ public sealed partial class RecordingLibrary : IDisposable
         {
             bool over = total + reserve > limit || free - reserve < floor;
             if (!policy.Recycle || !(over || policy.KeepDays > 0 && clip.Started < cutoff) ||
-                clip.Name == active || clip.Protected || !clip.Complete) continue;
-            Delete(clip.Name); total -= clip.Bytes; free = freeBytes(); deleted++;
+                clip.Name == active || clip.Protected || clip.InUse || !clip.Complete) continue;
+            try { Delete(clip.Name); }
+            catch (InvalidOperationException) { continue; } // Protected/leased after the initial catalogue snapshot.
+            total -= clip.Bytes; free = freeBytes(); deleted++;
         }
         if (total + reserve > limit) throw new IOException("Recording budget reached. Free space, raise the budget, or enable recycling.");
         if (free - reserve < floor) throw new IOException("Recording stopped to preserve free disk space.");
         return deleted;
     }
     public void Dispose() => connection.Dispose();
+
+    public ClipLease Hold(string name)
+    {
+        if (!File.Exists(ClipPath(name))) throw new IOException("Recording file is missing.");
+        string owner = Guid.NewGuid().ToString("N");
+        using var tx = connection.BeginTransaction(deferred: false);
+        using var cmd = connection.CreateCommand(); cmd.Transaction = tx;
+        cmd.CommandText = "INSERT INTO clip_leases(name,owner,expires) SELECT name,$o,unixepoch()+120 FROM clips WHERE name=$n AND complete=1";
+        cmd.Parameters.AddWithValue("$n", name); cmd.Parameters.AddWithValue("$o", owner);
+        if (cmd.ExecuteNonQuery() != 1) throw new IOException("Choose a completed recording.");
+        tx.Commit(); return new(Root, name, owner);
+    }
+    internal void RenewLease(string name, string owner) => Execute("UPDATE clip_leases SET expires=unixepoch()+120 WHERE name=$n AND owner=$o", ("$n", name), ("$o", owner));
+    internal void ReleaseLease(string name, string owner) => Execute("DELETE FROM clip_leases WHERE name=$n AND owner=$o", ("$n", name), ("$o", owner));
 }
 
 public sealed class SegmentRecorder : IDisposable

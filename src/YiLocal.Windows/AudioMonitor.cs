@@ -75,10 +75,29 @@ internal sealed class PcmOutput : IDisposable
     [DllImport("winmm.dll")] static extern uint waveOutUnprepareHeader(IntPtr handle, IntPtr header, uint size);
     [DllImport("winmm.dll")] static extern uint waveOutReset(IntPtr handle);
     [DllImport("winmm.dll")] static extern uint waveOutClose(IntPtr handle);
+    [StructLayout(LayoutKind.Sequential)] struct Position { public uint Type, Value, Padding; }
+    [DllImport("winmm.dll")] static extern uint waveOutGetPosition(IntPtr handle, ref Position position, uint size);
     readonly IntPtr handle;
+    readonly object clockLock = new();
+    double lastPosition;
+    bool disposed;
     readonly Queue<(IntPtr Header, IntPtr Data)> pending = new();
     static readonly uint HeaderSize = (uint)Marshal.SizeOf<Header>();
     static void Check(uint result) { if (result != 0) throw new IOException($"Windows audio output failed ({result})."); }
+    public double Seconds
+    {
+        get
+        {
+            lock (clockLock)
+            {
+                if (disposed) return lastPosition;
+                var position = new Position { Type = 2 };
+                if (waveOutGetPosition(handle, ref position, (uint)Marshal.SizeOf<Position>()) != 0) return lastPosition;
+                lastPosition = position.Type switch { 2 => position.Value / 16000.0, 1 => position.Value / 1000.0, 4 => position.Value / 32000.0, _ => lastPosition };
+                return lastPosition;
+            }
+        }
+    }
     public PcmOutput()
     {
         var format = new Format { Tag = 1, Channels = 1, Rate = 16000, BytesPerSecond = 32000, Align = 2, Bits = 16 };
@@ -112,5 +131,14 @@ internal sealed class PcmOutput : IDisposable
             Marshal.FreeHGlobal(data); Marshal.FreeHGlobal(header); throw;
         }
     }
-    public void Dispose() { waveOutReset(handle); Reclaim(true); waveOutClose(handle); }
+    public async Task DrainAsync(CancellationToken cancellation)
+    { while (pending.Count > 0) { Reclaim(); await Task.Delay(5, cancellation); } }
+    public void Dispose()
+    {
+        lock (clockLock)
+        {
+            if (disposed) return;
+            _ = Seconds; disposed = true; waveOutReset(handle); Reclaim(true); waveOutClose(handle);
+        }
+    }
 }

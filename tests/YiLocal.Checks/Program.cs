@@ -149,9 +149,20 @@ try
     Reject(() => library.Enforce(new(), freeBytes: () => 1), "Full disk accepted.");
     Check(File.Exists(library.ClipPath(name)), "Default policy erased a clip.");
     library.Protect(name, false);
+    using (var lease = library.Hold(name))
+    {
+        Check(library.Clips().Single().InUse && !library.Clips().Single().Protected, "Playback reservation altered user protection or was lost.");
+        Reject(() => library.Delete(name), "Reserved clip deleted.");
+        Reject(() => library.Enforce(new(Recycle: true), freeBytes: () => 1), "Reserved clip was recycled.");
+        lease.Renew();
+    }
+    Check(!library.Clips().Single().InUse, "Closed playback kept a reservation.");
     Check(library.Enforce(new(Recycle: true, KeepDays: 1), freeBytes: () => 100L << 30) == 0, "New clip expired.");
     Reject(() => library.Enforce(new(Recycle: true), freeBytes: () => 1), "Full disk incorrectly recovered.");
     Check(!File.Exists(library.ClipPath(name)), "Unprotected clip not recycled.");
+    var filtered = new Clip(name, 100, 4, 1280, 720, 1, true, false, true, new("Hall", "Small", "Timelapse", .5, 120));
+    Check(new ClipFilter(From: 200, Until: 300, Camera: "Hall", Kind: "Timelapse", Protected: false).Matches(filtered), "Date filter used accelerated playback instead of capture duration.");
+    Check(!new ClipFilter(From: 221).Matches(filtered) && !new ClipFilter(Kind: "Motion").Matches(filtered), "Filter included unrelated capture times/type.");
     using var recorder = new SegmentRecorder(folder, new());
     Reject(() => { using var other = new SegmentRecorder(folder, new()); }, "Second writer accepted.");
 }

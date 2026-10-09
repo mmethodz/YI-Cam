@@ -67,6 +67,19 @@ class StorageTests(unittest.TestCase):
                 self.library.delete(clip.name)
         self.assertTrue(clip.exists())
 
+    def test_native_playback_lease_prevents_python_recycling(self):
+        clip = self.clip(1)
+        self.library.connection.execute("INSERT INTO clip_leases VALUES(?, 'native-player', unixepoch()+120)", (clip.name,))
+        self.library.connection.execute('UPDATE clips SET started=0')
+        self.library.connection.commit()
+        self.assertTrue(self.library.clips()[0]['in_use'])
+        self.assertEqual(self.library.enforce(StoragePolicy(recycle=True, keep_days=1)), [])
+        with self.assertRaises(ValueError):
+            self.library.delete(clip.name)
+        self.library.connection.execute('UPDATE clip_leases SET expires=0')
+        self.library.connection.commit()
+        self.assertEqual(self.library.enforce(StoragePolicy(recycle=True, keep_days=1)), [clip.name])
+
 
 if __name__ == '__main__':
     unittest.main()

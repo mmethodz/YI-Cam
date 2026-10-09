@@ -14,6 +14,10 @@ GIB = 1024**3
 MANAGED_NAME = re.compile(r'YI_\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d_\d+x\d+_[a-f0-9]{6}\.mp4\Z')
 
 
+class ClipReservedError(ValueError):
+    pass
+
+
 @dataclass
 class StoragePolicy:
     quota_gib: float = 20
@@ -50,6 +54,7 @@ class Library:
             name TEXT PRIMARY KEY, started REAL NOT NULL, duration REAL DEFAULT 0,
             width INTEGER, height INTEGER, bytes INTEGER DEFAULT 0,
             complete INTEGER DEFAULT 0, protected INTEGER DEFAULT 0)''')
+        self.connection.execute('CREATE TABLE IF NOT EXISTS clip_leases (name TEXT NOT NULL, owner TEXT NOT NULL, expires INTEGER NOT NULL, PRIMARY KEY(name,owner))')
         self.connection.commit()
 
     def path(self, name):
@@ -77,7 +82,7 @@ class Library:
 
     def clips(self):
         result = []
-        for row in self.connection.execute('SELECT * FROM clips ORDER BY started DESC'):
+        for row in self.connection.execute('SELECT *, EXISTS(SELECT 1 FROM clip_leases l WHERE l.name=clips.name AND l.expires>unixepoch()) AS in_use FROM clips ORDER BY started DESC'):
             item = dict(row)
             try:
                 path = self.path(item['name'])
@@ -98,11 +103,15 @@ class Library:
         self.connection.execute('BEGIN IMMEDIATE')
         try:
             row = self.connection.execute('SELECT * FROM clips WHERE name=?', (name,)).fetchone()
-            if not row or row['protected'] or not row['complete']:
-                raise ValueError('Only finished, unprotected recordings can be deleted.')
+            held = self.connection.execute('SELECT 1 FROM clip_leases WHERE name=? AND expires>unixepoch() LIMIT 1', (name,)).fetchone()
+            if not row or row['protected'] or not row['complete'] or held:
+                raise ClipReservedError('Only finished, unprotected recordings that are not in use can be deleted.')
             path = self.path(name)
             path.unlink(missing_ok=True)
             self.connection.execute('DELETE FROM clips WHERE name=?', (name,))
+            for table in ('clip_details', 'clip_audio', 'clip_leases'):
+                if self.connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                    self.connection.execute(f'DELETE FROM {table} WHERE name=?', (name,))
             self.connection.commit()
         except BaseException:
             self.connection.rollback()
@@ -121,9 +130,12 @@ class Library:
             old = cutoff is not None and item['started'] < cutoff
             if not policy.recycle or not (over or old):
                 continue
-            if item['name'] == active or item['protected'] or not item['complete']:
+            if item['name'] == active or item['protected'] or not item['complete'] or item['in_use']:
                 continue
-            self.delete(item['name'])
+            try:
+                self.delete(item['name'])
+            except ClipReservedError:
+                continue  # Protection/reservation can change after the initial snapshot.
             deleted.append(item['name'])
             total -= item['bytes']
             free = shutil.disk_usage(self.root).free
