@@ -108,6 +108,9 @@ Use **Camera setup → Import** in the Python app. The importer checks the execu
 SHA-256 and only supports the tested 32-bit client `1.0.1.1_202209261648`. It reads
 the existing local pairing and does not modify the installed vendor executable.
 Close the vendor app after import, then import the encrypted profile into WinForms.
+Importing again with an existing saved profile is supported. The candidate key
+must authenticate before the saved profile is replaced; failed imports preserve
+it. Restart the Python app after updating its source so it loads the current importer.
 
 **Preserve an existing pairing.** Fresh QR setup is not implemented. The observed
 vendor QR includes Wi-Fi information and a server-issued binding token; an

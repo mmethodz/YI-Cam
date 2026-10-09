@@ -123,19 +123,12 @@ class CameraWorker(threading.Thread):
         elif name == 'stop':
             self.stop_recording()
         elif name == 'import':
-            # Frida is optional and is loaded only for this one-time local import.
-            from .bridge import ClientBridge
+            from .pairing import import_from_client
             ip, camera_name = value
-            bridge = ClientBridge(lambda *_: None)
             try:
-                bridge.connect()
-                key = bridge.script.exports_sync.pairing()['password']
-                # Validate against the actual LAN camera before saving it.
-                with Camera(ip, key) as camera:
-                    camera.firmware()
-                    save_device({'ip': ip, 'password': key, 'name': camera_name, 'uid': camera.uid})
-            finally:
-                bridge.close()
+                import_from_client(ip, camera_name)
+            except Exception as exc:
+                raise RuntimeError(f'Pairing import failed: {exc} Existing saved pairing was not replaced.') from None
             self.emit('paired', message='Pairing key imported and verified. You can close YI IOT.')
         else:
             if not self.camera:
