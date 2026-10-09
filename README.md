@@ -152,7 +152,8 @@ saved profile is supported. The candidate key
 must authenticate before the saved profile is replaced; failed imports preserve
 it. Restart the Python app after updating its source so it loads the current importer.
 
-**Preserve an existing pairing.** Fresh QR setup is not implemented. The observed
+**Preserve an existing pairing.** Fresh QR generation is experimental; completing
+account-free provisioning has not been established. The observed
 vendor QR includes Wi-Fi information and a server-issued binding token; an
 independent provisioning flow has not been established. Do not reset a working
 camera merely to try this app.

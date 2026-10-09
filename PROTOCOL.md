@@ -194,3 +194,92 @@ generation completes pairing. Composition is covered by synthetic fixtures;
 camera acceptance, token expiry and account-free provisioning remain unverified.
 The existing working camera was deliberately not reset. Saved QR images contain
 recoverable network credentials and are never added to the source repository.
+
+### Binding token evidence
+
+The inspected mobile `g2.d.q0` requests `/v2/qrcode/get_bindkey` with `seq=1`,
+`userid`, `timestamp`, optional `webauthflow`, and an account-authenticated `hmac`.
+This path does **not** submit the new camera's UID, its SSID, or its Wi-Fi password.
+The returned `data.bindkey` is copied unchanged into the QR. The request's HMAC
+does not establish that the returned token itself contains a signature. Another
+client path uses `/v5/qrcode/get_bindkey` with a `did`; do not generalize the v2
+request to every device family or setup mode.
+
+The mobile app polls `/v2/qrcode/check_bindkey` with the token, timestamp and
+request authentication. The handler recognizes `ret=-3` as token timeout,
+`-2` as not found, `-1` as server error, `0` as pending and `1` as success with
+`uid`. Pending responses provide `check_after` (bounded to 1–20 seconds, otherwise
+3). The UI's separate 120-second waiting limit is **not a measured token TTL**.
+These observations establish server-side token lookup and account association,
+but not one-time use, reuse rules, token entropy or the actual expiry period.
+
+Static analysis also examined an **older related firmware**,
+`6.0.05.10_202301061607`, from the
+[Anyka research firmware dump](https://github.com/VGerris/Anyka_ak3918_hacking_journey).
+It is not the baseline camera's `6.0.24.10_202401091113`. Nothing from this image
+was executed or flashed, and its binaries are not distributed with OpenYI.
+The examined `anyka_ipc` SHA-256 is
+`f2f977c41214d549022fcc987d5e55758ce8231d55fa0a4ab707c610d38de6e6`.
+
+* `judge_bindkey` (`0x2917c`, 1368 bytes) reads the first two characters to select
+  region, language and timezone. Recognized prefixes include `EU`, `US`, `CN`
+  and `YI`. This function does not authenticate the token's remaining characters;
+  it does not establish that no other firmware function performs further checks.
+* `webapi_do_bindkey` (`0x52b50`) invokes the device's cloud helper against
+  `/v5/ipc/qr_bind`, then parses the JSON response. Code `20000` returns success.
+  The helper formats `uid`, `bindkey`, `timestamp`, `seq=9` and an HMAC. A bundled
+  library also contains a `/v4/ipc/qr_bind` path; that string alone does not show
+  which path is active.
+* `keepalive_thread` calls `webapi_do_bindkey` at `0x56894`. Only its success
+  return (`1`) branches to playing `/tmp/audio/success.aac` at `0x56900` and
+  setting the Wi-Fi configuration state to successful. Failure clears that state
+  and calls `manage_bind_failed`.
+
+Thus this related firmware demonstrates a camera-run flow that waits for a
+cloud binding result before playing its success prompt. A spoken success prompt
+does not by itself demonstrate offline signature validation. Whether the current
+camera also permits authenticated LAN access after Wi-Fi association but before
+cloud binding remains unknown.
+
+| Proposed interpretation | Current conclusion |
+| --- | --- |
+| Opaque one-time nonce | Opaque to the inspected app, with a meaningful region prefix in related firmware; one-time use is unverified. |
+| Derived from camera/account data | Issued in an account-authenticated request. No new camera ID is supplied in the inspected v2 issuance path; internal server derivation is unknown. |
+| Vendor-signed token | Not established. HTTP request authentication is not proof of a signature inside the token. |
+| Validated only by phone/app or cloud | The phone polls cloud state. Related firmware independently calls the cloud binding endpoint, so phone-only validation is not supported by that evidence. |
+| Verified by camera firmware | QR parsing and a cloud-result check are demonstrated in related firmware. Offline cryptographic token verification on the current camera is not established. |
+
+### Controlled token experiments
+
+No reset or token acceptance experiment has been performed on the working camera.
+Opening its already paired entry in the phone app succeeded without new setup;
+this does not establish reset-free acceptance of a new QR. A pending firmware
+update advertised `20260806-eu / Minor bug fix`; compatibility and rollback have
+not been established, so the current firmware remains the reference baseline.
+
+Optional Python tooling decodes QR images without URL form decoding (Base64 `+`
+must stay `+`) and prepares bounded variations offline:
+
+```powershell
+python -m pip install -r requirements-qr.txt
+python tools/qr_research.py inspect .local/original-setup.png
+python tools/qr_research.py cases .local/original-setup.png --output .local/qr-cases
+```
+
+Inspection reports field names and lengths; only explicit `--reveal` prints
+credentials. Generated PNGs contain recoverable credentials. The tool never
+contacts a camera or service, and refuses to overwrite an existing case folder.
+
+| Case | What must be distinguished | Physical result |
+| --- | --- | --- |
+| Previously issued token | Same unchanged QR as the reference; record issuance time and whether it was used before. | Not run |
+| Altered token | Change one tail character, retaining length and the two-character region prefix. | Not run |
+| Expired token | Use an old genuine QR; call it expired only with evidence of expiry, not merely the phone's waiting timeout. | Not run |
+| Missing token | Omitted `b` and empty `b=` are separate parser cases. | Not run |
+| Locally random token | Randomize the tail but retain the region prefix and length to avoid changing server routing. | Not run |
+
+For each case record QR recognition, Wi-Fi/DHCP association, exact spoken prompt,
+authenticated local command/stream availability, and any cloud binding result
+separately. Otherwise a Wi-Fi success can be mistaken for account binding, or a
+region error for a token signature rejection. Do not reset the sole working
+camera just to fill this matrix without an agreed recovery procedure.
