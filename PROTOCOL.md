@@ -251,11 +251,17 @@ cloud binding remains unknown.
 
 ### Controlled token experiments
 
-No reset or token acceptance experiment has been performed on the working camera.
-Opening its already paired entry in the phone app succeeded without new setup;
-this does not establish reset-free acceptance of a new QR. A pending firmware
+The owner reports resetting the camera, scanning a newly issued mobile-app QR,
+and hearing “pairing succeeded.” This verifies the normal vendor QR path after
+reset by user observation, not any modified-token case or account-free setup.
+Opening its already paired entry in the phone app also succeeded without new
+setup; this does not establish reset-free acceptance of a new QR. A pending firmware
 update advertised `20260806-eu / Minor bug fix`; compatibility and rollback have
 not been established, so the current firmware remains the reference baseline.
+After this report, an authenticated read-only LAN query using the saved native
+profile still succeeded and returned the unchanged baseline firmware, hardware
+253, night mode 0 and tracking 0. No pairing-key replacement was needed for that
+check; this does not establish that keys survive every reset.
 
 Optional Python tooling decodes QR images without URL form decoding (Base64 `+`
 must stay `+`) and prepares bounded variations offline:
