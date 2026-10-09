@@ -16,12 +16,17 @@ Run:
 dotnet build YiLocal.sln
 dotnet run --project tests/YiLocal.Checks
 python -m unittest discover -s tests -v
-# Optional independent native mux/decode integration check:
+# Independent native media integration checks:
 python -m pip install imageio-ffmpeg==0.6.0
 python scripts/check_media_integration.py
+python scripts/check_recording_profiles.py
+python scripts/check_audio_integration.py
 ```
 
-The synthetic test does not access a camera. Hardware checks are opt-in, use an
+These synthetic tests do not access a camera. Native checks also run two simulated
+cameras on loopback addresses to verify independent sessions, controls and media.
+This is not multiple-camera hardware qualification; see docs/MULTI_CAMERA.md.
+Hardware checks are opt-in, use an
 already paired camera, and must save outside the source checkout. Do not reset or
 flash a camera just to test a control. Track unsupported models explicitly rather
 than assuming shared branding implies the same protocol.

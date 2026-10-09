@@ -92,16 +92,19 @@ internal static class MediaTools
 internal sealed class VideoPreview : IDisposable
 {
     public const int Width = 960, Height = 540;
+    readonly int width, height;
     readonly Process process;
     readonly Channel<byte[]> queue = Channel.CreateBounded<byte[]>(90);
     readonly CancellationTokenSource stop = new();
     readonly Task writer, reader, errors;
     Bitmap? latest;
     public bool Failed { get; private set; }
-    public VideoPreview(string executable)
+    public VideoPreview(string executable, int width = Width, int height = Height)
     {
+        if (width is < 16 or > 1920 || height is < 16 or > 1080 || width % 4 != 0) throw new ArgumentOutOfRangeException(nameof(width));
+        this.width = width; this.height = height;
         var info = MediaTools.StartInfo(executable, "-hide_banner", "-loglevel", "error", "-flags", "low_delay", "-probesize", "32768", "-analyzeduration", "0",
-            "-f", "h264", "-i", "pipe:0", "-vf", $"scale={Width}:{Height}", "-an", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1");
+            "-f", "h264", "-i", "pipe:0", "-vf", $"scale={width}:{height}", "-an", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1");
         info.RedirectStandardInput = info.RedirectStandardOutput = true;
         process = Process.Start(info) ?? throw new IOException("Unable to start FFmpeg.");
         // Drain stderr continuously, without keeping an unbounded log.
@@ -117,14 +120,14 @@ internal sealed class VideoPreview : IDisposable
         });
         reader = Task.Run(async () =>
         {
-            var buffer = new byte[Width * Height * 3];
+            var buffer = new byte[width * height * 3];
             try
             {
                 while (!stop.IsCancellationRequested)
                 {
                     await process.StandardOutput.BaseStream.ReadExactlyAsync(buffer, stop.Token);
-                    var bitmap = new Bitmap(Width, Height, PixelFormat.Format24bppRgb);
-                    var data = bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+                    var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+                    var data = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
                     try { Marshal.Copy(buffer, 0, data.Scan0, buffer.Length); } finally { bitmap.UnlockBits(data); }
                     Interlocked.Exchange(ref latest, bitmap)?.Dispose();
                 }

@@ -81,7 +81,7 @@ public sealed partial class MainForm
     }
     void SaveCaptureOptions()
     {
-        if (session?.Recording == true) throw new InvalidOperationException("Stop recording before changing the capture profile.");
+        if (AnyRecording) throw new InvalidOperationException("Stop all recordings before changing the capture profile.");
         UpdateCaptureControls();
         var selected = new RecordingOptions((RecordingEncoding)recordingProfile.SelectedIndex,
             limitRecordingRate.Checked ? (double)recordingRate.Value : null, (CaptureMode)recordingMode.SelectedIndex, recordingAudio.Checked);

@@ -11,6 +11,7 @@ internal sealed class Preferences
     public string? Ffmpeg { get; set; }
     public StoragePolicy Storage { get; set; } = new();
     public RecordingOptions Recording { get; set; } = new();
+    public bool ExperimentalMultipleCameras { get; set; }
     public static string FilePath => Path.Combine(DeviceProfile.SettingsDirectory, "settings.json");
     public void Save()
     {
@@ -68,7 +69,7 @@ public sealed partial class MainForm : Form
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
         layout.RowStyles.Add(new(SizeType.Percent, 100)); layout.RowStyles.Add(new(SizeType.Absolute, 40));
         layout.Controls.Add(tabs, 0, 0); layout.Controls.Add(status, 0, 1); Controls.Add(layout);
-        BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning(); BuildCapture();
+        BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning(); BuildCapture(); BuildCameras();
         try
         {
             if (File.Exists(Preferences.FilePath)) preferences = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(Preferences.FilePath)) ?? new();
@@ -78,7 +79,7 @@ public sealed partial class MainForm : Form
             else
                 for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
                     if (File.Exists(Path.Combine(dir.FullName, "YiLocal.sln")) && File.Exists(Path.Combine(dir.FullName, ".local", "device.dpapi")))
-                    { profile = DeviceProfile.Load(Path.Combine(dir.FullName, ".local", "device.dpapi")); profile.Save(); break; }
+                    { profile = DeviceProfile.Load(Path.Combine(dir.FullName, ".local", "device.dpapi")); profile.Save(DeviceProfile.DefaultPath); break; }
         }
         catch (Exception e) { preferences = new(); status.Text = "Saved settings could not be loaded: " + e.Message; }
         folder.Text = preferences.Folder; ffmpeg.Text = preferences.Ffmpeg ?? MediaTools.FindFfmpeg() ?? "";
@@ -86,11 +87,13 @@ public sealed partial class MainForm : Form
         segment.Value = (decimal)preferences.Storage.SegmentMinutes; days.Value = preferences.Storage.KeepDays; recycle.Checked = preferences.Storage.Recycle;
         ShowProfile();
         ShowCaptureOptions();
+        LoadCameras();
         timer.Tick += (_, _) =>
         {
             UpdatePlayback();
+            UpdateCameraGrid();
             Bitmap? next; lock (previewLock) next = preview?.Take();
-            if (next is not null) { var prior = picture.Image; picture.Image = next; prior?.Dispose(); }
+            if (next is not null) { var prior = picture.Image; picture.Image = next; SetPrimaryGridImage(next); prior?.Dispose(); }
         };
         timer.Start();
         FormClosing += OnClosing;
@@ -118,21 +121,7 @@ public sealed partial class MainForm : Form
         side.Controls.Add(Button("Save snapshot…", () => _ = Guard(SaveSnapshotAsync)));
         BuildAudio(side);
         connect.Click += async (_, _) => await Guard(ToggleConnection);
-        record.Click += async (_, _) => await Guard(async () =>
-        {
-            if (session is not { } active) return;
-            record.Enabled = false;
-            try
-            {
-                if (active.Recording) { await Task.Run(active.StopRecording); status.Text = "Recording saved."; RefreshClips(); }
-                else
-                {
-                    SaveCaptureOptions();
-                    active.StartRecording(preferences.Folder, preferences.Storage, preferences.Recording, preferences.Ffmpeg);
-                }
-            }
-            finally { record.Enabled = session is not null; }
-        });
+        record.Click += async (_, _) => await Guard(ToggleRecordingAsync);
         cameraControls.Controls.Add(Label("Stream quality", 218)); quality.Items.AddRange(["HD — original stream", "SD — smaller stream", "Automatic quality"]); quality.SelectedIndex = 0;
         cameraControls.Controls.Add(quality);
         quality.SelectionChangeCommitted += async (_, _) => await Guard(async () => { if (session is not null) await session.SetQualityAsync(new byte[] { 1, 2, 0 }[quality.SelectedIndex]); });
@@ -162,6 +151,21 @@ public sealed partial class MainForm : Form
         cameraControls.Controls.Add(directions);
         side.Controls.Add(Label("Recordings keep the original resolution. 4K export is a software upscale.", 224));
     }
+    async Task ToggleRecordingAsync()
+    {
+        if (!record.Enabled || session is not { } active) return;
+        record.Enabled = false;
+        try
+        {
+            if (active.Recording) { await Task.Run(active.StopRecording); status.Text = "Recording saved."; RefreshClips(); }
+            else
+            {
+                if (!extraCameras.Any(camera => camera.Recording)) SaveCaptureOptions();
+                active.StartRecording(preferences.Folder, preferences.Storage, preferences.Recording, preferences.Ffmpeg);
+            }
+        }
+        finally { record.Enabled = session is not null; }
+    }
     async Task ToggleConnection()
     {
         connect.Enabled = false;
@@ -172,9 +176,10 @@ public sealed partial class MainForm : Form
                 await DisconnectAsync(); status.Text = "Disconnected. Recordings are saved."; return;
             }
             if (profile is null) { tabs.SelectedIndex = 3; throw new InvalidOperationException("Import a paired device profile or enter its device key first."); }
+            EnsurePrimaryDistinct(profile);
             preferences.Ffmpeg = ffmpeg.Text.Trim();
             var active = new CameraSession(profile); session = active;
-            session.Status += text => Ui(() => { if (session == active) status.Text = text; });
+            session.Status += text => Ui(() => { if (session == active) { status.Text = text; UpdatePrimaryGridState(text); } });
             session.PairingRejected += () => Ui(() => _ = Guard(async () =>
             {
                 if (session != active) return;
@@ -198,7 +203,8 @@ public sealed partial class MainForm : Form
                 if (session != active) return;
                 record.Text = recordingActive ? "Stop recording" : "Start recording"; recordState.Text = recordingActive ? "● Recording to local disk" : "Recording is off";
                 recordState.ForeColor = recordingActive ? Color.Firebrick : Color.DarkSlateGray;
-                SetThreadExecutionState(recordingActive ? 0x80000001u : 0x80000000u);
+                if (!recordingActive) UpdatePrimaryGridState("Recording is off.");
+                UpdateKeepAwake();
             });
             session.Audio += OnAudio; session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
         }
@@ -213,13 +219,13 @@ public sealed partial class MainForm : Form
             ClearPreview(); ClearAudio(); listen.Checked = false; cameraControls.Enabled = record.Enabled = false;
             connect.Text = "Connect camera"; record.Text = "Start recording";
             recordState.Text = "Recording is off"; recordState.ForeColor = Color.DarkSlateGray;
-            SetThreadExecutionState(0x80000000);
+            UpdateKeepAwake(); UpdatePrimaryGridState();
         }
     }
     void ClearPreview()
     {
         lock (previewLock) { preview?.Dispose(); preview = null; previewIdentity = null; }
-        Ui(() => { var old = picture.Image; picture.Image = null; old?.Dispose(); });
+        Ui(() => { var old = picture.Image; picture.Image = null; SetPrimaryGridImage(null); old?.Dispose(); });
     }
     void OnFrame(VideoFrame frame, long time, int epoch)
     {
@@ -252,7 +258,7 @@ public sealed partial class MainForm : Form
         body.Controls.Add(Button("Choose FFmpeg…", () => { using var dialog = new OpenFileDialog { Filter = "FFmpeg executable|ffmpeg*.exe|Executable|*.exe" }; if (dialog.ShowDialog(this) == DialogResult.OK) ffmpeg.Text = dialog.FileName; }));
         body.Controls.Add(Button("Save storage settings", () => _ = Guard(() =>
         {
-            if (session?.Recording == true || exporting) throw new InvalidOperationException("Stop recording and let exports finish before changing storage.");
+            if (AnyRecording || exporting || gridBusy) throw new InvalidOperationException("Stop all recordings and let camera changes/exports finish before changing storage.");
             var policy = new StoragePolicy((double)quota.Value, (double)free.Value, (double)segment.Value, recycle.Checked, (int)days.Value); policy.Validate();
             preferences.Folder = Path.GetFullPath(folder.Text.Trim()); preferences.Ffmpeg = ffmpeg.Text.Trim(); preferences.Storage = policy;
             StopPlayback(); Directory.CreateDirectory(preferences.Folder); preferences.Save(); ClearPreview(); status.Text = "Storage settings saved."; return Task.CompletedTask;
@@ -301,7 +307,9 @@ public sealed partial class MainForm : Form
                 status.Text = "Reading the pairing; the saved profile is kept until verification succeeds…";
                 var candidate = await read(timeout.Token);
                 status.Text = "Checking the imported key against the LAN camera…";
-                profile = await PairingImport.VerifyAndSaveAsync(candidate, timeout.Token);
+                var verified = await PairingImport.VerifyAsync(candidate, timeout.Token);
+                EnsurePrimaryDistinct(verified);
+                verified.Save(DeviceProfile.DefaultPath); profile = verified;
             }
             catch (Exception e)
             {
@@ -321,10 +329,11 @@ public sealed partial class MainForm : Form
         e.Cancel = true;
         if (closing) return;
         if (importing) { status.Text = "Finishing pairing verification. Please wait before closing."; return; }
+        if (gridBusy) { status.Text = "Finishing a camera operation. Please wait before closing."; return; }
         if (exporting) { status.Text = "An export is running. Wait for it to finish before closing."; return; }
         if (savingSnapshot) { status.Text = "Finishing the snapshot. Please wait before closing."; return; }
         closing = true; Enabled = false; status.Text = "Saving recording and disconnecting…";
-        try { if (session is not null) await session.DisposeAsync(); }
+        try { await Task.WhenAll(StopExtraCameras(), session?.DisposeAsync().AsTask() ?? Task.CompletedTask); }
         catch (Exception error) { MessageBox.Show(this, "The recording could not be finalized: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {

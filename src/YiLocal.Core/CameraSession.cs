@@ -19,6 +19,7 @@ public sealed class CameraSession : IAsyncDisposable
     byte quality = 1;
     public CameraClient? Client { get; private set; }
     public bool Recording { get { lock (recordLock) return recording; } }
+    public byte Quality => quality;
     public event Action<string>? Status;
     public event Action<CameraSettings?>? Settings;
     public event Action<VideoFrame, long, int>? Frame;

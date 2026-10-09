@@ -47,6 +47,13 @@ makes no cloud requests and exposes no HTTP server. The camera firmware may stil
 contact vendor services; this app does not change the camera's network settings.
 Router-level Internet blocking has not been tested.
 
+**Cameras · experimental** adds independent camera configurations and a grid.
+The primary camera keeps its existing pairing and recording paths. Additional
+cameras have separate encrypted profiles, sessions, controls and catalogues, and
+their recordings appear in the browser. Only one physical camera is available
+for verification; two simulated cameras cover software isolation. See
+[multi-camera setup and qualification limits](docs/MULTI_CAMERA.md).
+
 ## Controls
 
 **Setup QR · experimental** can save a normal PNG for display on a phone. Fresh
@@ -72,8 +79,9 @@ accepted values but had no observed physical effect on this model; the app uses
 the separate light-mode command that worked.
 
 **Export 4K (upscaled)** creates a 3840 × 2160 software upscale. It does not add
-sensor detail or establish native 4K support. Recording preserves the original
-camera stream, without re-encoding. Measured frame rates are observations of this
+sensor detail or establish native 4K support. Default recording preserves the
+original camera stream without re-encoding; optional profiles are described below.
+Measured frame rates are observations of this
 stream, not a claimed hardware maximum.
 
 ## Local recording and storage

@@ -40,7 +40,8 @@ public sealed partial class MainForm
     bool scrubbing, refreshingBrowser;
     int browserPage;
     const int BrowserPageSize = 100;
-    IEnumerable<string> RecordingRoots() => [preferences.Folder];
+    IEnumerable<string> RecordingRoots() => new[] { preferences.Folder }.Concat(
+        CameraRegistry.ExistingRecordingFolders(preferences.Folder));
 
     void BuildRecordings()
     {
@@ -209,7 +210,10 @@ public sealed partial class MainForm
     void PausePlayback() { if (playback is not null) pausedAt = playback.Position; StopPlayback(); UpdatePlaybackTime(); }
     void StopPlayback()
     {
-        playback?.Dispose(); playback = null; playbackLease?.Dispose(); playbackLease = null; playbackButton.Text = "Play";
+        playback?.Dispose(); playback = null;
+        var lease = playbackLease; playbackLease = null;
+        try { lease?.Dispose(); } catch (Exception e) when (e is IOException or Microsoft.Data.Sqlite.SqliteException) { status.Text = "Playback closed; its catalogue reservation will expire: " + e.Message; }
+        playbackButton.Text = "Play";
     }
     void UpdatePlaybackTime()
     {

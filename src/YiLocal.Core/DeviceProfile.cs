@@ -11,17 +11,24 @@ public sealed class DeviceProfile
     [JsonPropertyName("name")] public string Name { get; set; } = "Camera";
     [JsonPropertyName("uid")] public string? Uid { get; set; }
     [JsonPropertyName("password")] public string Password { get; set; } = "";
+    [JsonIgnore] public string? StoragePath { get; private set; }
     public static string SettingsDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "YI Local");
     public static string DefaultPath => Path.Combine(SettingsDirectory, "device.dpapi");
-    public static DeviceProfile Load(string? path = null) =>
-        JsonSerializer.Deserialize<DeviceProfile>(Crypt(File.ReadAllBytes(path ?? DefaultPath), false)) ?? throw new InvalidDataException("Empty device profile.");
+    public static DeviceProfile Load(string? path = null)
+    {
+        path = Path.GetFullPath(path ?? DefaultPath);
+        var profile = JsonSerializer.Deserialize<DeviceProfile>(Crypt(File.ReadAllBytes(path), false)) ?? throw new InvalidDataException("Empty device profile.");
+        profile.StoragePath = path; return profile;
+    }
     public void Save(string? path = null)
     {
-        path ??= DefaultPath; Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        path = SavePath(path); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string temporary = path + ".tmp";
         File.WriteAllBytes(temporary, Crypt(JsonSerializer.SerializeToUtf8Bytes(this), true));
         File.Move(temporary, path, true);
+        StoragePath = path;
     }
+    internal string SavePath(string? path = null) => Path.GetFullPath(path ?? StoragePath ?? DefaultPath);
     [StructLayout(LayoutKind.Sequential)] struct Blob { public int Size; public IntPtr Data; }
     [DllImport("crypt32.dll", SetLastError = true)] static extern bool CryptProtectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);
     [DllImport("crypt32.dll", SetLastError = true)] static extern bool CryptUnprotectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);

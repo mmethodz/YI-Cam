@@ -7,7 +7,7 @@ without B frames. Reduced-rate profiles select one source picture per time
 bucket without duplicating pictures to raise the rate. Live preview consumes
 the original frame stream independently.
 
-The input queue is bounded to 180 pictures and 16 MiB. An encoder failure or
+The input queue is bounded to 360 video/audio packets and 16 MiB. An encoder failure or
 overflow stops recording with an error. The catalogue marks a clip complete
 only after the encoder finishes and its fragmented MP4 sample timing is read
 successfully. Finalization has a 15-second limit. Segment finalization runs off

@@ -90,6 +90,7 @@ if (args.Length > 0 && args[0] == "--live")
 }
 
 await PairingChecks.RunAsync();
+await MultiCameraChecks.RunAsync();
 Check(CameraAlert.Parse(new byte[4]).Count == 0, "Empty alert history rejected.");
 Check(CameraAlert.Parse(Wire.Join(Wire.U32(1), Wire.U32(1), Wire.U32(100), Wire.U32(6))).Single() == new CameraAlert(1, 100, 6), "Alert history fields differ.");
 Reject(() => CameraAlert.Parse(Wire.U32(1)), "Truncated alert history accepted.");

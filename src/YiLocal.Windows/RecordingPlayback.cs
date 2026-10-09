@@ -113,7 +113,7 @@ internal sealed class RecordingPlayback : IDisposable
         { if (!stop.IsCancellationRequested) Error = e.Message; stop.Cancel(); Kill(); }
     }
     public Bitmap? Take() => Interlocked.Exchange(ref latest, null);
-    void Kill() { try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } }
+    void Kill() { try { if (!process.HasExited) process.Kill(true); } catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { } }
     public void Dispose()
     {
         stop.Cancel(); ready.TrySetResult(); Kill(); audioPipe?.Dispose();

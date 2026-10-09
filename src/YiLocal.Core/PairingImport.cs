@@ -2,15 +2,19 @@ namespace YiLocal.Core;
 
 public static class PairingImport
 {
+    public static Task<DeviceProfile> VerifyAsync(DeviceProfile candidate, CancellationToken cancellation = default) =>
+        VerifyAndSaveAsync(candidate, VerifyCameraAsync, _ => { }, cancellation);
+
+    static async Task<string> VerifyCameraAsync(DeviceProfile profile, CancellationToken token)
+    {
+        using var camera = new CameraClient(profile.Ip, profile.Password, profile.Uid);
+        await camera.ConnectAsync(token);
+        await camera.FirmwareAsync().WaitAsync(token);
+        return camera.Uid ?? throw new InvalidDataException("The camera did not return its identity.");
+    }
     /// <summary>Only replace the saved profile after the candidate key authenticates to the pinned camera.</summary>
     public static Task<DeviceProfile> VerifyAndSaveAsync(DeviceProfile candidate, CancellationToken cancellation = default) =>
-        VerifyAndSaveAsync(candidate, async (profile, token) =>
-        {
-            using var camera = new CameraClient(profile.Ip, profile.Password, profile.Uid);
-            await camera.ConnectAsync(token);
-            await camera.FirmwareAsync().WaitAsync(token);
-            return camera.Uid ?? throw new InvalidDataException("The camera did not return its identity.");
-        }, profile => profile.Save(), cancellation);
+        VerifyAndSaveAsync(candidate, VerifyCameraAsync, profile => profile.Save(), cancellation);
 
     internal static async Task<DeviceProfile> VerifyAndSaveAsync(DeviceProfile candidate,
         Func<DeviceProfile, CancellationToken, Task<string>> verify, Action<DeviceProfile> save, CancellationToken cancellation = default)
