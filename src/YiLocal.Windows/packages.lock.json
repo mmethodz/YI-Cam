@@ -20,6 +20,11 @@
           "SQLitePCLRaw.core": "2.1.12"
         }
       },
+      "QRCoder": {
+        "type": "Transitive",
+        "resolved": "1.8.0",
+        "contentHash": "RuvX3PEXU6pbY/I5ItAk800jm62r+YnoPLgyS2WTgwxkOnGkOfU9ORiipHUF0LkLyqM8rlroUCA319JjRYfRFQ=="
+      },
       "SQLite": {
         "type": "Transitive",
         "resolved": "3.53.4",
@@ -59,15 +64,9 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Data.Sqlite": "[10.0.12, )",
+          "QRCoder": "[1.8.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )"
         }
-      }
-    },
-    "net10.0-windows7.0/win-x64": {
-      "SQLite": {
-        "type": "Transitive",
-        "resolved": "3.53.4",
-        "contentHash": "KN7jeWqgUPeBRe1FlcpZURzxomuKKEKHmBBQfg+Nx7NkY1LjKhzHvH+3ASkNvhayESE34nMBinL9CV21JfPRJw=="
       }
     }
   }

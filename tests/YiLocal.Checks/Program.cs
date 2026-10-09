@@ -9,6 +9,11 @@ static void Reject(Action action, string message)
 }
 static VideoFrame Frame(ushort seq, bool key = false, uint ms = 100000) => new([0, 0, 0, 1, key ? (byte)0x65 : (byte)0x41, 1], seq, 1280, 720, 1, ms, key, 1, 78);
 
+if (args.Length == 2 && args[0] == "--qr-fixture")
+{
+    File.WriteAllBytes(args[1], QrProvisioning.Png(QrProvisioning.Compose("Test WiFi", "password123", "TEST-TOKEN"))); return;
+}
+
 if (args.Length > 0 && args[0] == "--inspect-import")
 {
     if (args.Length != 2) throw new ArgumentException("--inspect-import <encrypted-profile-to-compare>");
@@ -72,6 +77,12 @@ if (args.Length > 0 && args[0] == "--live")
 }
 
 await PairingChecks.RunAsync();
+Check(QrProvisioning.Compose("Test", "89", "TEST") == "b=TEST&s=VGVzdA==&p=ODk=", "QR zero-XOR fallback or Base64 differs from observed format.");
+Check(QrProvisioning.Compose("Test", "", null, true, "TESTID") == "t=1&s=VGVzdA==&p=&d=TESTID", "Wi-Fi-change QR format differs.");
+Reject(() => QrProvisioning.Compose("Test", "", null, true), "Wi-Fi-change QR omitted the target device ID.");
+Reject(() => QrProvisioning.Compose("Test", "password", null), "Fresh QR invented a binding token.");
+Reject(() => QrProvisioning.Compose("Test", "password", "x&s=bad"), "QR field injection accepted.");
+Reject(() => QrProvisioning.Compose(new string('ä', 17), "password", "TEST"), "Overlong UTF-8 SSID accepted.");
 var channel = new ReliableChannel();
 var message = Wire.Join([2, 3, 0, 0], Wire.U32(5), [1, 2, 3, 4, 5]);
 Check(channel.Feed(1, message[6..]).Count == 0, "Out-of-order fragment escaped.");

@@ -67,7 +67,7 @@ public sealed partial class MainForm : Form
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
         layout.RowStyles.Add(new(SizeType.Percent, 100)); layout.RowStyles.Add(new(SizeType.Absolute, 40));
         layout.Controls.Add(tabs, 0, 0); layout.Controls.Add(status, 0, 1); Controls.Add(layout);
-        BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera();
+        BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning();
         try
         {
             if (File.Exists(Preferences.FilePath)) preferences = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(Preferences.FilePath)) ?? new();

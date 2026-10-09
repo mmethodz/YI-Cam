@@ -49,6 +49,13 @@ Router-level Internet blocking has not been tested.
 
 ## Controls
 
+**Setup QR · experimental** can save a normal PNG for display on a phone. Fresh
+setup currently requires an existing vendor binding token; a separate Wi-Fi-change
+format requires the vendor display device ID. Images are generated entirely
+locally, but neither flow has been physically verified. Account-free first-time
+provisioning is not established. See [the QR findings](PROTOCOL.md#experimental-setup-qr).
+Do not reset a working camera to test this feature.
+
 | Control | Verified behavior on the test camera |
 | --- | --- |
 | HD | H.264, 1280 × 720; about 15.2 source frames/s in the measured stream |

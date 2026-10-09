@@ -1,6 +1,8 @@
 # Third-party components
 
 The original OpenYI source is MIT licensed. Dependency licenses remain separate.
+
+- [QRCoder](https://github.com/Shane32/QRCoder), version 1.8.0, MIT: local PNG setup QR generation. No vendor runtime is required.
 No vendor client, APK, firmware, or decompiled source is distributed in this repository.
 
 | Component | Purpose | Upstream |

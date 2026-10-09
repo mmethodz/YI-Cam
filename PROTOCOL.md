@@ -165,7 +165,32 @@ authentication were independently inspected in the owner's installed clients;
 those vendor files and research downloads stay in ignored private development
 storage. Exploit functionality from external research is not used by this app.
 
-Fresh QR provisioning remains unverified. The inspected setup flow generates
-`b=…&s=…&p=…`, where `b` is obtained from the vendor binding service and the other
-fields carry encoded Wi-Fi details. This does not establish that an arbitrary
-locally generated binding token can replace the original onboarding flow.
+## Experimental setup QR
+
+The inspected mobile `GenerateAndScanBarcodeActivity` composes fresh Wi-Fi setup
+as `b=<binding-token>&s=<ssid-base64>&p=<password-base64>`. The binding token is
+the result of an account-specific vendor service request. No evidence currently
+establishes acceptance of a locally invented token or account-free first pairing.
+
+`s` is standard padded Base64 of UTF-8 SSID bytes. For `p`, XOR each UTF-16 password
+character with the corresponding character of this repeating 70-character mask:
+
+```text
+89JFSjo8HUbhou5776NJOMp9i90ghg7Y78G78t68899y79HY7g7y87y9ED45Ew30O0jkkl
+```
+
+If XOR produces NUL, retain the original character. Encode the resulting string
+as UTF-8 and standard padded Base64. Fields are concatenated directly, without
+URL escaping. This is reversible obfuscation, not encryption.
+
+The mobile Wi-Fi-change path instead composes
+`t=1&s=<ssid-base64>&p=<password-base64>&d=<display-device-id>`. This device ID is
+distinct from the protocol's 20-byte wire UID. A separate cellular/APN variant
+adds `a` and `t` fields and is not implemented.
+
+OpenYI generates PNG files locally with the open source QRCoder library. It does
+not contact a service, invent binding tokens, reset the camera, or assert that QR
+generation completes pairing. Composition is covered by synthetic fixtures;
+camera acceptance, token expiry and account-free provisioning remain unverified.
+The existing working camera was deliberately not reset. Saved QR images contain
+recoverable network credentials and are never added to the source repository.
