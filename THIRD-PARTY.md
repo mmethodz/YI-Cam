@@ -1,6 +1,6 @@
 # Third-party components
 
-The original YI Local source is MIT licensed. Dependency licenses remain separate.
+The original OpenYI source is MIT licensed. Dependency licenses remain separate.
 No vendor client, APK, firmware, or decompiled source is distributed in this repository.
 
 | Component | Purpose | Upstream |

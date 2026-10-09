@@ -1,4 +1,4 @@
-"""YI Local: standalone Windows camera viewer and recording library."""
+"""OpenYI: standalone Windows camera viewer and recording library."""
 from dataclasses import asdict
 from datetime import datetime
 import json
@@ -28,7 +28,7 @@ INFRARED = {'Infrared · auto in darkness': 0, 'Colour · extra lighting': 1, 'A
 class RecorderApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title('YI Local — Camera & Recordings')
+        self.title('OpenYI — Camera & Recordings')
         self.geometry('1180x800')
         self.minsize(980, 720)
         self.configure(bg=BG)
@@ -96,7 +96,7 @@ class RecorderApp(tk.Tk):
         style.configure('Treeview.Heading', font=('Segoe UI', 10, 'bold'))
         head = tk.Frame(self, bg=BG)
         head.pack(fill='x', padx=24, pady=(18, 12))
-        self.label(head, 'YI Local', bg=BG, font=('Segoe UI', 25, 'bold')).pack(side='left')
+        self.label(head, 'OpenYI', bg=BG, font=('Segoe UI', 25, 'bold')).pack(side='left')
         self.label(head, 'Your camera. Your recordings.', bg=BG, fg=MUTED).pack(side='left', padx=20)
         self.connect_button = self.button(head, 'Connect camera', self.connect, style='Accent.TButton')
         self.connect_button.pack(side='right')

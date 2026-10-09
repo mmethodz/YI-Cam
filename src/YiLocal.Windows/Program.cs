@@ -6,7 +6,7 @@ static class Program
     static void Main()
     {
         using var single = new Mutex(true, "YILocal.Windows.SingleInstance", out bool first);
-        if (!first) { MessageBox.Show("YI Local is already running.", "YI Local"); return; }
+        if (!first) { MessageBox.Show("OpenYI is already running.", "OpenYI"); return; }
         ApplicationConfiguration.Initialize();
         Application.Run(new MainForm());
     }

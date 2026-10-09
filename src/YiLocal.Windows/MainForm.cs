@@ -19,7 +19,7 @@ internal sealed class Preferences
     }
 }
 
-public sealed class MainForm : Form
+public sealed partial class MainForm : Form
 {
     Preferences preferences = new();
     DeviceProfile? profile;
@@ -61,7 +61,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "YI Local — Camera & Recordings (Windows)";
+        Text = "OpenYI — Camera & Recordings (Windows)";
         Font = new Font("Segoe UI", 10); ClientSize = new Size(1180, 740); MinimumSize = new Size(1000, 650);
         StartPosition = FormStartPosition.CenterScreen;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
@@ -100,7 +100,7 @@ public sealed class MainForm : Form
     void Ui(Action action) { if (!IsDisposed && IsHandleCreated) try { BeginInvoke(action); } catch (InvalidOperationException) { } }
     async Task Guard(Func<Task> action)
     {
-        try { await action(); } catch (Exception e) { status.Text = e.Message; MessageBox.Show(this, e.Message, "YI Local", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        try { await action(); } catch (Exception e) { status.Text = e.Message; MessageBox.Show(this, e.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
     }
     void BuildLive()
     {
@@ -372,7 +372,7 @@ public sealed class MainForm : Form
         if (exporting) { status.Text = "An export is running. Wait for it to finish before closing."; return; }
         closing = true; Enabled = false; status.Text = "Saving recording and disconnecting…";
         try { if (session is not null) await session.DisposeAsync(); }
-        catch (Exception error) { MessageBox.Show(this, "The recording could not be finalized: " + error.Message, "YI Local", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        catch (Exception error) { MessageBox.Show(this, "The recording could not be finalized: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {
             timer.Stop(); timer.Dispose(); ClearPreview(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();

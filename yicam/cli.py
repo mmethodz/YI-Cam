@@ -13,7 +13,7 @@ from .video import FrameClock, FrameOrder
 
 
 def main():
-    parser = argparse.ArgumentParser(description='YI Local: use the saved pairing key to operate your LAN camera.')
+    parser = argparse.ArgumentParser(description='OpenYI: use the saved pairing key to operate your LAN camera.')
     sub = parser.add_subparsers(dest='action', required=True)
     sub.add_parser('status')
     record = sub.add_parser('record')

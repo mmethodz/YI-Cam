@@ -1,10 +1,15 @@
-# YI Local
+# OpenYI
 
 An independent, open source LAN viewer and recorder for supported **YI IoT** cameras.
 Keep your recordings on your own disk and use the camera's controls without a
 vendor account login during normal operation.
 
-![YI Local Windows app showing live video, local recording, and camera controls](assets/screenshot-1.png)
+![OpenYI Windows app showing live video, local recording, and camera controls (earlier branding)](assets/screenshot-1.png)
+
+Previously called YI Local. The repository remains **YI-Cam**. Existing profile,
+recording, database, executable and launcher paths retain their original names
+for compatibility, including existing Windows Firewall allowances. The verified
+pre-enhancement version is tagged `baseline-yi-local-0.1`.
 
 **Native C# / WinForms is the Windows application. Python remains the protocol
 prototype and portable reference.** The Windows application does not run Python,
@@ -19,7 +24,7 @@ audio, and native 4K capture are not implemented.
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 2. Run **Build Windows.cmd**, then **Start Windows.cmd**.
-3. Open the camera's live view in the already paired YI IoT PC app. In YI Local's
+3. Open the camera's live view in the already paired YI IoT PC app. In OpenYI's
    **Camera setup**, enter the camera's LAN address and click **Import from running
    YI IoT**. This verifies and saves the key, then connects. You can also import an
    existing `.dpapi` profile under the same Windows account or enter a known key.
