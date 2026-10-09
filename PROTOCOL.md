@@ -289,3 +289,10 @@ authenticated local command/stream availability, and any cloud binding result
 separately. Otherwise a Wi-Fi success can be mistaken for account binding, or a
 region error for a token signature rejection. Do not reset the sole working
 camera just to fill this matrix without an agreed recovery procedure.
+
+## Local motion events
+
+See [the motion investigation](docs/MOTION.md) for the verified alert-history
+wire layout, negative observations, related-firmware event coalescing and the
+remaining physical tests. Alert history is not qualified as continuous motion
+state; tracking readback must not be substituted for detection.

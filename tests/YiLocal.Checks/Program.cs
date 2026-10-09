@@ -89,6 +89,10 @@ if (args.Length > 0 && args[0] == "--live")
 }
 
 await PairingChecks.RunAsync();
+Check(CameraAlert.Parse(new byte[4]).Count == 0, "Empty alert history rejected.");
+Check(CameraAlert.Parse(Wire.Join(Wire.U32(1), Wire.U32(1), Wire.U32(100), Wire.U32(6))).Single() == new CameraAlert(1, 100, 6), "Alert history fields differ.");
+Reject(() => CameraAlert.Parse(Wire.U32(1)), "Truncated alert history accepted.");
+Reject(() => CameraAlert.Parse(Wire.U32(uint.MaxValue)), "Unbounded alert count accepted.");
 Reject(() => new RecordingOptions(FramesPerSecond: 1).Validate(), "Original stream silently discarded source frames.");
 Reject(() => new RecordingOptions(RecordingEncoding.Balanced, double.NaN).Validate(), "Non-finite capture rate accepted.");
 Reject(() => new RecordingOptions(RecordingEncoding.Balanced, Mode: CaptureMode.Timelapse).Validate(), "Timelapse without a capture rate accepted.");

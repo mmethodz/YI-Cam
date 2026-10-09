@@ -264,6 +264,12 @@ public sealed class CameraClient : IDisposable
     }
 
     public async Task<string> FirmwareAsync() => Encoding.ASCII.GetString((await CommandAsync(0x1300, response: 0x1301))!.Data).TrimEnd('\0');
+    public async Task<IReadOnlyList<CameraAlert>> AlertHistoryAsync(uint from, uint to, CancellationToken cancellation = default)
+    {
+        if (to < from) throw new ArgumentException("Alert time range is reversed.");
+        var reply = await CommandAsync(0x5c06, Wire.Join(new byte[4], Wire.U32(from), Wire.U32(to)), 0x5c07, cancellation);
+        return CameraAlert.Parse(reply!.Data);
+    }
     public async Task<CameraSettings> SettingsAsync()
     {
         var data = (await CommandAsync(0x0330, new byte[4], 0x0331))!.Data;
