@@ -4,6 +4,8 @@ An independent, open source LAN viewer and recorder for supported **YI IoT** cam
 Keep your recordings on your own disk and use the camera's controls without a
 vendor account login during normal operation.
 
+![YI Local Windows app showing live video, local recording, and camera controls](assets/screenshot-1.png)
+
 **Native C# / WinForms is the Windows application. Python remains the protocol
 prototype and portable reference.** The Windows application does not run Python,
 BlueStacks, or the vendor client in the background.
