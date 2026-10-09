@@ -5,11 +5,14 @@ public sealed class CameraSession : IAsyncDisposable
 {
     readonly DeviceProfile profile;
     readonly object recordLock = new();
+    readonly SnapshotBuffer snapshots = new();
     readonly CancellationTokenSource stop = new();
     Task? run;
     SegmentRecorder? recorder;
     string? recordFolder;
     StoragePolicy policy = new();
+    RecordingOptions recordingOptions = new();
+    string? recordingFfmpeg;
     bool recording;
     byte quality = 1;
     public CameraClient? Client { get; private set; }
@@ -19,6 +22,7 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action<VideoFrame, long, int>? Frame;
     public event Action<bool>? RecordingChanged;
     public event Action? PairingRejected;
+    public VideoSnapshot Snapshot() => snapshots.Take();
     public CameraSession(DeviceProfile profile) { this.profile = profile; }
     public void Start() { if (run is not null) throw new InvalidOperationException(); run = Task.Run(RunAsync); }
     public async Task SetQualityAsync(byte value)
@@ -26,23 +30,28 @@ public sealed class CameraSession : IAsyncDisposable
         if (value > 2) throw new ArgumentOutOfRangeException(nameof(value));
         await (Client ?? throw new IOException("Camera is disconnected.")).QualityAsync(value); quality = value;
     }
-    public void StartRecording(string folder, StoragePolicy selectedPolicy)
+    public void StartRecording(string folder, StoragePolicy selectedPolicy, RecordingOptions? options = null, string? ffmpeg = null)
     {
         lock (recordLock)
         {
             if (recording) return;
-            recorder = new SegmentRecorder(folder, selectedPolicy); recordFolder = folder; policy = selectedPolicy; recording = true;
+            recordingOptions = options ?? new(); recordingFfmpeg = ffmpeg;
+            recorder = new SegmentRecorder(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
+            recordFolder = folder; policy = selectedPolicy;
+            // Queue the initial status before incoming frames can report an opened clip.
+            Status?.Invoke("Recording armed; waiting for the next keyframe."); recording = true;
         }
-        RecordingChanged?.Invoke(true); Status?.Invoke("Recording armed; waiting for the next keyframe.");
+        RecordingChanged?.Invoke(true);
     }
     public void StopRecording()
     {
+        SegmentRecorder? closing;
         lock (recordLock)
         {
-            recording = false;
-            try { recorder?.Dispose(); } finally { recorder = null; }
+            recording = false; closing = recorder; recorder = null;
         }
-        RecordingChanged?.Invoke(false);
+        try { closing?.Dispose(); }
+        finally { RecordingChanged?.Invoke(false); }
     }
     void CloseSegment()
     {
@@ -70,15 +79,16 @@ public sealed class CameraSession : IAsyncDisposable
                     foreach (var frame in order.Feed(input))
                     {
                         long time = clock.Time(frame);
+                        snapshots.Add(frame, time, order.Epoch);
                         lock (recordLock)
                         {
                             if (recording)
                                 try
                                 {
-                                    recorder ??= new SegmentRecorder(recordFolder!, policy);
+                                    recorder ??= new SegmentRecorder(recordFolder!, policy, recordingOptions, recordingFfmpeg, profile.Name);
                                     bool opening = recorder.Current is null;
                                     recorder.Write(frame, time, order.Epoch);
-                                    if (opening && recorder.Current is not null) Status?.Invoke("Recording original video to local disk.");
+                                    if (opening && recorder.Current is not null) Status?.Invoke("Recording to local disk · " + recordingOptions.Label + ".");
                                 }
                                 catch (Exception e)
                                 {
@@ -103,6 +113,7 @@ public sealed class CameraSession : IAsyncDisposable
             finally
             {
                 Client = null;
+                snapshots.Clear();
                 Settings?.Invoke(null);
                 try { CloseSegment(); }
                 catch (Exception e)

@@ -78,6 +78,29 @@ stream, not a claimed hardware maximum.
 
 ## Local recording and storage
 
+The **Capture options** tab keeps **Original stream** as the default: native,
+lossless remuxing with the camera's original frames and timing. Optional FFmpeg
+H.264 profiles use CRF 28 (balanced) or CRF 32 (smaller). With either encoding
+profile, select a recording rate from 0.5 to 120 fps, capped by available source
+pictures, or leave it at source rate. Presets include 5, 1 and 0.5 fps. These
+settings do not reduce the live preview rate. Re-encoding uses CPU and loses some
+detail; a remux alone does not substantially shrink the encoded stream.
+
+**Continuous / low-rate** preserves real elapsed time. **Timelapse** plays selected
+pictures at 25 fps and deliberately shortens playback. The final low-rate picture
+is held for one selected interval, so playback can extend by up to that interval
+beyond the last captured picture. Capture duration is stored separately and is
+used for storage estimates. Audio is not included in these profiles yet.
+
+**Save snapshot** saves a full source-resolution PNG from the current decoded
+camera GOP, rather than the scaled preview. It requires FFmpeg. Snapshots are
+explicit exports to a chosen file and are outside automatic recording recycling.
+
+The capture tab estimates MB/hour and GB/day from recent completed recordings
+with the saved profile. Scene detail, noise, motion and keyframes affect the
+result; lower frame rate alone does not guarantee a smaller output. Measured
+examples and their limits are in [recording measurements](docs/RECORDING.md).
+
 - Default location: your **Videos / YI Local** folder, outside the source repository.
 - Video-only fragmented MP4, using camera timestamps for correct playback speed.
 - Default policy: 10-minute clips, 20 GiB recording budget, 2 GiB of free disk space.

@@ -22,3 +22,4 @@ jobs:
       - if: runner.os == 'Windows'
         run: dotnet build YiLocal.sln -c Release --nologo
       - run: python scripts/check_media_integration.py
+      - run: python scripts/check_recording_profiles.py

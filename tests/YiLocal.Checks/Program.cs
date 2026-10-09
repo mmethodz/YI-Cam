@@ -24,21 +24,33 @@ if (args.Length > 0 && args[0] == "--inspect-import")
     return;
 }
 
-if (args.Length > 0 && args[0] == "--mux-fixture")
+if (args.Length > 0 && args[0] is "--mux-fixture" or "--encode-fixture" or "--measure-recording")
 {
-    if (args.Length != 3) throw new ArgumentException("--mux-fixture <160x90-annex-b-with-AUD> <output-folder>");
+    if (args.Length != 3 && args.Length != 10 && args.Length != 11) throw new ArgumentException("--mux-fixture <160x90-annex-b-with-AUD> <output-folder> OR --encode-fixture <annex-b-with-AUD> <output-folder> <ffmpeg> <Original|Balanced|Small> <fps|source> <Continuous|Timelapse> <width> <height> <frame-ms> [timestamp-array.json]");
+    var options = args.Length == 3 ? new RecordingOptions() : new(Enum.Parse<RecordingEncoding>(args[4]),
+        args[5] == "source" ? null : double.Parse(args[5], System.Globalization.CultureInfo.InvariantCulture), Enum.Parse<CaptureMode>(args[6]));
+    int width = args.Length == 3 ? 160 : int.Parse(args[7]), height = args.Length == 3 ? 90 : int.Parse(args[8]);
+    int step = args.Length == 3 ? 67 : int.Parse(args[9]);
+    var times = args.Length == 11 ? System.Text.Json.JsonSerializer.Deserialize<long[]>(File.ReadAllText(args[10])) : null;
+    var snapshots = new SnapshotBuffer();
     var units = FragmentedMp4.Nals(File.ReadAllBytes(args[1])); var access = new List<byte[]>(); ushort nr = 0;
-    using var recorder = new SegmentRecorder(args[2], new(SegmentMinutes: 0.1));
+    using var recorder = new SegmentRecorder(args[2], new(SegmentMinutes: args[0] == "--measure-recording" ? 10 : 0.1), options, args.Length == 3 ? null : args[3], "Fixture camera");
     void Flush()
     {
         if (!access.Any(n => (n[0] & 31) is 1 or 5)) { access.Clear(); return; }
         var data = Wire.Join(access.Select(n => Wire.Join([0, 0, 0, 1], n)).ToArray());
-        recorder.Write(new(data, nr, 160, 90, 0, (uint)(nr * 67), access.Any(n => (n[0] & 31) == 5), 1, 78), nr * 67);
+        long time = times?[nr] ?? nr * step;
+        var frame = new VideoFrame(data, nr, width, height, 0, (uint)time, access.Any(n => (n[0] & 31) == 5), 1, 78);
+        recorder.Write(frame, time); snapshots.Add(frame, time, 0);
+        if (options.Encoding != RecordingEncoding.Original) Thread.Sleep(20); // Pace the accelerated source instead of overflowing a deliberately bounded live queue.
         nr++; access.Clear();
     }
     foreach (var nal in units) { if ((nal[0] & 31) == 9) Flush(); access.Add(nal); }
     Flush(); Check(recorder.Frames >= 100, "Too few fixture frames.");
-    Console.WriteLine($"Wrote {recorder.Frames} fixture frames with 67 ms camera timestamps."); return;
+    var snapshot = snapshots.Take();
+    File.WriteAllBytes(Path.Combine(args[2], "snapshot-input.mp4"), snapshot.ToMp4());
+    File.WriteAllText(Path.Combine(args[2], "snapshot-index.txt"), (snapshot.Pictures.Count - 1).ToString());
+    Console.WriteLine($"Wrote {recorder.Frames} source frames with {step} ms camera timestamps ({options.Label})."); return;
 }
 
 if (args.Length > 0 && args[0] == "--live")
@@ -77,6 +89,9 @@ if (args.Length > 0 && args[0] == "--live")
 }
 
 await PairingChecks.RunAsync();
+Reject(() => new RecordingOptions(FramesPerSecond: 1).Validate(), "Original stream silently discarded source frames.");
+Reject(() => new RecordingOptions(RecordingEncoding.Balanced, double.NaN).Validate(), "Non-finite capture rate accepted.");
+Reject(() => new RecordingOptions(RecordingEncoding.Balanced, Mode: CaptureMode.Timelapse).Validate(), "Timelapse without a capture rate accepted.");
 Check(QrProvisioning.Compose("Test", "89", "TEST") == "b=TEST&s=VGVzdA==&p=ODk=", "QR zero-XOR fallback or Base64 differs from observed format.");
 Check(QrProvisioning.Compose("Test", "", null, true, "TESTID") == "t=1&s=VGVzdA==&p=&d=TESTID", "Wi-Fi-change QR format differs.");
 Reject(() => QrProvisioning.Compose("Test", "", null, true), "Wi-Fi-change QR omitted the target device ID.");
@@ -101,6 +116,14 @@ var timeTest = new FrameClock();
 Check(timeTest.Time(Frame(1, true, uint.MaxValue - 10)) == 0 && timeTest.Time(Frame(2, ms: 55)) == 66, "Timestamp wrap failed.");
 var nals = FragmentedMp4.Nals([0, 0, 0, 1, 0x67, 2, 0, 0, 1, 0x68, 3]);
 Check(nals.Count == 2 && nals[0].SequenceEqual(new byte[] { 0x67, 2 }), "Annex-B parsing failed.");
+var snapshotCache = new SnapshotBuffer(maximumFrames: 2);
+var snapshotKey = Frame(1, true) with { Data = [0, 0, 0, 1, 0x67, 0x42, 0, 0x1e, 0, 0, 0, 1, 0x68, 1, 0, 0, 0, 1, 0x65, 1] };
+snapshotCache.Add(Frame(0), 0, 0); Reject(() => snapshotCache.Take(), "Snapshot accepted a P frame without an IDR.");
+snapshotCache.Add(snapshotKey, 1, 0); snapshotCache.Add(Frame(2), 68, 0);
+Check(snapshotCache.Take().Pictures.Count == 2, "Snapshot lost a valid GOP.");
+snapshotCache.Add(Frame(3), 135, 0); Reject(() => snapshotCache.Take(), "Snapshot cache exceeded its bound.");
+snapshotCache.Add(snapshotKey, 202, 1); Check(snapshotCache.Take().Pictures.Count == 1, "Snapshot did not recover at a new keyframe.");
+snapshotCache.Clear(); Reject(() => snapshotCache.Take(), "Snapshot survived disconnection.");
 string folder = Path.Combine(Path.GetTempPath(), "yi-local-checks-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(folder);
 try

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
+using YiLocal.Core;
 
 namespace YiLocal.Windows;
 
@@ -38,6 +39,29 @@ internal static class MediaTools
             using var registration = cancellation.Register(() => { try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } });
             await process.WaitForExitAsync(cancellation);
             if (process.ExitCode != 0) throw new IOException("4K export failed: " + await error);
+            File.Move(temporary, output, false);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+    public static async Task SaveSnapshot(string executable, VideoSnapshot snapshot, string output, CancellationToken cancellation)
+    {
+        string temporary = output + "." + Guid.NewGuid().ToString("N") + ".partial.png";
+        var info = StartInfo(executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-f", "mp4", "-i", "pipe:0",
+            "-map", "0:v:0", "-vf", $"select=eq(n\\,{snapshot.Pictures.Count - 1})", "-frames:v", "1", "-fps_mode", "passthrough", temporary);
+        info.RedirectStandardInput = true;
+        using var process = new Process { StartInfo = info };
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation); timeout.CancelAfter(TimeSpan.FromSeconds(15));
+        try
+        {
+            process.Start(); var errors = process.StandardError.ReadToEndAsync(timeout.Token);
+            using var registration = timeout.Token.Register(() => { try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } });
+            await Task.Run(async () =>
+            {
+                await process.StandardInput.BaseStream.WriteAsync(snapshot.ToMp4(), timeout.Token);
+                process.StandardInput.Close();
+            }, timeout.Token);
+            await process.WaitForExitAsync(timeout.Token);
+            if (process.ExitCode != 0 || !File.Exists(temporary)) throw new IOException("Snapshot failed: " + await errors);
             File.Move(temporary, output, false);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
