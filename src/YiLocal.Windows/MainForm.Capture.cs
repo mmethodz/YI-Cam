@@ -8,6 +8,7 @@ public sealed partial class MainForm
     readonly ComboBox recordingMode = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 340 };
     readonly CheckBox limitRecordingRate = new() { Text = "Limit recording capture rate", AutoSize = true };
     readonly NumericUpDown recordingRate = Number(0.5m, 120, 5, 2);
+    readonly CheckBox recordingAudio = new() { Text = "Include camera microphone audio (AAC)", AutoSize = true };
     readonly Label recordingEstimate = Label("Storage estimates appear after a completed recording.");
     bool savingSnapshot;
 
@@ -50,6 +51,8 @@ public sealed partial class MainForm
             presets.Controls.Add(Button($"{fps:0.#} fps", () => { if (recordingProfile.SelectedIndex == 0) recordingProfile.SelectedIndex = 1; limitRecordingRate.Checked = true; recordingRate.Value = fps; }));
         body.Controls.Add(presets);
         body.Controls.Add(Label("Frame selection affects saved recordings only. Live preview and camera stream quality stay independent. Low-rate recordings preserve elapsed time; timelapse deliberately plays faster."));
+        body.Controls.Add(recordingAudio);
+        body.Controls.Add(Label("Audio is off by default. Original and encoded real-time profiles retain camera-timestamped AAC; accelerated timelapse has no audio."));
         body.Controls.Add(Button("Save capture settings", () => _ = Guard(() => { SaveCaptureOptions(); status.Text = "Capture settings saved for the next recording."; return Task.CompletedTask; })));
         body.Controls.Add(Button("Refresh measured storage estimate", UpdateStorageEstimate));
         body.Controls.Add(recordingEstimate);
@@ -63,6 +66,7 @@ public sealed partial class MainForm
         recordingMode.SelectedIndex = (int)preferences.Recording.Mode;
         limitRecordingRate.Checked = preferences.Recording.FramesPerSecond is not null;
         recordingRate.Value = (decimal)(preferences.Recording.FramesPerSecond ?? 5);
+        recordingAudio.Checked = preferences.Recording.IncludeAudio;
         UpdateCaptureControls();
     }
     void UpdateCaptureControls()
@@ -72,13 +76,15 @@ public sealed partial class MainForm
         if (!encode) { recordingMode.SelectedIndex = 0; limitRecordingRate.Checked = false; }
         else if (recordingMode.SelectedIndex == 1) limitRecordingRate.Checked = true;
         recordingRate.Enabled = encode && limitRecordingRate.Checked;
+        recordingAudio.Enabled = recordingMode.SelectedIndex != 1;
+        if (!recordingAudio.Enabled) recordingAudio.Checked = false;
     }
     void SaveCaptureOptions()
     {
         if (session?.Recording == true) throw new InvalidOperationException("Stop recording before changing the capture profile.");
         UpdateCaptureControls();
         var selected = new RecordingOptions((RecordingEncoding)recordingProfile.SelectedIndex,
-            limitRecordingRate.Checked ? (double)recordingRate.Value : null, (CaptureMode)recordingMode.SelectedIndex);
+            limitRecordingRate.Checked ? (double)recordingRate.Value : null, (CaptureMode)recordingMode.SelectedIndex, recordingAudio.Checked);
         selected.Validate();
         if (selected.Encoding != RecordingEncoding.Original && !File.Exists(ffmpeg.Text.Trim()))
             throw new IOException("Choose an FFmpeg executable in Storage for encoding profiles.");
@@ -93,6 +99,7 @@ public sealed partial class MainForm
             var matching = library.Clips().Where(c => c.Complete && c.Exists &&
                 (c.Metadata?.Profile ?? "Original stream") == preferences.Recording.Label &&
                 c.Metadata?.TargetFps == preferences.Recording.FramesPerSecond &&
+                (c.Metadata?.Audio is not null) == preferences.Recording.IncludeAudio &&
                 (c.Metadata?.Kind == "Timelapse") == (preferences.Recording.Mode == CaptureMode.Timelapse))
                 .Take(10).ToArray();
             double seconds = matching.Sum(c => c.Metadata is { CaptureDuration: > 0 } m ? m.CaptureDuration : c.Duration);

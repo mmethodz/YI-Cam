@@ -49,20 +49,36 @@ public sealed class FrameOrder
 
 public sealed class FrameClock
 {
+    readonly object gate = new();
     ulong? previous;
     bool? uptime;
     long elapsed;
     public long Time(VideoFrame frame)
     {
-        uptime ??= frame.Milliseconds > 999;
-        ulong value = uptime.Value ? frame.Milliseconds : (ulong)frame.Seconds * 1000 + frame.Milliseconds;
-        if (previous.HasValue)
+        lock (gate)
         {
-            long delta = uptime.Value ? (uint)(value - previous.Value) : (long)value - (long)previous.Value;
-            if (delta is < 0 or > 30000) throw new InvalidDataException("Camera timestamp jumped; reconnecting is required.");
-            elapsed += Math.Max(1, delta);
+            uptime ??= frame.Milliseconds > 999;
+            ulong value = uptime.Value ? frame.Milliseconds : (ulong)frame.Seconds * 1000 + frame.Milliseconds;
+            if (previous.HasValue)
+            {
+                long delta = uptime.Value ? (uint)(value - previous.Value) : (long)value - (long)previous.Value;
+                if (delta is < 0 or > 30000) throw new InvalidDataException("Camera timestamp jumped; reconnecting is required.");
+                elapsed += Math.Max(1, delta);
+            }
+            previous = value;
+            return elapsed;
         }
-        previous = value;
-        return elapsed;
+    }
+    /// <summary>Map audio onto the video clock without advancing or perturbing that clock.</summary>
+    public long? AudioTime(AudioFrame frame)
+    {
+        lock (gate)
+        {
+            if (previous is null) return null;
+            long delta = uptime == true ? unchecked((int)(frame.Milliseconds - (uint)previous.Value))
+                : checked((long)frame.Seconds * 1000 + frame.Milliseconds - (long)previous.Value);
+            if (Math.Abs(delta) > 30000) throw new InvalidDataException("Audio and video clocks diverged.");
+            return elapsed + delta;
+        }
     }
 }

@@ -115,6 +115,7 @@ public sealed partial class MainForm : Form
         var side = Column(); grid.Controls.Add(side, 1, 0); grid.SetRowSpan(side, 2); page.Controls.Add(grid);
         side.Controls.Add(connect); side.Controls.Add(record); side.Controls.Add(recordState); side.Controls.Add(cameraControls);
         side.Controls.Add(Button("Save snapshot…", () => _ = Guard(SaveSnapshotAsync)));
+        BuildAudio(side);
         connect.Click += async (_, _) => await Guard(ToggleConnection);
         record.Click += async (_, _) => await Guard(async () =>
         {
@@ -183,7 +184,7 @@ public sealed partial class MainForm : Form
             session.Settings += settings =>
             {
                 if (session != active) return;
-                ClearPreview(); firstTime = 0; frameCount = 0;
+                ClearPreview(); ClearAudio(); firstTime = 0; frameCount = 0;
                 Ui(() =>
                 {
                     if (session != active) return;
@@ -198,7 +199,7 @@ public sealed partial class MainForm : Form
                 recordState.ForeColor = recordingActive ? Color.Firebrick : Color.DarkSlateGray;
                 SetThreadExecutionState(recordingActive ? 0x80000001u : 0x80000000u);
             });
-            session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
+            session.Audio += OnAudio; session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
         }
         finally { connect.Enabled = !importing; }
     }
@@ -208,7 +209,7 @@ public sealed partial class MainForm : Form
         try { if (previous is not null) await previous.DisposeAsync(); }
         finally
         {
-            ClearPreview(); cameraControls.Enabled = record.Enabled = false;
+            ClearPreview(); ClearAudio(); listen.Checked = false; cameraControls.Enabled = record.Enabled = false;
             connect.Text = "Connect camera"; record.Text = "Start recording";
             recordState.Text = "Recording is off"; recordState.ForeColor = Color.DarkSlateGray;
             SetThreadExecutionState(0x80000000);
@@ -345,7 +346,7 @@ public sealed partial class MainForm : Form
             await UpdatePairingAsync(_ => Task.FromResult(DeviceProfile.Load(dialog.FileName)));
         })));
         body.Controls.Add(Label($"Direct import supports YI IoT PC {VendorClientImporter.SupportedVersion}. It reads the existing pairing without changing the vendor app. After a successful import you can close YI IoT. QR generation is available in the experimental Setup QR tab."));
-        body.Controls.Add(Label("Compatibility: initially tested on the Anyka-family YI IoT camera reporting hardware 253. Audio and native 4K capture are not implemented."));
+        body.Controls.Add(Label("Compatibility: initially tested on the Anyka-family YI IoT camera reporting hardware 253. AAC microphone audio is optional. Native 4K capture is not verified."));
     }
     async Task UpdatePairingAsync(Func<CancellationToken, Task<DeviceProfile>> read)
     {
@@ -388,7 +389,7 @@ public sealed partial class MainForm : Form
         catch (Exception error) { MessageBox.Show(this, "The recording could not be finalized: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {
-            timer.Stop(); timer.Dispose(); ClearPreview(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();
+            timer.Stop(); timer.Dispose(); ClearPreview(); ClearAudio(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();
         }
     }
 }

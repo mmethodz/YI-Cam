@@ -31,8 +31,8 @@ internal static class MediaTools
         // A unique temporary output prevents overwriting a file created while the export runs.
         string temporary = output + "." + Guid.NewGuid().ToString("N") + ".partial.mp4";
         using var process = new Process { StartInfo = StartInfo(executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-i", input,
-            "-map", "0:v:0", "-vf", "scale=3840:2160:flags=lanczos", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-            "-fps_mode", "passthrough", "-enc_time_base", "1:1000", "-an", "-movflags", "+faststart", temporary) };
+            "-map", "0:v:0", "-map", "0:a:0?", "-vf", "scale=3840:2160:flags=lanczos", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+            "-fps_mode", "passthrough", "-enc_time_base", "1:1000", "-c:a", "copy", "-movflags", "+faststart", temporary) };
         try
         {
             process.Start(); var error = process.StandardError.ReadToEndAsync(cancellation);

@@ -10,6 +10,8 @@ public sealed class FragmentedMp4 : IDisposable
     (byte[] Data, long Time, bool Key)? pending;
     uint sequence;
     int lastDuration = 67;
+    readonly AacConfiguration? audio;
+    long lastAudioTime = -1;
     public long DurationMilliseconds { get; private set; }
     public long Frames { get; private set; }
 
@@ -42,8 +44,8 @@ public sealed class FragmentedMp4 : IDisposable
     static byte[] U64(ulong n) => Wire.Join(Wire.U32((uint)(n >> 32)), Wire.U32((uint)n));
     static byte[] Matrix => Wire.Join(Wire.U32(0x10000), new byte[12], Wire.U32(0x10000), new byte[12], Wire.U32(0x40000000));
 
-    public FragmentedMp4(string path, int width, int height, byte[] sps, byte[] pps)
-        : this(OpenFile(path, width, height, sps, pps), width, height, sps, pps) { }
+    public FragmentedMp4(string path, int width, int height, byte[] sps, byte[] pps, AacConfiguration? audio = null)
+        : this(OpenFile(path, width, height, sps, pps), width, height, sps, pps, audio) { }
 
     static Stream OpenFile(string path, int width, int height, byte[] sps, byte[] pps)
     {
@@ -57,9 +59,10 @@ public sealed class FragmentedMp4 : IDisposable
     }
 
     /// <summary>Takes ownership of the stream. Used to feed timestamped fragments to an optional encoder.</summary>
-    public FragmentedMp4(Stream stream, int width, int height, byte[] sps, byte[] pps)
+    public FragmentedMp4(Stream stream, int width, int height, byte[] sps, byte[] pps, AacConfiguration? audio = null)
     {
         ValidateConfiguration(width, height, sps, pps);
+        audio?.Validate(); this.audio = audio;
         output = stream;
         var avcc = B("avcC", [1, sps[1], sps[2], sps[3], 255, 225], Wire.U16(checked((ushort)sps.Length)), sps,
             [1], Wire.U16(checked((ushort)pps.Length)), pps);
@@ -74,14 +77,46 @@ public sealed class FragmentedMp4 : IDisposable
         var trak = B("trak", F("tkhd", 7, new byte[8], Wire.U32(1), new byte[16], new byte[8], Matrix,
             Wire.U32((uint)width << 16), Wire.U32((uint)height << 16)), mdia);
         var moov = B("moov", F("mvhd", 0, new byte[8], Wire.U32(1000), new byte[4], Wire.U32(0x10000),
-            Wire.U16(0x100), new byte[10], Matrix, new byte[24], Wire.U32(2)), trak,
-            B("mvex", F("trex", 0, Wire.U32(1), Wire.U32(1), new byte[12])));
+            Wire.U16(0x100), new byte[10], Matrix, new byte[24], Wire.U32(audio is null ? 2u : 3u)), trak,
+            audio is null ? [] : AudioTrack(audio),
+            B("mvex", F("trex", 0, Wire.U32(1), Wire.U32(1), new byte[12]),
+                audio is null ? [] : F("trex", 0, Wire.U32(2), Wire.U32(1), Wire.U32(1024), new byte[8])));
         try
         {
             output.Write(B("ftyp", Encoding.ASCII.GetBytes("isom"), Wire.U32(512), Encoding.ASCII.GetBytes("isomiso6avc1mp41")));
             output.Write(moov); output.Flush();
         }
         catch { output.Dispose(); throw; }
+    }
+
+    static byte[] AudioTrack(AacConfiguration format)
+    {
+        // ISO/IEC 14496 descriptors. AAC-LC AudioSpecificConfig is two bytes.
+        static byte[] D(byte tag, byte[] data) => Wire.Join([tag, checked((byte)data.Length)], data);
+        var config = D(4, Wire.Join([0x40, 0x15], new byte[11], D(5, format.AudioSpecificConfig)));
+        var esds = F("esds", 0, D(3, Wire.Join(Wire.U16(2), [0], config, D(6, [2]))));
+        var sample = B("mp4a", new byte[6], Wire.U16(1), new byte[8], Wire.U16((ushort)format.Channels), Wire.U16(16),
+            new byte[4], Wire.U32((uint)format.SampleRate << 16), esds);
+        var stbl = B("stbl", F("stsd", 0, Wire.U32(1), sample), F("stts", 0, new byte[4]), F("stsc", 0, new byte[4]),
+            F("stsz", 0, new byte[8]), F("stco", 0, new byte[4]));
+        var mdia = B("mdia", F("mdhd", 0, new byte[8], Wire.U32((uint)format.SampleRate), new byte[4], Wire.U16(0x55c4), new byte[2]),
+            F("hdlr", 0, new byte[4], Encoding.ASCII.GetBytes("soun"), new byte[12], Encoding.ASCII.GetBytes("OpenYI audio\0")),
+            B("minf", F("smhd", 0, new byte[4]), B("dinf", F("dref", 0, Wire.U32(1), F("url ", 1))), stbl));
+        return B("trak", F("tkhd", 7, new byte[8], Wire.U32(2), new byte[16], new byte[4], Wire.U16(0x100), new byte[2], Matrix, new byte[8]), mdia);
+    }
+
+    public void WriteAudio(byte[] adts, long milliseconds)
+    {
+        if (audio is null) throw new InvalidOperationException("This clip has no audio track.");
+        var (format, sample) = AacConfiguration.Parse(adts);
+        if (format != audio) throw new InvalidDataException("AAC configuration changed within the clip.");
+        if (milliseconds < 0 || milliseconds <= lastAudioTime) throw new InvalidDataException("Non-monotonic audio timestamps.");
+        long time = checked(milliseconds * format.SampleRate / 1000);
+        byte[] Fragment(uint offset) => B("moof", F("mfhd", 0, Wire.U32(sequence + 1)), B("traf",
+            F("tfhd", 0x020000, Wire.U32(2)), F("tfdt", 0x01000000, U64((ulong)time)),
+            F("trun", 0x000301, Wire.U32(1), Wire.U32(offset), Wire.U32(1024), Wire.U32((uint)sample.Length))));
+        var moof = Fragment(0); output.Write(Fragment((uint)moof.Length + 8)); output.Write(B("mdat", sample)); output.Flush();
+        sequence++; lastAudioTime = milliseconds;
     }
 
     public void Write(byte[] annexB, long milliseconds)

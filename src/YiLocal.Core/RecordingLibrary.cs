@@ -33,6 +33,7 @@ public sealed partial class RecordingLibrary : IDisposable
         Execute("CREATE TABLE IF NOT EXISTS clips (name TEXT PRIMARY KEY, started REAL NOT NULL, duration REAL DEFAULT 0, width INTEGER, height INTEGER, bytes INTEGER DEFAULT 0, complete INTEGER DEFAULT 0, protected INTEGER DEFAULT 0)");
         // Separate table leaves the existing Python catalogue schema and older readers intact.
         Execute("CREATE TABLE IF NOT EXISTS clip_details (name TEXT PRIMARY KEY, camera TEXT NOT NULL, profile TEXT NOT NULL, kind TEXT NOT NULL, target_fps REAL, capture_duration REAL DEFAULT 0, frames INTEGER DEFAULT 0)");
+        Execute("CREATE TABLE IF NOT EXISTS clip_audio (name TEXT PRIMARY KEY, description TEXT NOT NULL)");
     }
     void Execute(string sql, params (string, object)[] values)
     {
@@ -56,6 +57,8 @@ public sealed partial class RecordingLibrary : IDisposable
         if (metadata is not null)
             Execute("INSERT INTO clip_details(name,camera,profile,kind,target_fps) VALUES($n,$c,$p,$k,$f)",
                 ("$n", name), ("$c", metadata.Camera), ("$p", metadata.Profile), ("$k", metadata.Kind), ("$f", (object?)metadata.TargetFps ?? DBNull.Value));
+        if (metadata?.Audio is { } audio)
+            Execute("INSERT INTO clip_audio(name,description) VALUES($n,$d)", ("$n", name), ("$d", audio));
     }
     public void Finish(string name, double duration, double? captureDuration = null, long frames = 0)
     {
@@ -65,7 +68,7 @@ public sealed partial class RecordingLibrary : IDisposable
     }
     public List<Clip> Clips()
     {
-        using var cmd = connection.CreateCommand(); cmd.CommandText = "SELECT c.*,d.camera,d.profile,d.kind,d.target_fps,d.capture_duration,d.frames FROM clips c LEFT JOIN clip_details d ON c.name=d.name ORDER BY c.started DESC";
+        using var cmd = connection.CreateCommand(); cmd.CommandText = "SELECT c.*,d.camera,d.profile,d.kind,d.target_fps,d.capture_duration,d.frames,a.description FROM clips c LEFT JOIN clip_details d ON c.name=d.name LEFT JOIN clip_audio a ON c.name=a.name ORDER BY c.started DESC";
         using var reader = cmd.ExecuteReader(); var result = new List<Clip>();
         while (reader.Read())
         {
@@ -75,7 +78,7 @@ public sealed partial class RecordingLibrary : IDisposable
             result.Add(new(name, reader.GetDouble(1), reader.GetDouble(2), reader.GetInt32(3), reader.GetInt32(4),
                 size, reader.GetInt32(6) != 0, reader.GetInt32(7) != 0, exists,
                 reader.IsDBNull(8) ? null : new(reader.GetString(8), reader.GetString(9), reader.GetString(10),
-                    reader.IsDBNull(11) ? null : reader.GetDouble(11), reader.GetDouble(12), reader.GetInt64(13))));
+                    reader.IsDBNull(11) ? null : reader.GetDouble(11), reader.GetDouble(12), reader.GetInt64(13), reader.IsDBNull(14) ? null : reader.GetString(14))));
         }
         return result;
     }
@@ -94,6 +97,7 @@ public sealed partial class RecordingLibrary : IDisposable
                 throw new InvalidOperationException("Only finished, unprotected recordings can be deleted.");
         File.Delete(ClipPath(name));
         cmd.CommandText = "DELETE FROM clip_details WHERE name=$n"; cmd.ExecuteNonQuery();
+        cmd.CommandText = "DELETE FROM clip_audio WHERE name=$n"; cmd.ExecuteNonQuery();
         cmd.CommandText = "DELETE FROM clips WHERE name=$n"; cmd.ExecuteNonQuery(); tx.Commit();
     }
     public int Enforce(StoragePolicy policy, string? active = null, long reserve = 1024 * 1024,
@@ -133,6 +137,10 @@ public sealed class SegmentRecorder : IDisposable
     string? current;
     long started, lastCheck;
     string? epoch;
+    AacConfiguration? audioConfiguration;
+    ushort? audioSequence;
+    long? audioTime;
+    long? waitingForAudio;
     public long Frames { get; private set; }
     public int Recycled { get; private set; }
     public string? Current => current;
@@ -149,6 +157,12 @@ public sealed class SegmentRecorder : IDisposable
     }
     public void Write(VideoFrame frame, long time, int orderEpoch = 0)
     {
+        if (options.IncludeAudio && audioConfiguration is null)
+        {
+            waitingForAudio ??= Environment.TickCount64;
+            if (Environment.TickCount64 - waitingForAudio > 15000)
+                throw new IOException("No supported microphone audio arrived within 15 seconds. Disable audio to record video only.");
+        }
         foreach (var done in finishing.Where(task => task.IsCompleted).ToArray())
         { finishing.Remove(done); done.GetAwaiter().GetResult(); }
         string identity = $"{orderEpoch}:{frame.Generation}:{frame.Width}:{frame.Height}";
@@ -167,21 +181,39 @@ public sealed class SegmentRecorder : IDisposable
         if (current is not null && key && time - started >= policy.SegmentMinutes * 60000) CloseSegment();
         if (current is null)
         {
-            if (!key || !parameters.ContainsKey(7) || !parameters.ContainsKey(8)) return;
+            if (!key || !parameters.ContainsKey(7) || !parameters.ContainsKey(8) || options.IncludeAudio && audioConfiguration is null) return;
             Recycled += library.Enforce(policy);
             string name = $"YI_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_{frame.Width}x{frame.Height}_{Guid.NewGuid().ToString("N")[..6]}.mp4";
             if (finishing.Count > 1) throw new IOException("Recording encoders are not finishing in time.");
             if (options.Encoding == RecordingEncoding.Original)
-                writer = new(library.ClipPath(name), frame.Width, frame.Height, parameters[7], parameters[8]);
+                writer = new(library.ClipPath(name), frame.Width, frame.Height, parameters[7], parameters[8], options.IncludeAudio ? audioConfiguration : null);
             else
-                encoder = new(ffmpeg!, library.ClipPath(name), frame.Width, frame.Height, parameters[7], parameters[8], options);
+                encoder = new(ffmpeg!, library.ClipPath(name), frame.Width, frame.Height, parameters[7], parameters[8], options, options.IncludeAudio ? audioConfiguration : null);
             current = name; started = time;
             library.Register(name, frame.Width, frame.Height, new(cameraName, options.Label,
-                options.Mode == CaptureMode.Timelapse ? "Timelapse" : options.FramesPerSecond is not null ? "Low-rate" : "Continuous", options.FramesPerSecond));
+                options.Mode == CaptureMode.Timelapse ? "Timelapse" : options.FramesPerSecond is not null ? "Low-rate" : "Continuous", options.FramesPerSecond,
+                Audio: options.IncludeAudio ? $"AAC-LC {audioConfiguration!.SampleRate} Hz, {audioConfiguration.Channels} channel(s)" : null));
         }
         if (writer is not null) writer.Write(frame.Data, time - started);
         else encoder!.Write(frame.Data, time - started);
         Frames++;
+    }
+    public void WriteAudio(AudioFrame frame, long time)
+    {
+        if (!options.IncludeAudio) return;
+        if (frame.Codec != 138) throw new NotSupportedException($"Unsupported camera audio codec {frame.Codec}.");
+        var (configuration, _) = AacConfiguration.Parse(frame.Data);
+        if (audioConfiguration is not null && (audioConfiguration != configuration ||
+            audioSequence is { } prior && frame.Sequence != (ushort)(prior + 1) || audioTime is { } previous && time <= previous))
+            CloseSegment(); // Preserve a discontinuity rather than silently stretch audio over missing packets.
+        audioConfiguration = configuration; audioSequence = frame.Sequence; audioTime = time;
+        if (current is null || time < started) return;
+        if (writer is not null) writer.WriteAudio(frame.Data, time - started);
+        else encoder!.Write(frame.Data, time - started, audio: true);
+    }
+    public void ConnectionEnded()
+    {
+        CloseSegment(); audioConfiguration = null; audioSequence = null; audioTime = null; waitingForAudio = null;
     }
     public void CloseSegment()
     {

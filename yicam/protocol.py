@@ -94,6 +94,16 @@ class VideoFrame:
     milliseconds: int = 0
 
 
+@dataclass
+class AudioFrame:
+    data: bytes
+    sequence: int
+    seconds: int
+    milliseconds: int
+    codec: int
+    flags: int
+
+
 class Camera:
     def __init__(self, ip: str, password: str, uid: str | None = None):
         # A literal LAN address prevents accidentally sending pairing credentials
@@ -113,6 +123,7 @@ class Camera:
         self.running = False
         self.error = None
         self.frames = queue.Queue(maxsize=300)
+        self.audio_frames = queue.Queue(maxsize=128)
         self.replies = queue.Queue(maxsize=100)
         self.stats = Counter()
         self.channels = {i: Channel() for i in range(6)}
@@ -275,6 +286,16 @@ class Camera:
                     pass
             if not self.replies.full():
                 self.replies.put_nowait(reply)
+        elif kind == 2 and channel == 1 and len(body) >= 24:
+            data = body[24:]
+            encrypted = len(data) // 16 * 16
+            data = self._cipher.decrypt(data[:encrypted]) + data[encrypted:]
+            frame = AudioFrame(data, struct.unpack_from('>H', body, 6)[0], struct.unpack_from('>I', body, 12)[0],
+                               struct.unpack_from('>I', body, 20)[0], struct.unpack_from('>H', body)[0], body[2])
+            try:
+                self.audio_frames.put_nowait(frame)
+            except queue.Full:
+                raise ProtocolError('Audio processing fell behind; reconnect to recover safely.')
         elif kind == 1 and len(body) >= 24:
             codec, flags, live, online, generation, sequence, width, height, seconds = struct.unpack_from('>HBBBBHHHI', body)
             milliseconds = struct.unpack_from('>I', body, 20)[0]
@@ -299,6 +320,12 @@ class Camera:
     def start_video(self, resolution=1):
         self.generation = (self.generation + 1) & 0xff
         self.command(0x2345, bytes((self.generation, resolution, 1, 0)))
+
+    def start_audio(self):
+        self.command(0x0300, bytes(8))
+
+    def stop_audio(self):
+        self.command(0x0301, bytes(8))
 
     def set_resolution(self, mode):
         if mode not in (0, 1, 2, 3):

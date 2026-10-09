@@ -115,7 +115,7 @@ claimed to apply to all camera models.
 | `2345` | Start live video: use-count byte, resolution byte, `01 00` |
 | `1311 / 1312` | Resolution32, use-count32; HD=1, SD=2, auto=0 |
 | `1380 / 1381` | Light mode32: 0 infrared in darkness; 1 colour with extra lighting; 2 automatic lighting |
-| `400B / 400C` | Tracking32: 0 off, 1 motion tracking; verified by readback |
+| `400B / 400C` | Tracking32: 0 off, 1 motion tracking; readback verified and physical tracking confirmed by owner |
 | `4012` | Direction32, speed32=0; 1 up, 2 down, 3 left, 4 right |
 | `4013` | Stop movement; four zero bytes |
 
@@ -296,3 +296,12 @@ See [the motion investigation](docs/MOTION.md) for the verified alert-history
 wire layout, negative observations, related-firmware event coalescing and the
 remaining physical tests. Alert history is not qualified as continuous motion
 state; tracking readback must not be substituted for detection.
+
+## Microphone stream
+
+See [audio transport, codec and timing](docs/AUDIO.md) for the physically captured
+AAC format, channel/header layout, complete-block decryption, common-clock muxing
+and remaining synchronization tests. The inspected mobile paths are
+`TnpCamera.sendStartListeningCommand`, `ThreadRecvAudio`, `AVFrame` and
+`AntsUtil.decryptAudioFrame`; codec IDs from the separate legacy `TNP_Proto`
+class do not describe the observed stream.

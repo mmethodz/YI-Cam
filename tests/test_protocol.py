@@ -4,7 +4,8 @@ import hmac
 import struct
 import unittest
 
-from yicam.protocol import Channel, ProtocolError, VideoFrame, authentication
+from yicam.protocol import Camera, Channel, ProtocolError, VideoFrame, authentication
+from Crypto.Cipher import AES
 from yicam.video import FrameClock, FrameOrder
 
 
@@ -13,6 +14,21 @@ def frame(sequence, key=False, milliseconds=10000):
 
 
 class TransportTests(unittest.TestCase):
+    def test_audio_decrypts_complete_blocks_and_keeps_tail(self):
+        camera = Camera('127.0.0.1', '123456789012345')
+        clear = bytes(range(37))
+        encrypted = AES.new(b'1234567890123450', AES.MODE_ECB).encrypt(clear[:32]) + clear[32:]
+        header = bytearray(24)
+        struct.pack_into('>H', header, 0, 138)
+        header[2] = 27
+        struct.pack_into('>H', header, 6, 65535)
+        struct.pack_into('>I', header, 12, 123)
+        struct.pack_into('>I', header, 20, 100000)
+        camera._message(1, 2, 0, bytes(header) + encrypted)
+        audio = camera.audio_frames.get_nowait()
+        self.assertEqual(audio.data, clear)
+        self.assertEqual((audio.codec, audio.flags, audio.sequence, audio.seconds, audio.milliseconds), (138, 27, 65535, 123, 100000))
+
     def test_fragment_reordering_duplicates_and_wrap(self):
         channel = Channel()
         channel.expected = 65535

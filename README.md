@@ -17,8 +17,8 @@ BlueStacks, or the vendor client in the background.
 
 This is an early release, initially verified with one Anyka-family camera:
 hardware **253**, firmware **6.0.24.10_202401091113**. Other cameras using the
-same app name may use different hardware and protocols. Fresh QR provisioning,
-audio, and native 4K capture are not implemented.
+same app name may use different hardware and protocols. Account-free fresh
+provisioning and native 4K capture remain unverified.
 
 ## Windows application
 
@@ -62,7 +62,7 @@ Do not reset a working camera to test this feature.
 | SD | H.264, 640 × 360 |
 | Automatic quality | Camera-selected stream; dimensions may change |
 | Pan/tilt | Short direction commands followed by stop; left/right physically checked |
-| Motion tracking | Enable/disable commands and setting readback verified; following behavior not characterized |
+| Motion tracking | Commands/readback verified; the owner also confirms local physical tracking works |
 | Infrared | IR activates automatically in darkness; red LEDs and filter click physically confirmed |
 | Colour night vision | Extra visible lights activate; physically confirmed |
 | Automatic lighting | Mode accepted and read back; trigger behavior not yet characterized |
@@ -90,7 +90,10 @@ detail; a remux alone does not substantially shrink the encoded stream.
 pictures at 25 fps and deliberately shortens playback. The final low-rate picture
 is held for one selected interval, so playback can extend by up to that interval
 beyond the last captured picture. Capture duration is stored separately and is
-used for storage estimates. Audio is not included in these profiles yet.
+used for storage estimates. Optional **Include camera microphone audio** retains
+AAC with its camera timestamps in real-time profiles. Timelapse has no audio.
+**Listen to camera** enables local speaker monitoring using FFmpeg and Windows
+audio output. Both options start off; see [audio evidence and limits](docs/AUDIO.md).
 
 **Save snapshot** saves a full source-resolution PNG from the current decoded
 camera GOP, rather than the scaled preview. It requires FFmpeg. Snapshots are
@@ -102,7 +105,7 @@ result; lower frame rate alone does not guarantee a smaller output. Measured
 examples and their limits are in [recording measurements](docs/RECORDING.md).
 
 - Default location: your **Videos / YI Local** folder, outside the source repository.
-- Video-only fragmented MP4, using camera timestamps for correct playback speed.
+- Fragmented MP4 with optional AAC audio, using camera timestamps for playback timing.
 - Default policy: 10-minute clips, 20 GiB recording budget, 2 GiB of free disk space.
   Clip rotation waits for a keyframe, so the target length is approximate.
 - Recycling starts **off**. Recording stops when a configured space limit is reached.

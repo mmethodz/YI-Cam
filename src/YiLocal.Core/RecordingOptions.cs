@@ -6,7 +6,7 @@ public enum RecordingEncoding { Original, Balanced, Small }
 public enum CaptureMode { Continuous, Timelapse }
 
 public sealed record RecordingOptions(RecordingEncoding Encoding = RecordingEncoding.Original,
-    double? FramesPerSecond = null, CaptureMode Mode = CaptureMode.Continuous)
+    double? FramesPerSecond = null, CaptureMode Mode = CaptureMode.Continuous, bool IncludeAudio = false)
 {
     public string Label => Encoding switch
     {
@@ -23,6 +23,8 @@ public sealed record RecordingOptions(RecordingEncoding Encoding = RecordingEnco
             throw new ArgumentException("Original-stream recording preserves every source frame and its timing. Choose an H.264 profile for frame selection or timelapse.");
         if (Mode == CaptureMode.Timelapse && FramesPerSecond is null)
             throw new ArgumentException("Choose a capture rate for timelapse (played at 25 fps).");
+        if (Mode == CaptureMode.Timelapse && IncludeAudio)
+            throw new ArgumentException("Timelapse has accelerated time and cannot retain synchronized real-time audio.");
     }
     internal string? Filter
     {
@@ -42,6 +44,6 @@ public sealed record RecordingOptions(RecordingEncoding Encoding = RecordingEnco
 }
 
 public sealed record ClipMetadata(string Camera = "", string Profile = "Original stream", string Kind = "Continuous",
-    double? TargetFps = null, double CaptureDuration = 0, long Frames = 0);
+    double? TargetFps = null, double CaptureDuration = 0, long Frames = 0, string? Audio = null);
 
 internal sealed record EncodedClipResult(double Duration, double CaptureDuration, long Frames);

@@ -7,6 +7,8 @@ public sealed class CameraSession : IAsyncDisposable
     readonly object recordLock = new();
     readonly SnapshotBuffer snapshots = new();
     readonly CancellationTokenSource stop = new();
+    readonly SemaphoreSlim audioControl = new(1);
+    bool monitoring, audioStarted;
     Task? run;
     SegmentRecorder? recorder;
     string? recordFolder;
@@ -20,10 +22,29 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action<string>? Status;
     public event Action<CameraSettings?>? Settings;
     public event Action<VideoFrame, long, int>? Frame;
+    public event Action<AudioFrame, long>? Audio;
     public event Action<bool>? RecordingChanged;
     public event Action? PairingRejected;
     public VideoSnapshot Snapshot() => snapshots.Take();
     public CameraSession(DeviceProfile profile) { this.profile = profile; }
+    public async Task SetMonitoringAsync(bool enabled)
+    {
+        monitoring = enabled; await UpdateAudioAsync();
+    }
+    async Task UpdateAudioAsync()
+    {
+        await audioControl.WaitAsync();
+        try
+        {
+            if (Client is not { Connected: true } client) return;
+            bool wanted; lock (recordLock) wanted = monitoring || recording && recordingOptions.IncludeAudio;
+            if (wanted == audioStarted) return;
+            if (wanted) await client.StartAudioAsync(); else await client.StopAudioAsync();
+            audioStarted = wanted;
+        }
+        catch (Exception e) { Status?.Invoke("Audio control: " + e.Message); }
+        finally { audioControl.Release(); }
+    }
     public void Start() { if (run is not null) throw new InvalidOperationException(); run = Task.Run(RunAsync); }
     public async Task SetQualityAsync(byte value)
     {
@@ -39,9 +60,10 @@ public sealed class CameraSession : IAsyncDisposable
             recorder = new SegmentRecorder(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
             recordFolder = folder; policy = selectedPolicy;
             // Queue the initial status before incoming frames can report an opened clip.
-            Status?.Invoke("Recording armed; waiting for the next keyframe."); recording = true;
+            Status?.Invoke(recordingOptions.IncludeAudio ? "Recording armed; waiting for AAC audio and the next keyframe." : "Recording armed; waiting for the next keyframe."); recording = true;
         }
         RecordingChanged?.Invoke(true);
+        _ = UpdateAudioAsync();
     }
     public void StopRecording()
     {
@@ -51,11 +73,11 @@ public sealed class CameraSession : IAsyncDisposable
             recording = false; closing = recorder; recorder = null;
         }
         try { closing?.Dispose(); }
-        finally { RecordingChanged?.Invoke(false); }
+        finally { RecordingChanged?.Invoke(false); _ = UpdateAudioAsync(); }
     }
     void CloseSegment()
     {
-        lock (recordLock) recorder?.CloseSegment();
+        lock (recordLock) recorder?.ConnectionEnded();
     }
     async Task RunAsync()
     {
@@ -69,12 +91,18 @@ public sealed class CameraSession : IAsyncDisposable
                 await client.FirmwareAsync();
                 if (profile.Uid is null) { profile.Uid = client.Uid; profile.Save(); }
                 Client = client;
+                audioStarted = false;
                 CameraSettings? settings = null;
                 try { settings = await client.SettingsAsync(); } catch (NotSupportedException) { }
                 Settings?.Invoke(settings);
                 await client.StartVideoAsync(quality);
                 Status?.Invoke("Connected locally.");
                 var order = new FrameOrder(); var clock = new FrameClock();
+                using var audioStop = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+                var audioTask = ReadAudioAsync(client, clock, audioStop.Token);
+                await UpdateAudioAsync();
+                try
+                {
                 await foreach (var input in client.Frames.ReadAllAsync(stop.Token))
                     foreach (var frame in order.Feed(input))
                     {
@@ -100,6 +128,12 @@ public sealed class CameraSession : IAsyncDisposable
                         }
                         Frame?.Invoke(frame, time, order.Epoch);
                     }
+                }
+                finally
+                {
+                    audioStop.Cancel();
+                    try { await audioTask; } catch (OperationCanceledException) { }
+                }
                 if (!stop.IsCancellationRequested) throw new IOException("Camera stream ended.");
             }
             catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }
@@ -124,6 +158,32 @@ public sealed class CameraSession : IAsyncDisposable
             }
             try { await Task.Delay(3000, stop.Token); } catch (OperationCanceledException) { break; }
         }
+    }
+    async Task ReadAudioAsync(CameraClient client, FrameClock clock, CancellationToken cancellation)
+    {
+        try
+        {
+            await foreach (var frame in client.AudioFrames.ReadAllAsync(cancellation))
+            {
+                if (clock.AudioTime(frame) is not { } time) continue;
+                lock (recordLock)
+                {
+                    if (recording)
+                        try { recorder?.WriteAudio(frame, time); }
+                        catch (Exception e)
+                        {
+                            recording = false;
+                            try { recorder?.Dispose(); } catch (IOException) { }
+                            recorder = null;
+                            RecordingChanged?.Invoke(false); Status?.Invoke("Recording stopped: " + e.Message);
+                            _ = UpdateAudioAsync();
+                        }
+                }
+                if (monitoring) Audio?.Invoke(frame, time);
+            }
+        }
+        catch (Exception e) when (e is IOException or OperationCanceledException)
+        { if (!cancellation.IsCancellationRequested && client.Connected) Status?.Invoke("Audio stream: " + e.Message); }
     }
     public async ValueTask DisposeAsync()
     {

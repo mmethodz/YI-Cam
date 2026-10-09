@@ -1,7 +1,8 @@
 # Local motion investigation
 
 Tracking and motion detection are different features. Tracking control/readback
-works on the reference camera; it does not provide a motion-active event.
+works on the reference camera, and the owner confirms physical local tracking
+also works. This control does not provide a motion-active event.
 
 The reference hardware-253 camera answers `0x5c06` / `0x5c07` alert history.
 The request contains three big-endian uint32 values: zero, start seconds and end

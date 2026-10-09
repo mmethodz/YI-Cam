@@ -82,6 +82,7 @@ public sealed class CameraClient : IDisposable
     readonly ReliableChannel[] channels = Enumerable.Range(0, 6).Select(_ => new ReliableChannel()).ToArray();
     readonly CancellationTokenSource stop = new();
     readonly Channel<VideoFrame> video = Channel.CreateBounded<VideoFrame>(new BoundedChannelOptions(300) { SingleWriter = true });
+    readonly Channel<AudioFrame> audio = Channel.CreateBounded<AudioFrame>(new BoundedChannelOptions(128) { SingleWriter = true });
     readonly string noncePrefix = Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToLowerInvariant()[..7];
     IPEndPoint? peer;
     Task? receiver;
@@ -93,6 +94,7 @@ public sealed class CameraClient : IDisposable
     public bool Connected { get; private set; }
     public Exception? Error { get; private set; }
     public ChannelReader<VideoFrame> Frames => video.Reader;
+    public ChannelReader<AudioFrame> AudioFrames => audio.Reader;
     static long Now => Environment.TickCount64;
 
     public CameraClient(string ip, string deviceKey, string? uid = null)
@@ -240,6 +242,7 @@ public sealed class CameraClient : IDisposable
             Connected = false;
             foreach (var pending in requests.Values) pending.Completion.TrySetException(Error ?? new IOException("Camera disconnected."));
             video.Writer.TryComplete(Error);
+            audio.Writer.TryComplete(Error);
         }
     }
 
@@ -252,6 +255,13 @@ public sealed class CameraClient : IDisposable
             if (40 + extra + size > body.Length) throw new InvalidDataException("Truncated command response.");
             if (requests.TryGetValue(nr, out var request) && (request.Response == cmd || result != 0))
                 request.Completion.TrySetResult(new(cmd, nr, result, body[(40 + extra)..(40 + extra + size)], ability));
+        }
+        else if (kind == 2 && channel == 1 && body.Length >= 24)
+        {
+            var data = body[24..]; int encrypted = data.Length / 16 * 16;
+            if (encrypted > 0) aes.DecryptEcb(data.AsSpan(0, encrypted), PaddingMode.None).CopyTo(data, 0);
+            var frame = new AudioFrame(data, Wire.U16(body.AsSpan(6)), Wire.U32(body.AsSpan(12)), Wire.U32(body.AsSpan(20)), Wire.U16(body), body[2]);
+            if (!audio.Writer.TryWrite(frame)) throw new IOException("Audio processing fell behind; reconnect to recover.");
         }
         else if (kind == 1 && body.Length >= 24)
         {
@@ -277,6 +287,8 @@ public sealed class CameraClient : IDisposable
         return new(data[8], data[91], data[68]);
     }
     public Task StartVideoAsync(byte quality = 1) => CommandAsync(0x2345, [++generation, quality, 1, 0]);
+    public Task StartAudioAsync() => CommandAsync(0x0300, new byte[8]);
+    public Task StopAudioAsync() => CommandAsync(0x0301, new byte[8]);
     public Task QualityAsync(uint quality)
     {
         if (quality > 2) throw new ArgumentOutOfRangeException(nameof(quality));

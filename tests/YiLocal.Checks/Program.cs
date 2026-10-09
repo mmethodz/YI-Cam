@@ -8,6 +8,7 @@ static void Reject(Action action, string message)
     throw new Exception(message);
 }
 static VideoFrame Frame(ushort seq, bool key = false, uint ms = 100000) => new([0, 0, 0, 1, key ? (byte)0x65 : (byte)0x41, 1], seq, 1280, 720, 1, ms, key, 1, 78);
+if (AudioChecks.Fixture(args)) return;
 
 if (args.Length == 2 && args[0] == "--qr-fixture")
 {
@@ -118,6 +119,13 @@ Check(orderTest.Feed(Frame(4), 100).Count == 0, "Gap not held.");
 Check(orderTest.Feed(Frame(5, true), 2201).Single().Sequence == 5 && orderTest.Epoch == 1, "Gap recovery failed.");
 var timeTest = new FrameClock();
 Check(timeTest.Time(Frame(1, true, uint.MaxValue - 10)) == 0 && timeTest.Time(Frame(2, ms: 55)) == 66, "Timestamp wrap failed.");
+Check(timeTest.AudioTime(new([], 0, 1, 45, 138, 27)) == 56, "Audio wrap mapping changed the common clock.");
+Check(timeTest.Time(Frame(3, ms: 122)) == 133, "Audio perturbed video timing.");
+var adts = new byte[] { 0xff, 0xf9, 0x60, 0x40, 0x01, 0x1f, 0xfc, 0 };
+var aac = AacConfiguration.Parse(adts);
+Check(aac.Configuration.SampleRate == 16000 && aac.Configuration.Channels == 1 && aac.Configuration.AudioSpecificConfig.SequenceEqual(new byte[] { 0x14, 8 }), "AAC configuration differs from ADTS.");
+Reject(() => AacConfiguration.Parse(adts[..7]), "Truncated AAC accepted.");
+Reject(() => new RecordingOptions(RecordingEncoding.Balanced, 1, CaptureMode.Timelapse, true).Validate(), "Accelerated timelapse accepted real-time audio.");
 var nals = FragmentedMp4.Nals([0, 0, 0, 1, 0x67, 2, 0, 0, 1, 0x68, 3]);
 Check(nals.Count == 2 && nals[0].SequenceEqual(new byte[] { 0x67, 2 }), "Annex-B parsing failed.");
 var snapshotCache = new SnapshotBuffer(maximumFrames: 2);
@@ -134,7 +142,8 @@ try
 {
     using var library = new RecordingLibrary(folder);
     const string name = "YI_2026-01-01_00-00-00_1280x720_abcdef.mp4";
-    File.WriteAllBytes(library.ClipPath(name), [1, 2, 3]); library.Register(name, 1280, 720); library.Finish(name, 1);
+    File.WriteAllBytes(library.ClipPath(name), [1, 2, 3]); library.Register(name, 1280, 720, new(Audio: "AAC-LC 16000 Hz, 1 channel(s)")); library.Finish(name, 1);
+    Check(library.Clips().Single().Metadata?.Audio == "AAC-LC 16000 Hz, 1 channel(s)", "Catalogue lost audio metadata.");
     library.Protect(name, true); Reject(() => library.Delete(name), "Protected clip deleted.");
     Reject(() => library.ClipPath("../outside.mp4"), "Unsafe name accepted.");
     Reject(() => library.Enforce(new(), freeBytes: () => 1), "Full disk accepted.");
