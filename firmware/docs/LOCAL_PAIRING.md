@@ -112,13 +112,19 @@ separately above; local02 still has no hardware qualification.
 The Windows app defaults to **Camera pairing → OpenYI firmware setup**. A new
 installation with no saved primary camera opens this page automatically.
 
-1. **Use this PC's Wi-Fi** fills the connected network and, when Windows permits,
-   its saved password. Detection runs when the page first opens. The app calls
+1. **Use this PC's Wi-Fi** reads connected and saved Windows networks, even when
+   the PC uses Ethernet, and their passwords when Windows permits. A single
+   network fills automatically; with several saved networks, choose one from
+   the Wi-Fi name list. An existing matching selection or the sole connected
+   network is preferred. Detection runs when the page first opens. The app calls
    the [Native Wi-Fi query API](https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlanqueryinterface)
+   and [saved-profile list API](https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlangetprofilelist)
    and [profile API](https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlangetprofile);
    it does not export plaintext profiles or parse localized command output.
-   On Ethernet, enter the network or choose **Use saved camera's Wi-Fi** to read
-   it from an existing, verified local01 camera. SSID/password can be edited.
+   If no networks are saved, enter the network or choose **Use saved camera's
+   Wi-Fi** to read it from an existing, verified local01 camera. SSID/password can
+   be edited. Windows may withhold passwords independently of SSID access;
+   location permissions can also affect detection of the current connection.
    An unreadable password is not treated as an open network: that choice requires
    the explicit **Network has no password** checkbox.
 2. **Show QR code** previews the locally generated marker; **Save QR image** saves

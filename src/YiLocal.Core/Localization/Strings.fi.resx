@@ -2306,15 +2306,15 @@ Kuvausaika {2}
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.PcWifiUnavailable" xml:space="preserve">
-    <value>Windows ei voinut lukea nykyistä Wi-Fi-yhteyttä. Kirjoita verkon tiedot tai käytä tallennetun kameran Wi-Fiä.</value>
+    <value>Windows ei voinut lukea Wi-Fi-yhteyksiä tai tallennettuja verkkoja. Kirjoita verkon tiedot tai käytä tallennetun kameran Wi-Fiä.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.NoPcWifi" xml:space="preserve">
-    <value>Tietokoneella ei ole aktiivista Wi-Fi-yhteyttä. Kirjoita verkon tiedot tai käytä tallennetun OpenYI-kameran Wi-Fiä.</value>
+    <value>Tietokoneelta ei löytynyt yhdistettyjä tai tallennettuja Wi-Fi-verkkoja. Kirjoita verkon tiedot tai käytä tallennetun OpenYI-kameran Wi-Fiä.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.WifiPermission" xml:space="preserve">
-    <value>Windows esti Wi-Fi-verkon tunnistuksen. Salli työpöytäsovellusten sijaintitietojen käyttö Windowsin asetuksissa tai kirjoita verkon tiedot itse.</value>
+    <value>Windows esti Wi-Fi-tietojen lukemisen. Kirjoita verkon tiedot itse tai käytä tallennetun kameran Wi-Fiä. Nykyisen verkon tunnistus voi edellyttää työpöytäsovellusten sijaintitietojen käyttöoikeutta.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.EnterWifiPassword" xml:space="preserve">
@@ -2323,6 +2323,18 @@ Kuvausaika {2}
   </data>
   <data name="Setup.PcWifiLoaded" xml:space="preserve">
     <value>Nykyisen Wi-Fi-verkon tiedot täytetty. Tarkista, että verkko on käytettävissä kameran tukemalla Wi-Fi-taajuudella.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.SavedPcWifiLoaded" xml:space="preserve">
+    <value>Windowsiin tallennetun Wi-Fi-verkon tiedot täytetty. Tarkista, että verkko on oikea ja käytettävissä kameran tukemalla Wi-Fi-taajuudella.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ChoosePcWifi" xml:space="preserve">
+    <value>Windowsiin on tallennettu useita Wi-Fi-verkkoja. Valitse verkko Wi-Fi-nimen luettelosta, niin sen tiedot täytetään.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.PcWifiPasswordUnavailable" xml:space="preserve">
+    <value>Verkon nimi täytetty. Windows ei antanut sen salasanaa; kirjoita se alle.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.NoExistingCamera" xml:space="preserve">

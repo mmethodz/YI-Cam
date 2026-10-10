@@ -105,9 +105,12 @@ compared with the post-reset camera export and matched. English and Finnish
 setup layouts, including a synthetic QR preview, fit at the default window size.
 
 This PC uses Ethernet: Native Wi-Fi returned no active Wi-Fi connection, and the
-camera-based fallback worked. Windows Wi-Fi autofill parsing has automated tests,
-but current-SSID/password detection on a physically connected Wi-Fi adapter still
-needs hardware coverage. A separate test executable timed out at TNP session
+camera-based fallback worked. A follow-up added saved Windows profile support
+for disconnected WLAN adapters. Both Native Wi-Fi and `netsh wlan show profiles`
+reported no saved profiles on this PC. Synthetic profile and WinForms tests
+cover SSID/password selection in English and Finnish, but reading a real saved
+password or current Wi-Fi connection still needs hardware coverage.
+A separate test executable timed out at TNP session
 establishment without the installed app's firewall rule; native onboarding passed
 from the installed executable with its existing allowance. No firewall settings
 were changed for these tests.

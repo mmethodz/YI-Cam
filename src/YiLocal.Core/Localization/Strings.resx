@@ -2306,15 +2306,15 @@ Captured {2}
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.PcWifiUnavailable" xml:space="preserve">
-    <value>Windows could not read the current Wi-Fi connection. Enter the network, or use a saved camera’s Wi-Fi.</value>
+    <value>Windows could not read Wi-Fi connections or saved networks. Enter the network, or use a saved camera’s Wi-Fi.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.NoPcWifi" xml:space="preserve">
-    <value>This PC has no active Wi-Fi connection. Enter the network, or use a saved OpenYI camera’s Wi-Fi.</value>
+    <value>No connected or saved Wi-Fi networks were found on this PC. Enter the network, or use a saved OpenYI camera’s Wi-Fi.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.WifiPermission" xml:space="preserve">
-    <value>Windows denied Wi-Fi detection. Allow location access for desktop apps in Windows settings, or enter the network manually.</value>
+    <value>Windows denied access to Wi-Fi information. Enter the network manually, or use a saved camera’s Wi-Fi. Current-network detection may require location access for desktop apps.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.EnterWifiPassword" xml:space="preserve">
@@ -2323,6 +2323,18 @@ Captured {2}
   </data>
   <data name="Setup.PcWifiLoaded" xml:space="preserve">
     <value>Current Wi-Fi details filled in. Check that this network is available on the camera’s supported Wi-Fi band.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.SavedPcWifiLoaded" xml:space="preserve">
+    <value>Saved Windows Wi-Fi details filled in. Check that this is the right network and is available on the camera’s supported Wi-Fi band.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ChoosePcWifi" xml:space="preserve">
+    <value>Several Windows Wi-Fi networks are saved. Choose one from the Wi-Fi name list to fill in its details.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.PcWifiPasswordUnavailable" xml:space="preserve">
+    <value>Network name filled in. Windows did not provide its password; enter it below.</value>
     <comment>Local camera onboarding</comment>
   </data>
   <data name="Setup.NoExistingCamera" xml:space="preserve">

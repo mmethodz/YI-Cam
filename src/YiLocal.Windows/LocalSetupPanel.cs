@@ -21,6 +21,7 @@ internal sealed class LocalSetupPanel : UserControl
     CancellationTokenSource? operation;
     byte[]? imageBytes;
     bool detected;
+    bool applyingNetwork;
     public bool Busy => operation is not null;
     public event Action<bool>? BusyChanged;
 
@@ -96,8 +97,16 @@ internal sealed class LocalSetupPanel : UserControl
         fields.Controls.Add(toggle); fields.Controls.Add(advanced);
         content.Controls.Add(state); content.Controls.Add(cancel);
         cancel.Click += (_, _) => operation?.Cancel();
-        ssid.TextChanged += (_, _) => { if (!Busy) { wifiPassword.Clear(); openNetwork.Checked = false; } InvalidateQr(); };
-        ssid.SelectionChangeCommitted += (_, _) => { if (ssid.SelectedItem is NetworkChoice item) ApplyNetwork(item.Network); };
+        ssid.TextChanged += (_, _) =>
+        {
+            if (!Busy && !applyingNetwork)
+            {
+                if (ssid.SelectedItem is WindowsWifiNetwork item && ssid.Text == item.Network.Ssid) ApplyPcNetwork(item);
+                else { wifiPassword.Clear(); openNetwork.Checked = false; }
+            }
+            InvalidateQr();
+        };
+        ssid.SelectionChangeCommitted += (_, _) => { if (ssid.SelectedItem is WindowsWifiNetwork item) ApplyPcNetwork(item); };
         wifiPassword.TextChanged += (_, _) => InvalidateQr(); region.SelectedIndexChanged += (_, _) => InvalidateQr();
         VisibleChanged += (_, _) =>
         {
@@ -132,16 +141,30 @@ internal sealed class LocalSetupPanel : UserControl
     }
     async Task DetectWifi(CancellationToken token)
     {
-        var networks = await Task.Run(WindowsWifi.ReadCurrent, token);
+        var networks = await Task.Run(WindowsWifi.ReadAvailable, token);
         token.ThrowIfCancellationRequested();
+        ApplyWifiNetworks(networks);
+    }
+    internal void ApplyWifiNetworks(IReadOnlyList<WindowsWifiNetwork> networks)
+    {
         if (networks.Count == 0) { state.Text = L.Get("Setup.NoPcWifi"); return; }
-        ssid.Items.Clear(); ssid.Items.AddRange(networks.Select(n => new NetworkChoice(n)).ToArray());
-        ssid.SelectedIndex = 0; ApplyNetwork(networks[0]);
-        state.Text = networks[0].Password is null ? L.Get("Setup.EnterWifiPassword") : L.Get("Setup.PcWifiLoaded");
+        string previous = ssid.Text;
+        ssid.Items.Clear(); ssid.Items.AddRange(networks.Cast<object>().ToArray());
+        int selected = WindowsWifi.DefaultNetwork(networks, previous);
+        if (selected < 0) { ssid.Text = previous; state.Text = L.Get("Setup.ChoosePcWifi"); return; }
+        ssid.SelectedIndex = selected; ApplyPcNetwork(networks[selected]);
+    }
+    void ApplyPcNetwork(WindowsWifiNetwork item)
+    {
+        ApplyNetwork(item.Network);
+        state.Text = L.Get(item.Network.Password is null ? "Setup.PcWifiPasswordUnavailable"
+            : item.Connected ? "Setup.PcWifiLoaded" : "Setup.SavedPcWifiLoaded");
     }
     void ApplyNetwork(WifiSetupNetwork network)
     {
-        ssid.Text = network.Ssid; wifiPassword.Text = network.Password ?? ""; openNetwork.Checked = network.Password == "";
+        applyingNetwork = true;
+        try { ssid.Text = network.Ssid; wifiPassword.Text = network.Password ?? ""; openNetwork.Checked = network.Password == ""; }
+        finally { applyingNetwork = false; }
     }
     void MakeQr()
     {
@@ -156,10 +179,5 @@ internal sealed class LocalSetupPanel : UserControl
     {
         if (disposing) { operation?.Cancel(); InvalidateQr(); }
         base.Dispose(disposing);
-    }
-    sealed class NetworkChoice(WifiSetupNetwork network)
-    {
-        public WifiSetupNetwork Network { get; } = network;
-        public override string ToString() => Network.Ssid;
     }
 }

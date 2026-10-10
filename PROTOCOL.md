@@ -428,5 +428,10 @@ binary mode, passive transfer and fixed-file reads, with bounded responses and
 downloads; a passive reply cannot redirect a data connection to another host.
 Discovery broadcasts the existing `F1 30 00 00` probe on active local IPv4
 Ethernet/Wi-Fi interfaces and retains each response's UID for import verification.
-No broadcast contains a credential. Windows Wi-Fi detection uses `WlanQueryInterface`
-and `WlanGetProfile`, never a shell command or temporary plaintext profile file.
+No broadcast contains a credential. Windows Wi-Fi detection uses `WlanQueryInterface`,
+`WlanGetProfileList` and `WlanGetProfile`, never a shell command or temporary
+plaintext profile file. Saved profiles are enumerated even on disconnected WLAN
+interfaces. SSIDs come from the profile's SSID bytes, not its renameable profile
+name. Multiple saved networks require a selection unless the current connection
+or the already entered SSID identifies one. Windows controls plaintext-password
+access; protected or absent keys are never treated as open-network credentials.

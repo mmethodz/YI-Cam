@@ -27,8 +27,8 @@ if (args is ["--wifi-hardware"])
 {
     try
     {
-        var networks = WindowsWifi.ReadCurrent();
-        Console.WriteLine($"Active Windows Wi-Fi connections: {networks.Count}; password accessible: {networks.Count(n => n.Password is not null)}. No SSID/password printed or saved.");
+        var networks = WindowsWifi.ReadAvailable();
+        Console.WriteLine($"Windows Wi-Fi networks: {networks.Count}; connected: {networks.Count(n => n.Connected)}; saved: {networks.Count(n => !n.Connected)}; password accessible: {networks.Count(n => n.Network.Password is not null)}. No SSID/password printed or saved.");
     }
     catch (System.ComponentModel.Win32Exception error) { Console.WriteLine($"Windows Wi-Fi access unavailable, code {error.NativeErrorCode}; manual or camera-network fallback is available."); }
     return;

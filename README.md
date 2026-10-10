@@ -35,9 +35,12 @@ test; WAN-isolated provisioning and native 4K capture remain unverified.
    It requires the supported [OpenYI local01 firmware](firmware/README.md).
    Use the detected Wi-Fi details (or enter them), show/save the QR, then choose
    **Find cameras → Connect and save camera**. The app reads and verifies the
-   local key directly; no vendor account, token or device ID is needed. On a PC
-   connected by Ethernet, **Use saved camera's Wi-Fi** can copy network details
-   from an existing OpenYI camera. See [the full setup flow](firmware/docs/LOCAL_PAIRING.md).
+   local key directly; no vendor account, token or device ID is needed.
+   **Use this PC's Wi-Fi** also offers saved Windows networks while the PC uses
+   Ethernet; choose from the Wi-Fi name list if several are saved. Windows must
+   permit access to their passwords. **Use saved camera's Wi-Fi** can copy network
+   details from an existing OpenYI camera, including when Windows has no saved
+   networks. See [the full setup flow](firmware/docs/LOCAL_PAIRING.md).
 4. Choose an [FFmpeg executable](https://ffmpeg.org/download.html) in **Storage**
    for live preview and 4K export. Original-stream recording itself is native C#
    and does not need FFmpeg. A sibling `ffmpeg.exe` is detected automatically.
