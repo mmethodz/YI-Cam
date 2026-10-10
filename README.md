@@ -1,323 +1,310 @@
 # OpenYI
 
-An independent, open source LAN viewer and recorder for supported **YI IoT** cameras.
-Keep your recordings on your own disk and use the camera's controls without a
-vendor account login during normal operation.
+Local camera setup, live viewing and recording for supported **YI IoT** cameras.
+OpenYI combines a native Windows surveillance app with an open-source firmware
+patch workflow that puts the camera's device key under its owner's control.
+
+**The recommended setup is OpenYI local01 firmware + the OpenYI Windows app.**
+Once local01 is installed, generate a Wi-Fi QR locally, show it to the camera,
+then discover and connect to it directly. No vendor app, account, binding token
+or cloud subscription is needed for this pairing flow. Recordings stay on your
+own disk.
 
 ![OpenYI Windows app showing live video, local recording, and camera controls (earlier branding)](assets/screenshot-1.png)
 
-Previously called YI Local. The repository remains **YI-Cam**. Existing profile,
-recording, database, executable and launcher paths retain their original names
-for compatibility, including existing Windows Firewall allowances. The verified
-pre-enhancement version is tagged `baseline-yi-local-0.1`.
+[Get started](#get-started) · [Supported camera](#supported-camera) ·
+[Features](#features) · [Verification status](#verification-status) ·
+[Documentation](#documentation)
 
-**Native C# / WinForms is the Windows application. Python remains the protocol
-prototype and portable reference.** The Windows application does not run Python,
-BlueStacks, or the vendor client in the background.
+## Supported camera
 
-**English and Finnish:** choose **Settings → App language / Kieli → Suomi**, then
-restart OpenYI. English remains the default. Translations use separate resource
-files with English fallback; community languages are welcome. See the
-[translation guide](docs/LOCALIZATION.md).
+The firmware currently targets **one identified hardware and firmware combination**:
 
-This is an early release, initially verified with one Anyka-family camera:
-hardware **253**, firmware **6.0.24.10_202401091113**. Other cameras using the
-same app name may use different hardware and protocols. With the supported
-OpenYI local01 firmware, physical reset, locally generated QR setup and direct
-native key import have passed on that unit. Internet was available during the
-test; WAN-isolated provisioning and native 4K capture remain unverified.
+| Item | Supported reference |
+| --- | --- |
+| Platform / sensor | Anyka AK3918E / GC1084 |
+| Board | `Cloud39EV2_AK3918E80PIN_MNBD` |
+| Original application firmware | `6.0.24.10_202401091113` |
+| Recommended patch profile | `ak3918e-local01` |
+| Installed local01 version | `6.0.24.10_202610100002` |
 
-## Windows application
+The workshop checks the exact original filesystem and binary hashes. A matching
+case, brand, YI IoT app or reported hardware number **253** is not sufficient to
+establish compatibility. See [hardware identification and backup evidence](firmware/docs/HARDWARE_AND_BACKUP.md).
 
-1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+Local01 installation, cold-boot reconnection, physical reset and vendor-free QR
+pairing have succeeded on the reference camera. **Internet was available during
+those tests.** Operation with Internet blocked, a complete traffic audit and
+recovery from a failed boot remain unverified. See [verification status](#verification-status).
+
+## Get started
+
+### 1. Install the recommended firmware
+
+Local01 is required for the default **OpenYI firmware setup** page. If your camera
+already has the reviewed local01 build, continue to step 2.
+
+Start with the [firmware workshop instructions](firmware/README.md). You need the
+matching original application filesystem from your own camera backup, Python
+3.10+, and the documented Linux build tools; Windows uses Ubuntu under WSL.
+Original vendor images and private camera backups are not included in this repo.
+The initial Wi-Fi installation requires a reachable stock camera on your LAN
+and owner access to its FTP maintenance interface.
+
+From the repository root, run the single interactive tool:
+
+```powershell
+python firmware/openyi_fw.py
+```
+
+1. Choose **Build and verify** and keep the default `ak3918e-local01` profile.
+2. Let both reproducible builds and the mandatory independent verification finish.
+3. Inspect the final image, extracted files, exact patches and verification reports.
+4. Choose **Flash an inspected build over Wi-Fi** when ready. The tool verifies
+   again, takes fresh full-flash backups, checks the staged bytes and requires
+   confirmation of the exact image before writing. It verifies the installed
+   application payload after reboot.
+
+Building and inspection do not contact the camera. Flashing is a separate,
+explicit action. The installer targets the application partition and preserves
+bootloader, kernel, factory identity and calibration.
+
+**The output is `update.tar`, not `home.bin`.** Do not rename it or substitute
+generic YI Home SD-card instructions: that recovery route is not established for
+this board. Use the [documented installation workflow](firmware/docs/PATCH_WORKFLOW.md).
+
+Local01 keeps local authentication and media encryption, replaces vendor key
+refresh with a persistent owner key, and disables the identified cloud binding,
+registration, upload and notification paths. The separate local02 keyless profile
+is an unflashed experiment; it is not needed for vendor-free pairing.
+
+### 2. Build and launch the Windows app
+
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+   compatible with [global.json](global.json).
 2. Run **Build Windows.cmd**, then **Start Windows.cmd**.
-3. **Camera pairing → OpenYI firmware setup** is the default onboarding flow.
-   It requires the supported [OpenYI local01 firmware](firmware/README.md).
-   Use the detected Wi-Fi details (or enter them), show/save the QR, then choose
-   **Find cameras → Connect and save camera**. The app reads and verifies the
-   local key directly; no vendor account, token or device ID is needed.
-   **Use this PC's Wi-Fi** also offers saved Windows networks while the PC uses
-   Ethernet; choose from the Wi-Fi name list if several are saved. Windows must
-   permit access to their passwords. **Use saved camera's Wi-Fi** can copy network
-   details from an existing OpenYI camera, including when Windows has no saved
-   networks. See [the full setup flow](firmware/docs/LOCAL_PAIRING.md).
-4. Choose an [FFmpeg executable](https://ffmpeg.org/download.html) in **Storage**
-   for live preview and 4K export. Original-stream recording itself is native C#
-   and does not need FFmpeg. A sibling `ffmpeg.exe` is detected automatically.
-5. Click **Connect camera**. If Windows requests network access, allow the app
-   on the network containing your camera. The camera's discovery reply uses a
-   different UDP source port, so an inbound LAN allowance can be necessary.
+3. Select an [FFmpeg executable](https://ffmpeg.org/download.html) in **Storage**,
+   or place `ffmpeg.exe` beside the app. FFmpeg enables live preview, playback,
+   compressed recording, motion detection, snapshots and audio features.
 
-Build output: `dist/YI-Local/YiLocal.Windows.exe`. A standard build needs the
+The executable is `dist/YI-Local/YiLocal.Windows.exe`. A normal build needs the
 .NET 10 Desktop Runtime on the destination PC. To include the runtime:
 
 ```powershell
 powershell -NoProfile -File scripts/build-windows.ps1 -SelfContained
 ```
 
-App preferences live in `%LOCALAPPDATA%\YI Local\settings.json`, independently of
-the executable's folder or working directory. Starting from `dist/` uses the same
-settings. Storage and capture edits save automatically when recordings are stopped;
-changes made during recording wait until it stops. Path edits save after leaving
-the text box. Explicit Save buttons remain available. A previous valid version is
-kept in `settings.json.bak`; invalid sections are reported without discarding other
-settings. Camera keys, stream quality and arrow preferences stay in encrypted
-per-camera profiles. Night vision, tracking and gimbal state are read from the camera.
-Recording, listening and talking start manually each time. No registry setup is needed.
+The Windows app is native C# / WinForms. It does not run Python, BlueStacks or a
+proprietary vendor runtime. Python is used separately for the firmware workshop
+and protocol reference tools.
 
-**Motion alarm** adds an optional second motion threshold for the primary camera.
-It can repeat a bundled public-domain siren or imported audio through the camera
-(default), a selected computer output, or both. Home/Away, entry/exit delays,
-30-second/1-minute/5-minute/custom durations and an until-stopped option are local
-controls; the app always launches in Home. The bottom bar and tray show the alarm
-state and offer immediate stop/disarm. See [alarm setup and verification limits](docs/ALARM.md).
+### 3. Pair directly with OpenYI
 
-Existing stock-camera profiles remain supported through **Camera setup** and
-the advanced stock tools. Stock import can read a running, already paired YI IoT
-PC client, import a `.dpapi` file under the same Windows account, or verify a
-known key. That compatibility route does not require flashing. The default
-vendor-free setup requires OpenYI firmware. The app makes no cloud requests and
-exposes no HTTP server; no Internet port forwarding is required. Stock firmware
-may still contact vendor services. Router-level Internet blocking has not been tested.
+Open **Camera pairing → OpenYI firmware setup**. New installations without a
+saved camera open this page automatically.
 
-An optional [firmware research workshop](firmware/README.md) provides one
-interactive Python tool for reproducible patch builds, mandatory offline
-verification, image inspection and an experimental Wi-Fi installer. The recommended
-local01 candidate replaces cloud login with a persistent owner key and removes
-the identified cloud paths. An optional local02 candidate and explicit client
-mode provide keyless plaintext LAN operation. Both have offline ARM/image checks.
-Local01's [first installation, reboot and exact image readback](firmware/docs/LOCAL01_INSTALLATION.md)
-succeeded, and the owner confirmed live video with the existing saved pairing.
-The same pairing also connected after a separate power cycle without a vendor-app refresh.
-On 11 October, the owner reset the camera, scanned a locally generated QR, heard
-Wi-Fi/pairing success and reconnected. A fresh direct export and native app
-onboarding subsequently authenticated and displayed live video.
-Other camera functions and WAN isolation checks remain pending. Local02
-has not been flashed. Normal desktop use with
-stock firmware remains supported. Local01 retains the same authenticated protocol;
-the default onboarding page requires OpenYI firmware.
+1. Choose the camera's Wi-Fi network. **Use this PC's Wi-Fi** reads connected and
+   saved Windows networks, including saved profiles while the PC uses Ethernet.
+   Select a network from the list if several are saved. Password autofill depends
+   on Windows permissions. You can enter the details yourself, or use **Use saved
+   camera's Wi-Fi** to copy them from an existing OpenYI camera.
+2. Choose **Show QR code** or **Save QR image**. The saved PNG can be displayed on
+   a phone in front of a wall-mounted camera. It contains your Wi-Fi credentials;
+   keep it private.
+3. Put the already-patched camera into QR setup mode and show it the code. The
+   reference unit entered this mode after a physical reset. Wait for Wi-Fi
+   connection and the pairing-success prompt.
+4. Choose **Find cameras**, select the camera and give it a name. A manual LAN
+   address is also available if discovery is blocked.
+5. Choose **Connect and save camera**. OpenYI checks the installed firmware,
+   reads the owner key directly, authenticates and saves an encrypted profile.
+   There is no pairing ID or vendor token to copy.
 
-OpenYI firmware is fully local. An Internet connection is not required for pairing, viewing, control, recording, or normal operation.
+**Already on the correct Wi-Fi with local01? Skip the QR/reset steps.** Use
+**Find cameras → Connect and save camera**. An existing working OpenYI profile
+can also be used directly after the firmware migration.
 
-**Cameras · experimental** adds independent camera configurations and a grid.
-The primary camera keeps its existing pairing and recording paths. Additional
-cameras have separate encrypted profiles, sessions, controls and catalogues, and
-their recordings appear in the browser. Only one physical camera is available
-for verification; two simulated cameras cover software isolation. See
-[multi-camera setup and qualification limits](docs/MULTI_CAMERA.md).
+The first camera becomes primary. Pairing another identity adds a separate
+experimental camera entry; it does not replace the primary camera. If Windows
+requests network access, allow OpenYI on the network containing your cameras.
 
-## Controls
+The [pairing guide](firmware/docs/LOCAL_PAIRING.md) documents the QR format,
+maintenance-password override, direct key import and independent Python route.
+Key import uses an unencrypted FTP maintenance connection on the LAN; subsequent
+camera sessions retain local authentication and media encryption. A reset is
+not required to read the owner key, and the tested reset preserved that key.
 
-**Camera pairing** previews and saves a normal QR PNG for display on a phone.
-The default OpenYI setup supplies its own local marker and reads the device key
-directly after Wi-Fi setup. Current Wi-Fi detection uses Windows APIs; password
-autofill depends on Windows access permissions. Blank/unavailable passwords never
-silently select an open network. Credentials stay on the setup page unless the
-owner saves a QR image. The first camera becomes primary; additional identities
-get independent grid entries rather than replacing that camera.
+### 4. Choose how to record
 
-**Original firmware · advanced** retains the stock QR tools and their token/ID
-requirements. See [the QR findings](PROTOCOL.md#experimental-setup-qr) and
-[local firmware onboarding](firmware/docs/LOCAL_PAIRING.md). A reset is only needed
-to enter the camera's fresh setup mode; reading a local01 key does not reset it.
+Set the recording folder and limits in **Storage**, then select a mode in
+**Capture options**:
 
-| Control | Verified behavior on the test camera |
+| Mode | Behavior |
 | --- | --- |
-| HD | H.264, 1280 × 720; about 15.2 source frames/s in the measured stream |
-| SD | H.264, 640 × 360 |
-| Automatic quality | Camera-selected stream; dimensions may change |
-| Pan/tilt | Short direction commands followed by stop; left/right physically checked |
-| Motion tracking | Commands/readback verified; the owner also confirms local physical tracking works |
-| Rotate image 180° | Camera readback and visibly rotated/restored live image verified |
-| Restore gimbal | Off/on readback verified; reads the existing setting on connection; physical return behavior remains experimental |
-| Reverse left/right or up/down controls | Per-camera local arrow preferences; do not disable motor axes |
-| Infrared | IR activates automatically in darkness; red LEDs and filter click physically confirmed |
-| Colour night vision | Extra visible lights activate; physically confirmed |
-| Automatic lighting | Mode accepted and read back; trigger behavior not yet characterized |
-| Talk to camera | Native Windows PC microphone → camera speaker physically confirmed; 16 kHz mono AAC |
+| Continuous / low-rate | Record continuously with real elapsed time. Optional encoding and frame-rate limits reduce storage use. |
+| Motion · local detection on this PC | Set a changed-image-area threshold and post-motion recording time: 30 seconds, 1 minute, 5 minutes or custom. Each new movement restarts the timer. |
+| Timelapse | Capture selected pictures and play them faster; no audio. |
 
-Forced IR in a bright room is not established. The generic day/night command
-accepted values but had no observed physical effect on this model; the app uses
-the separate light-mode command that worked.
+**Original stream** is the default lossless remux: it preserves the camera's
+encoded video without re-encoding. Optional FFmpeg H.264 profiles offer balanced
+or smaller files, with recording-rate presets of **5, 1 and 0.5 fps** and a custom
+rate limited by the source. These settings do not lower live preview fps.
+Original-stream recording itself does not need FFmpeg; local motion analysis does.
 
-**Export 4K (upscaled)** creates a 3840 × 2160 software upscale. It does not add
-sensor detail or establish native 4K support. Default recording preserves the
-original camera stream without re-encoding; optional profiles are described below.
-Measured frame rates are observations of this
-stream, not a claimed hardware maximum.
+Use **Start recording** for continuous/timelapse capture or **Arm motion** for
+motion capture. Keep the PC and OpenYI running. Motion recording can include a
+short buffered lead-in; its length depends on the camera's keyframes. Camera
+movement and lighting changes can also trigger detection.
 
-## Local recording and storage
+## Features
 
-The **Capture options** tab keeps **Original stream** as the default: native,
-lossless remuxing with the camera's original frames and timing. Optional FFmpeg
-H.264 profiles use CRF 28 (balanced) or CRF 32 (smaller). With either encoding
-profile, select a recording rate from 0.5 to 120 fps, capped by available source
-pictures, or leave it at source rate. Presets include 5, 1 and 0.5 fps. These
-settings do not reduce the live preview rate. Re-encoding uses CPU and loses some
-detail; a remux alone does not substantially shrink the encoded stream.
-
-**Continuous / low-rate** preserves real elapsed time. **Timelapse** plays selected
-pictures at 25 fps and deliberately shortens playback. The final low-rate picture
-is held for one selected interval, so playback can extend by up to that interval
-beyond the last captured picture. Capture duration is stored separately and is
-used for storage estimates. Optional **Include camera microphone audio** retains
-AAC with its camera timestamps in real-time profiles. Timelapse has no audio.
-**Listen to camera** enables local speaker monitoring using FFmpeg and Windows
-audio output. Both options start off; see [audio evidence and limits](docs/AUDIO.md).
-
-**Talk to camera** sends the selected PC microphone to the primary camera over the
-LAN using FFmpeg's AAC encoder. Click again, press Escape, switch tabs or switch
-away from OpenYI to stop. Listening pauses while talking to limit feedback; this is
-half-duplex intercom behavior. The microphone is released when talking stops and
-does not restart automatically. See [talk-back protocol and limits](docs/AUDIO.md#talk-to-camera).
-
-**Motion · local detection on this PC** records when the source image changes.
-Set the changed-area threshold (lower is more sensitive) and the seconds to record
-after the last motion; each new movement restarts that timer. It works with
-original-stream and reduced-rate profiles without reducing live preview fps.
-A bounded GOP buffer includes a short lead-in when available. FFmpeg is required
-for detection, and OpenYI must remain open and connected. Camera movement and
-lighting can also trigger it. See [motion behavior and verification](docs/MOTION.md).
-
-**Save snapshot** saves a full source-resolution PNG from the current decoded
-camera GOP, rather than the scaled preview. It requires FFmpeg. Snapshots are
-explicit exports to a chosen file and are outside automatic recording recycling.
-
-The capture tab estimates MB/hour and GB/day from recent completed recordings
-with the saved profile. Scene detail, noise, motion and keyframes affect the
-result; lower frame rate alone does not guarantee a smaller output. Measured
-examples and their limits are in [recording measurements](docs/RECORDING.md).
-
-- Default location: your **Videos / YI Local** folder, outside the source repository.
-- Fragmented MP4 with optional AAC audio, using camera timestamps for playback timing.
-- Default policy: 10-minute clips, 20 GiB recording budget, 2 GiB of free disk space.
-  Clip rotation waits for a keyframe, so the target length is approximate.
-- Recycling starts **off**. Recording stops when a configured space limit is reached.
-- With recycling enabled, the oldest completed, unprotected app-managed clips are
-  deleted when needed. An optional maximum age can also trigger recycling.
-- Only files registered in the folder's SQLite catalogue are managed. Unrelated
-  videos, exports, active clips, and protected clips are excluded from recycling.
-- The **Recordings** tab has thumbnails, metadata, date/time, camera, protection
-  and recording-type filters, plus embedded playback with pause and seeking.
-  Protect, export and delete operate on the same catalogue. Active playback and
-  export reserve their clips against recycling without changing protection.
-  See [browser/player details](docs/BROWSER.md).
-- One recorder may write to a library at a time. Python and C# share its catalogue
-  format. Use separate folders for simultaneous independent sessions.
-- Windows is kept awake during recording. Closing the app finishes the current
-  clip. Connection loss finishes a clip and retries; an armed recording resumes
-  after a new keyframe. A rejected device key stops retries and opens Camera setup
-  so its saved pairing can be refreshed.
-
-The C# muxer writes one fragment per picture; Python uses keyframe fragments.
-Completed fragments can remain readable after a crash, but the last fragment may
-be lost. Interrupted entries remain marked incomplete and are not automatically
-recycled. Recovery/catalogue repair and long-duration unattended soak testing
-remain future work. The muxer currently targets the verified H.264 stream without
-B frames; other codec/reordering formats need explicit support.
-
-## Pairing
-
-The camera requires a **device pairing key**, not the user's account password.
-Normal operation uses that saved key to authenticate directly to the LAN camera.
-The camera identity is pinned after an authenticated connection. Account pairing
-and the current device key are separate: an existing vendor pairing can remain
-valid while the key saved by this app becomes outdated.
-
-**If the camera rejects the device key:** open its live view in the vendor PC app,
-then use **Camera setup → Import from running YI IoT** in the Windows app. There is
-no need to reset the camera or repeat QR pairing. The native importer requires
-the verified 32-bit YI IoT PC client `1.0.1.1_202209261648`, running under the same
-Windows account. It checks the executable's SHA-256, reads the matching live
-camera's pairing with read-only process access, and authenticates directly to
-that camera before saving. It needs neither Python nor Frida and does not inject
-code or change the vendor process. Close the vendor app after a successful import.
-
-Imported profiles and manually entered keys are verified before replacing an
-existing profile. Failed or canceled imports preserve it. Import finishes an
-active recording; after success, an armed recorder resumes in a new clip.
-
-A different key was observed after the test camera was power-cycled and moved;
-the vendor client reconnected using its existing pairing. The mechanism that
-refreshes this key has not yet been established. Independent, automatic key
-refresh is **not implemented**; when a saved key stops working, this recovery
-currently depends on a working vendor live view or another valid device key.
-This does not establish that every power cycle changes the key.
-
-WinForms saves the profile using current-user Windows DPAPI under
-`%LOCALAPPDATA%\YI Local\device.dpapi`. The Python prototype uses
-`.local/device.dpapi` on Windows; a source-tree native build can import that profile
-automatically on first launch. DPAPI files are tied to the Windows account and
-are not portable plain-text exports. Keys are never printed in application logs.
-
-The Python prototype can optionally import a key from an already paired,
-running YI IOT PC live view:
-
-```powershell
-.venv\Scripts\python.exe -m pip install -r requirements-import.txt
-```
-
-Use **Camera setup → Import** in the Python app. The importer checks the executable
-SHA-256 and only supports the tested 32-bit client `1.0.1.1_202209261648`. It reads
-the existing local pairing and does not modify the installed vendor executable.
-The Python and Windows applications keep separate profiles; refresh each one
-when needed, or import the updated encrypted file. Importing again with an existing
-saved profile is supported. The candidate key
-must authenticate before the saved profile is replaced; failed imports preserve
-it. Restart the Python app after updating its source so it loads the current importer.
-
-**Preserve an existing pairing when it works.** The stock vendor QR contains a
-server-issued binding token. OpenYI local01's independent QR setup has now passed
-one physical reset/setup test with Internet available. No reset is required to
-import its owner key or reconnect an already configured camera. Other hardware
-and WAN-isolated first setup still need qualification.
-
-## Python reference
-
-Python 3.12+ with Tcl/Tk is needed for the prototype UI. On Windows, run **Setup.cmd**,
-then **Start Recorder.cmd**. Its launcher hides the console of `python.exe`.
-
-For Linux/macOS, use a virtual environment and install
-`requirements-crossplatform.txt`, then run `python -m yicam.app`. Keys use the OS
-keychain (Secret Service on Linux, Keychain on macOS), without a plain-text fallback.
-Enter a known device key; Windows DPAPI profiles and the optional PC-client importer
-are Windows-specific. Live hardware testing so far has been on Windows; Linux/macOS
-desktop integration remains unverified.
-
-```powershell
-.venv\Scripts\python.exe -m yicam.cli status
-.venv\Scripts\python.exe -m yicam.cli record --seconds 60 --quality hd
-.venv\Scripts\python.exe -m yicam.cli night infrared
-.venv\Scripts\python.exe -m yicam.cli tracking on
-.venv\Scripts\python.exe -m yicam.cli move left
-```
-
-## Source layout and checks
-
-| Path | Purpose |
+| Feature | Available in the Windows app |
 | --- | --- |
-| `src/YiLocal.Core` | Native LAN protocol, verified pairing import, frame ordering, MP4 muxer, storage catalogue |
-| `src/YiLocal.Windows` | WinForms UI, preview and export adapters |
-| `yicam` | Python protocol prototype, GUI and CLI |
-| `tests/YiLocal.Checks` | Native pairing, protocol, timing, storage and optional hardware checks |
-| `tests/test_*.py` | Python transport and retention tests |
-| `scripts/check_media_integration.py` | Synthetic native muxing and independent PyAV decode test |
-| [PROTOCOL.md](PROTOCOL.md) | Observed wire formats, command IDs and uncertainty |
+| Live camera controls | Stream quality, pan/tilt, motion tracking, infrared/color night modes and image rotation. Some gimbal behavior remains experimental. |
+| Recording browser | Thumbnails, dates, duration, camera/profile metadata, filters, playback and seeking; protect, export and delete through the recording catalogue. |
+| Storage management | Clip rotation, disk budget, free-space floor and optional recycling of completed, unprotected recordings. |
+| Snapshots | Save a PNG at the source resolution. |
+| Audio | Optional camera microphone monitoring and recording; PC microphone talk-back to the camera speaker. Listening pauses while talking. |
+| Optional alarm | Separate motion threshold, entry/exit grace, Home/Away, fixed or until-stopped playback; camera speaker, selected PC output or both. Primary camera only. |
+| Multiple cameras · experimental | Independent camera profiles, sessions and recording libraries, with a grid and combined recording browser. |
+| English and Finnish | Resource-based localization, ready for community translations. Choose **Settings → App language / Kieli → Suomi**, then restart. |
+
+The measured HD stream on the reference camera is **1280 × 720 at about 15 fps**;
+SD is 640 × 360. **Export 4K (upscaled)** is a software enlargement, not native
+4K capture. Physical control and recording evidence is documented separately
+from post-flash local01 qualification.
+
+Storage estimates use completed recordings. The owner's original recordings
+were roughly **300 MB/hour per camera**; actual use depends on the scene and
+profile. Re-encoding trades CPU and some detail for storage savings, and reducing
+fps alone does not guarantee a smaller file. See [measured examples](docs/RECORDING.md).
+
+Recycling starts **off**. With it enabled, only eligible files in OpenYI's SQLite
+catalogue are removed; protected clips, active clips and unrelated files are
+excluded. Multi-camera storage budgets apply **per camera**, not across the fleet.
+
+OpenYI currently starts with recording stopped and the alarm in **Home**.
+Connect and arm explicitly after launch. A connected recording session retries
+after connection loss; this is separate from unattended startup recovery.
+The app exposes no remote HTTP panel and needs no Internet port forwarding.
+
+## Settings and local key recovery
+
+Settings are per Windows user and do not depend on where you launch the EXE:
+
+| Data | Default location |
+| --- | --- |
+| App settings | `%LOCALAPPDATA%\YI Local\settings.json` |
+| Previous valid settings | `%LOCALAPPDATA%\YI Local\settings.json.bak` |
+| Primary camera profile | `%LOCALAPPDATA%\YI Local\device.dpapi` |
+| Additional camera profiles | `%LOCALAPPDATA%\YI Local\camera-profiles` |
+| Recordings and catalogue | Your **Videos / YI Local** folder; configurable in Storage |
+
+Storage and capture edits save automatically while recording is stopped; edits
+during recording wait until it stops. Path edits save after leaving the text box.
+Camera profiles use current-user Windows DPAPI, so copying a `.dpapi` file to
+another Windows account is not a portable pairing method. On another PC, import
+the key directly from the local01 camera using **Connect and save camera**.
+
+If a local01 connection needs its profile refreshed, use that same direct flow,
+or the workshop's **Export local01 camera key for OpenYI** followed by
+**Import encrypted pairing profile**. This does not require the vendor app or
+another reset. Failed verification preserves the existing saved profile.
+
+The project was previously called YI Local. The repository remains **YI-Cam**,
+and existing executable, settings and recording paths keep their old names for
+compatibility, including Windows Firewall allowances. No registry setup is needed.
+
+## Verification status
+
+Evidence is from **one physical camera**, plus automated tests. These are
+distinct levels of verification:
+
+| Area | Current evidence |
+| --- | --- |
+| Firmware build and patches | Reproducible images, independent filesystem/checksum verification and selected ARM execution checks pass offline. |
+| local01 installation | Wi-Fi flash, reboot and complete application-image readback passed on 10 October 2026. |
+| Owner key persistence | Existing pairing reconnected after a separate cold power cycle, without a vendor-app key refresh. |
+| Vendor-free setup | Physical reset, local QR scan, Wi-Fi connection, fresh direct key import and native live video passed on 11 October 2026. |
+| Existing app features | Recording, motion capture, controls and audio have reference-camera evidence on stock firmware; the full suite still needs repeating after the local01 flash. |
+| Multiple cameras | Concurrent software sessions tested with two simulated cameras; multiple physical cameras and sustained load remain unqualified. |
+| Remaining firmware checks | Internet-blocked setup/operation, complete network traffic capture, initial key creation without a previous key, extended operation and failed-boot recovery. |
+
+Local01 disables the identified vendor-dependent paths and keeps a local owner
+key. That implementation and the successful vendor-free pairing test do not
+establish that every process on the camera is silent on the WAN. Read the
+[installation evidence](firmware/docs/LOCAL01_INSTALLATION.md) and
+[exact patch scope](firmware/docs/LOCAL01.md) before extending support to another
+unit. Offline checksum verification establishes image integrity, not recoverability.
+
+## Original firmware compatibility
+
+Existing stock-firmware cameras remain supported through **Camera setup** and
+**Original firmware · advanced**. This is a compatibility route; the recommended
+vendor-free setup above requires local01.
+
+On stock firmware, the device key can become outdated while vendor account
+pairing remains valid. Open the camera's live view in the already-paired vendor
+PC client, then use **Camera setup → Import from running YI IoT**. The native
+importer supports the verified 32-bit client `1.0.1.1_202209261648`, reads the
+matching pairing and authenticates before saving. It does not modify the vendor
+process. A known valid key or same-user DPAPI import is also supported.
+
+Stock key recovery may therefore still depend on the vendor client. Stock QR
+binding tokens are separate from device keys; they are not needed for local01's
+setup flow. Stock-camera compatibility does not remove that camera's cloud behavior.
+
+## Documentation
+
+| Guide | Contents |
+| --- | --- |
+| [Firmware workshop](firmware/README.md) | Prerequisites, build → verify → inspect → flash, and research index |
+| [Local pairing](firmware/docs/LOCAL_PAIRING.md) | QR payload, direct onboarding and key handoff |
+| [Local key lifecycle](firmware/docs/LOCAL_KEY_MAP.md) | Key creation, persistence, readers/writers and reset behavior |
+| [Protocol](PROTOCOL.md) | Wire formats, commands, measured controls and open questions |
+| [Recording](docs/RECORDING.md) / [motion](docs/MOTION.md) | Encoding, rates, storage measurements and trigger behavior |
+| [Browser/player](docs/BROWSER.md) | Playback, filters, protection and export |
+| [Audio](docs/AUDIO.md) / [alarm](docs/ALARM.md) | Listening, talk-back, optional siren and qualification limits |
+| [Multiple cameras](docs/MULTI_CAMERA.md) | Grid, session isolation, per-camera storage and testing limits |
+| [Translations](docs/LOCALIZATION.md) | English/Finnish resources and adding a language |
+| [Contributing](CONTRIBUTING.md) | Source checks, compatibility reports and private-data handling |
+
+## Python reference and development
+
+`src/YiLocal.Core` contains the native protocol, recording and storage code;
+`src/YiLocal.Windows` is the Windows UI. `yicam` is the Python protocol prototype,
+GUI and CLI. `firmware` contains the public patch profiles, workshop and findings.
+
+For the Python UI on Windows, use Python 3.12+ with Tcl/Tk, run **Setup.cmd**, then
+**Start Recorder.cmd**. Linux/macOS use a virtual environment with
+`requirements-crossplatform.txt` and `python -m yicam.app`; keys use the OS
+keychain. The native Windows onboarding flow is the recommended client setup.
+Linux/macOS desktop integration remains unverified.
+
+Representative source checks:
 
 ```powershell
-dotnet build YiLocal.sln
-dotnet run --project tests/YiLocal.Checks
+dotnet build YiLocal.sln -c Release
+dotnet run --project tests/YiLocal.Checks -c Release
+dotnet run --project tests/YiLocal.Checks -c Release -- --localization
 python -m unittest discover -s tests -v
+python -B -m unittest discover -s firmware/tests -v
 ```
 
-The synthetic media integration check additionally needs `imageio-ffmpeg==0.6.0`.
-It generates a test pattern; no camera or personal video is used. GitHub Actions
-is configured for Windows and Linux source checks. See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dependencies and the media integration
+checks. Tests use synthetic inputs; hardware operations are explicit. Never
+include Wi-Fi QR codes, device keys, private camera footage or raw device backups
+in a compatibility report or source archive.
 
-MIT licensed original source; dependencies retain their own licenses. See
-[THIRD-PARTY.md](THIRD-PARTY.md), including the separate FFmpeg binary packaging notes.
-This project is independent and is not affiliated with YI or the camera vendor.
+## License and independence
 
-Private research, camera captures, keys, recordings, vendor files and compiled
-binaries are excluded from Git. Create public source packages using **git archive**,
-not by zipping an entire development checkout containing ignored files.
+Original OpenYI application code, patch sources and tooling are [MIT licensed](LICENSE).
+The firmware workflow patches an owner's stock image; the resulting image still
+contains proprietary vendor drivers, libraries and other components. This is not
+a fully open-source replacement firmware image. See [third-party notices](THIRD-PARTY.md)
+and [firmware scope](firmware/docs/LOCAL01.md).
+
+Vendor binaries, generated firmware images, credentials and recordings are not
+distributed in this repository. Use `git archive` for public source packages,
+rather than zipping a development checkout containing ignored private files.
+OpenYI is independent and is not affiliated with YI or the camera manufacturer.
