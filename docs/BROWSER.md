@@ -10,8 +10,8 @@ rows and held in memory rather than generating another set of image files.
 Date/time filters select overlapping capture intervals. This matters for
 timelapse, where four seconds of playback may represent several minutes of
 surveillance. Additional filters select a camera, protected/unprotected clips,
-and continuous, low-rate, timelapse or motion type. The motion filter is ready
-for tagged recordings; it does not imply a qualified motion trigger exists.
+and continuous, low-rate, timelapse or motion type. The motion filter includes
+recordings triggered by the local detector, including reduced-rate motion clips.
 
 Select a completed recording and use Play/Pause, Stop or the seek bar. The
 embedded player uses independent FFmpeg video/audio pipes with the same seek origin.

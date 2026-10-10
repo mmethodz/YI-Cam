@@ -9,6 +9,7 @@ static void Reject(Action action, string message)
 }
 static VideoFrame Frame(ushort seq, bool key = false, uint ms = 100000) => new([0, 0, 0, 1, key ? (byte)0x65 : (byte)0x41, 1], seq, 1280, 720, 1, ms, key, 1, 78);
 if (AudioChecks.Fixture(args)) return;
+if (MotionChecks.Fixture(args)) return;
 
 if (args.Length == 2 && args[0] == "--qr-fixture")
 {
@@ -90,6 +91,7 @@ if (args.Length > 0 && args[0] == "--live")
 }
 
 await PairingChecks.RunAsync();
+MotionChecks.Run();
 await MultiCameraChecks.RunAsync();
 Check(CameraAlert.Parse(new byte[4]).Count == 0, "Empty alert history rejected.");
 Check(CameraAlert.Parse(Wire.Join(Wire.U32(1), Wire.U32(1), Wire.U32(100), Wire.U32(6))).Single() == new CameraAlert(1, 100, 6), "Alert history fields differ.");

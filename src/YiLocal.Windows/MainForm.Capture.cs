@@ -9,6 +9,8 @@ public sealed partial class MainForm
     readonly CheckBox limitRecordingRate = new() { Text = "Limit recording capture rate", AutoSize = true };
     readonly NumericUpDown recordingRate = Number(0.5m, 120, 5, 2);
     readonly CheckBox recordingAudio = new() { Text = "Include camera microphone audio (AAC)", AutoSize = true };
+    readonly NumericUpDown postMotion = Number(1, 3600, 30, 0);
+    readonly NumericUpDown motionThreshold = Number(0.1m, 100, 2, 1);
     readonly Label recordingEstimate = Label("Storage estimates appear after a completed recording.");
     bool savingSnapshot;
 
@@ -42,7 +44,7 @@ public sealed partial class MainForm
         body.Controls.Add(recordingProfile);
         body.Controls.Add(Label("Original keeps the camera's encoded video, every frame and original timing. Encoding profiles trade CPU and some detail for smaller files; the saving depends on the scene."));
         body.Controls.Add(Label("Capture mode"));
-        recordingMode.Items.AddRange(["Continuous / low-rate · real elapsed time", "Timelapse · selected frames played at 25 fps"]);
+        recordingMode.Items.AddRange(["Continuous / low-rate · real elapsed time", "Timelapse · selected frames played at 25 fps", "Motion · local detection on this PC"]);
         body.Controls.Add(recordingMode); body.Controls.Add(limitRecordingRate);
         var rate = new FlowLayoutPanel { AutoSize = true };
         recordingRate.Increment = 0.5m; rate.Controls.Add(recordingRate); rate.Controls.Add(Label("frames / second (at most the source rate)", 420)); body.Controls.Add(rate);
@@ -51,6 +53,13 @@ public sealed partial class MainForm
             presets.Controls.Add(Button($"{fps:0.#} fps", () => { if (recordingProfile.SelectedIndex == 0) recordingProfile.SelectedIndex = 1; limitRecordingRate.Checked = true; recordingRate.Value = fps; }));
         body.Controls.Add(presets);
         body.Controls.Add(Label("Frame selection affects saved recordings only. Live preview and camera stream quality stay independent. Low-rate recordings preserve elapsed time; timelapse deliberately plays faster."));
+        var motion = new FlowLayoutPanel { AutoSize = true };
+        motion.Controls.Add(Label("Seconds after last motion", 230)); motion.Controls.Add(postMotion);
+        body.Controls.Add(motion);
+        var sensitivity = new FlowLayoutPanel { AutoSize = true };
+        sensitivity.Controls.Add(Label("Changed image area (%)", 230)); sensitivity.Controls.Add(motionThreshold);
+        motionThreshold.Increment = 0.1m; body.Controls.Add(sensitivity);
+        body.Controls.Add(Label("A lower area threshold is more sensitive. Local detection checks up to 5 times/second, independently of saved fps. New motion restarts the timer. Camera movement and lighting can also trigger it. A short buffered lead-in is included when available (up to one keyframe interval, capped at 5 seconds)."));
         body.Controls.Add(recordingAudio);
         body.Controls.Add(Label("Audio is off by default. Original and encoded real-time profiles retain camera-timestamped AAC; accelerated timelapse has no audio."));
         body.Controls.Add(Button("Save capture settings", () => _ = Guard(() => { SaveCaptureOptions(); status.Text = "Capture settings saved for the next recording."; return Task.CompletedTask; })));
@@ -67,29 +76,35 @@ public sealed partial class MainForm
         limitRecordingRate.Checked = preferences.Recording.FramesPerSecond is not null;
         recordingRate.Value = (decimal)(preferences.Recording.FramesPerSecond ?? 5);
         recordingAudio.Checked = preferences.Recording.IncludeAudio;
+        postMotion.Value = (decimal)preferences.Recording.PostMotionSeconds;
+        motionThreshold.Value = (decimal)preferences.Recording.MotionThresholdPercent;
         UpdateCaptureControls();
+        UpdateRecordLabels();
     }
     void UpdateCaptureControls()
     {
         bool encode = recordingProfile.SelectedIndex > 0;
-        recordingMode.Enabled = limitRecordingRate.Enabled = encode;
-        if (!encode) { recordingMode.SelectedIndex = 0; limitRecordingRate.Checked = false; }
+        limitRecordingRate.Enabled = encode;
+        if (!encode) { if (recordingMode.SelectedIndex == 1) recordingMode.SelectedIndex = 0; limitRecordingRate.Checked = false; }
         else if (recordingMode.SelectedIndex == 1) limitRecordingRate.Checked = true;
         recordingRate.Enabled = encode && limitRecordingRate.Checked;
         recordingAudio.Enabled = recordingMode.SelectedIndex != 1;
         if (!recordingAudio.Enabled) recordingAudio.Checked = false;
+        postMotion.Enabled = motionThreshold.Enabled = recordingMode.SelectedIndex == 2;
     }
     void SaveCaptureOptions()
     {
-        if (AnyRecording) throw new InvalidOperationException("Stop all recordings before changing the capture profile.");
+        if (AnyRecording) throw new InvalidOperationException("Stop or disarm all recordings before changing the capture profile.");
         UpdateCaptureControls();
         var selected = new RecordingOptions((RecordingEncoding)recordingProfile.SelectedIndex,
-            limitRecordingRate.Checked ? (double)recordingRate.Value : null, (CaptureMode)recordingMode.SelectedIndex, recordingAudio.Checked);
+            limitRecordingRate.Checked ? (double)recordingRate.Value : null, (CaptureMode)recordingMode.SelectedIndex, recordingAudio.Checked,
+            (double)postMotion.Value, (double)motionThreshold.Value);
         selected.Validate();
-        if (selected.Encoding != RecordingEncoding.Original && !File.Exists(ffmpeg.Text.Trim()))
-            throw new IOException("Choose an FFmpeg executable in Storage for encoding profiles.");
+        if ((selected.Encoding != RecordingEncoding.Original || selected.Mode == CaptureMode.Motion) && !File.Exists(ffmpeg.Text.Trim()))
+            throw new IOException("Choose an FFmpeg executable in Storage for encoding profiles or local motion detection.");
         preferences.Recording = selected; preferences.Ffmpeg = ffmpeg.Text.Trim(); preferences.Save();
         UpdateStorageEstimate();
+        UpdateRecordLabels();
     }
     void UpdateStorageEstimate()
     {
@@ -107,7 +122,8 @@ public sealed partial class MainForm
             double perHour = matching.Sum(c => c.Bytes) / seconds * 3600 / 1_000_000;
             recordingEstimate.Text = $"Saved profile: {preferences.Recording.Label} · {(preferences.Recording.FramesPerSecond is { } fps ? $"{fps:0.##} fps" : "source fps")}\n" +
                 $"Measured from {matching.Length} recent clips ({seconds / 60:0.0} minutes captured):\n" +
-                $"{perHour:0.0} MB/hour · {perHour * 24 / 1000:0.00} GB/day per camera · {perHour * 96 / 1000:0.00} GB/day for four similar cameras.\n" +
+                (preferences.Recording.Mode == CaptureMode.Motion ? $"{perHour:0.0} MB per hour of recorded footage. Daily use depends on how often motion triggers.\n" :
+                    $"{perHour:0.0} MB/hour · {perHour * 24 / 1000:0.00} GB/day per camera · {perHour * 96 / 1000:0.00} GB/day for four similar cameras.\n") +
                 "Estimate only: movement, lighting and scene detail change file size. MB/GB use decimal units.";
         }
         catch (Exception e) { recordingEstimate.Text = "Storage estimate unavailable: " + e.Message; }

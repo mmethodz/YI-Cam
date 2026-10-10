@@ -3,10 +3,11 @@ using System.Globalization;
 namespace YiLocal.Core;
 
 public enum RecordingEncoding { Original, Balanced, Small }
-public enum CaptureMode { Continuous, Timelapse }
+public enum CaptureMode { Continuous, Timelapse, Motion }
 
 public sealed record RecordingOptions(RecordingEncoding Encoding = RecordingEncoding.Original,
-    double? FramesPerSecond = null, CaptureMode Mode = CaptureMode.Continuous, bool IncludeAudio = false)
+    double? FramesPerSecond = null, CaptureMode Mode = CaptureMode.Continuous, bool IncludeAudio = false,
+    double PostMotionSeconds = 30, double MotionThresholdPercent = 2)
 {
     public string Label => Encoding switch
     {
@@ -19,12 +20,15 @@ public sealed record RecordingOptions(RecordingEncoding Encoding = RecordingEnco
         if (!Enum.IsDefined(Encoding) || !Enum.IsDefined(Mode) ||
             FramesPerSecond is { } fps && (!double.IsFinite(fps) || fps is < 0.5 or > 120))
             throw new ArgumentException("Recording rate must be between 0.5 and 120 fps, or the source rate.");
-        if (Encoding == RecordingEncoding.Original && (FramesPerSecond is not null || Mode != CaptureMode.Continuous))
+        if (Encoding == RecordingEncoding.Original && (FramesPerSecond is not null || Mode == CaptureMode.Timelapse))
             throw new ArgumentException("Original-stream recording preserves every source frame and its timing. Choose an H.264 profile for frame selection or timelapse.");
         if (Mode == CaptureMode.Timelapse && FramesPerSecond is null)
             throw new ArgumentException("Choose a capture rate for timelapse (played at 25 fps).");
         if (Mode == CaptureMode.Timelapse && IncludeAudio)
             throw new ArgumentException("Timelapse has accelerated time and cannot retain synchronized real-time audio.");
+        if (!double.IsFinite(PostMotionSeconds) || PostMotionSeconds is < 1 or > 3600 ||
+            !double.IsFinite(MotionThresholdPercent) || MotionThresholdPercent is < 0.1 or > 100)
+            throw new ArgumentException("Post-motion recording must be 1–3600 seconds; the changed-area threshold must be 0.1–100 percent.");
     }
     internal string? Filter
     {

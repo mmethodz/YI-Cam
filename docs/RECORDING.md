@@ -1,7 +1,8 @@
 # Recording profiles and verification
 
-Original recording remains the default native C# fragmented MP4 path. It does
-not require FFmpeg. Optional profiles feed those timestamped fragments to a
+Original recording remains the default native C# fragmented MP4 path. It
+does not require FFmpeg in continuous mode. Motion mode uses FFmpeg for local
+detection while preserving the original encoded recording. Optional profiles feed those timestamped fragments to a
 separate FFmpeg process and encode with `libx264`, `veryfast`, CRF 28 or 32,
 without B frames. Reduced-rate profiles select one source picture per time
 bucket without duplicating pictures to raise the rate. Live preview consumes

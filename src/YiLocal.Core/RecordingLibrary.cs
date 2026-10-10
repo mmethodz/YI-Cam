@@ -181,8 +181,7 @@ public sealed class SegmentRecorder : IDisposable
             if (Environment.TickCount64 - waitingForAudio > 15000)
                 throw new IOException("No supported microphone audio arrived within 15 seconds. Disable audio to record video only.");
         }
-        foreach (var done in finishing.Where(task => task.IsCompleted).ToArray())
-        { finishing.Remove(done); done.GetAwaiter().GetResult(); }
+        CheckCompleted();
         string identity = $"{orderEpoch}:{frame.Generation}:{frame.Width}:{frame.Height}";
         if (epoch != identity) { CloseSegment(); parameters.Clear(); epoch = identity; }
         if (Environment.TickCount64 - lastCheck > 1000)
@@ -209,7 +208,7 @@ public sealed class SegmentRecorder : IDisposable
                 encoder = new(ffmpeg!, library.ClipPath(name), frame.Width, frame.Height, parameters[7], parameters[8], options, options.IncludeAudio ? audioConfiguration : null);
             current = name; started = time;
             library.Register(name, frame.Width, frame.Height, new(cameraName, options.Label,
-                options.Mode == CaptureMode.Timelapse ? "Timelapse" : options.FramesPerSecond is not null ? "Low-rate" : "Continuous", options.FramesPerSecond,
+                options.Mode == CaptureMode.Motion ? "Motion" : options.Mode == CaptureMode.Timelapse ? "Timelapse" : options.FramesPerSecond is not null ? "Low-rate" : "Continuous", options.FramesPerSecond,
                 Audio: options.IncludeAudio ? $"AAC-LC {audioConfiguration!.SampleRate} Hz, {audioConfiguration.Channels} channel(s)" : null));
         }
         if (writer is not null) writer.Write(frame.Data, time - started);
@@ -228,6 +227,17 @@ public sealed class SegmentRecorder : IDisposable
         if (current is null || time < started) return;
         if (writer is not null) writer.WriteAudio(frame.Data, time - started);
         else encoder!.Write(frame.Data, time - started, audio: true);
+    }
+    internal void PrimeAudio(AudioFrame frame)
+    {
+        if (!options.IncludeAudio) return;
+        if (frame.Codec != 138) throw new NotSupportedException($"Unsupported camera audio codec {frame.Codec}.");
+        audioConfiguration = AacConfiguration.Parse(frame.Data).Configuration;
+    }
+    internal void CheckCompleted()
+    {
+        foreach (var done in finishing.Where(task => task.IsCompleted).ToArray())
+        { finishing.Remove(done); done.GetAwaiter().GetResult(); }
     }
     public void ConnectionEnded()
     {

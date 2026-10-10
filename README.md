@@ -103,6 +103,14 @@ AAC with its camera timestamps in real-time profiles. Timelapse has no audio.
 **Listen to camera** enables local speaker monitoring using FFmpeg and Windows
 audio output. Both options start off; see [audio evidence and limits](docs/AUDIO.md).
 
+**Motion · local detection on this PC** records when the source image changes.
+Set the changed-area threshold (lower is more sensitive) and the seconds to record
+after the last motion; each new movement restarts that timer. It works with
+original-stream and reduced-rate profiles without reducing live preview fps.
+A bounded GOP buffer includes a short lead-in when available. FFmpeg is required
+for detection, and OpenYI must remain open and connected. Camera movement and
+lighting can also trigger it. See [motion behavior and verification](docs/MOTION.md).
+
 **Save snapshot** saves a full source-resolution PNG from the current decoded
 camera GOP, rather than the scaled preview. It requires FFmpeg. Snapshots are
 explicit exports to a chosen file and are outside automatic recording recycling.

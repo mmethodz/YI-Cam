@@ -11,6 +11,7 @@ public sealed class CameraSession : IAsyncDisposable
     bool monitoring, audioStarted;
     Task? run;
     SegmentRecorder? recorder;
+    MotionRecorder? motionRecorder;
     string? recordFolder;
     StoragePolicy policy = new();
     RecordingOptions recordingOptions = new();
@@ -25,6 +26,7 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action<VideoFrame, long, int>? Frame;
     public event Action<AudioFrame, long>? Audio;
     public event Action<bool>? RecordingChanged;
+    public event Action<MotionRecordingState>? MotionChanged;
     public event Action? PairingRejected;
     public VideoSnapshot Snapshot() => snapshots.Take();
     public CameraSession(DeviceProfile profile) { this.profile = profile; }
@@ -58,10 +60,22 @@ public sealed class CameraSession : IAsyncDisposable
         {
             if (recording) return;
             recordingOptions = options ?? new(); recordingFfmpeg = ffmpeg;
-            recorder = new SegmentRecorder(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
+            if (recordingOptions.Mode == CaptureMode.Motion)
+            {
+                motionRecorder = new(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
+                motionRecorder.State += state =>
+                {
+                    MotionChanged?.Invoke(state);
+                    if (recording) Status?.Invoke(state.Capturing
+                        ? $"Motion recording · {state.RemainingSeconds:0} s after last motion · {state.ChangedPercent:0.0}% changed"
+                        : $"Watching for motion · {state.ChangedPercent:0.0}% changed / {recordingOptions.MotionThresholdPercent:0.0}% threshold");
+                };
+            }
+            else recorder = new SegmentRecorder(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
             recordFolder = folder; policy = selectedPolicy;
             // Queue the initial status before incoming frames can report an opened clip.
-            Status?.Invoke(recordingOptions.IncludeAudio ? "Recording armed; waiting for AAC audio and the next keyframe." : "Recording armed; waiting for the next keyframe."); recording = true;
+            Status?.Invoke(recordingOptions.Mode == CaptureMode.Motion ? "Motion recording armed; starting local detection." :
+                recordingOptions.IncludeAudio ? "Recording armed; waiting for AAC audio and the next keyframe." : "Recording armed; waiting for the next keyframe."); recording = true;
         }
         RecordingChanged?.Invoke(true);
         _ = UpdateAudioAsync();
@@ -69,16 +83,17 @@ public sealed class CameraSession : IAsyncDisposable
     public void StopRecording()
     {
         SegmentRecorder? closing;
+        MotionRecorder? closingMotion;
         lock (recordLock)
         {
-            recording = false; closing = recorder; recorder = null;
+            recording = false; closing = recorder; recorder = null; closingMotion = motionRecorder; motionRecorder = null;
         }
-        try { closing?.Dispose(); }
+        try { closing?.Dispose(); closingMotion?.Dispose(); }
         finally { RecordingChanged?.Invoke(false); _ = UpdateAudioAsync(); }
     }
     void CloseSegment()
     {
-        lock (recordLock) recorder?.ConnectionEnded();
+        lock (recordLock) { recorder?.ConnectionEnded(); motionRecorder?.ConnectionEnded(); }
     }
     async Task RunAsync()
     {
@@ -114,17 +129,23 @@ public sealed class CameraSession : IAsyncDisposable
                             if (recording)
                                 try
                                 {
-                                    recorder ??= new SegmentRecorder(recordFolder!, policy, recordingOptions, recordingFfmpeg, profile.Name);
-                                    bool opening = recorder.Current is null;
-                                    recorder.Write(frame, time, order.Epoch);
-                                    if (opening && recorder.Current is not null) Status?.Invoke("Recording to local disk · " + recordingOptions.Label + ".");
+                                    if (motionRecorder is not null) motionRecorder.Write(frame, time, order.Epoch);
+                                    else
+                                    {
+                                        recorder ??= new SegmentRecorder(recordFolder!, policy, recordingOptions, recordingFfmpeg, profile.Name);
+                                        bool opening = recorder.Current is null;
+                                        recorder.Write(frame, time, order.Epoch);
+                                        if (opening && recorder.Current is not null) Status?.Invoke("Recording to local disk · " + recordingOptions.Label + ".");
+                                    }
                                 }
                                 catch (Exception e)
                                 {
                                     recording = false;
                                     try { recorder?.Dispose(); } catch (IOException) { }
-                                    recorder = null;
+                                    try { motionRecorder?.Dispose(); } catch (IOException) { }
+                                    recorder = null; motionRecorder = null;
                                     RecordingChanged?.Invoke(false); Status?.Invoke("Recording stopped: " + e.Message);
+                                    _ = UpdateAudioAsync();
                                 }
                         }
                         Frame?.Invoke(frame, time, order.Epoch);
@@ -170,12 +191,17 @@ public sealed class CameraSession : IAsyncDisposable
                 lock (recordLock)
                 {
                     if (recording)
-                        try { recorder?.WriteAudio(frame, time); }
+                        try
+                        {
+                            if (motionRecorder is not null) motionRecorder.WriteAudio(frame, time);
+                            else recorder?.WriteAudio(frame, time);
+                        }
                         catch (Exception e)
                         {
                             recording = false;
                             try { recorder?.Dispose(); } catch (IOException) { }
-                            recorder = null;
+                            try { motionRecorder?.Dispose(); } catch (IOException) { }
+                            recorder = null; motionRecorder = null;
                             RecordingChanged?.Invoke(false); Status?.Invoke("Recording stopped: " + e.Message);
                             _ = UpdateAudioAsync();
                         }

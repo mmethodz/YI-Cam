@@ -19,10 +19,11 @@ public sealed class SnapshotBuffer
     readonly Dictionary<int, byte[]> parameters = [];
     readonly int maximumFrames;
     readonly long maximumBytes;
+    readonly long maximumMilliseconds;
     string? identity;
     long bytes;
-    public SnapshotBuffer(int maximumFrames = 600, long maximumBytes = 16 * 1024 * 1024)
-    { this.maximumFrames = maximumFrames; this.maximumBytes = maximumBytes; }
+    public SnapshotBuffer(int maximumFrames = 600, long maximumBytes = 16 * 1024 * 1024, long maximumMilliseconds = long.MaxValue)
+    { this.maximumFrames = maximumFrames; this.maximumBytes = maximumBytes; this.maximumMilliseconds = maximumMilliseconds; }
     public void Clear()
     { lock (gate) { frames.Clear(); parameters.Clear(); bytes = 0; identity = null; } }
     public void Add(VideoFrame frame, long time, int epoch)
@@ -42,7 +43,8 @@ public sealed class SnapshotBuffer
             if (!nals.Any(nal => (nal[0] & 31) is 1 or 5)) return;
             if (key) { frames.Clear(); bytes = 0; }
             if (!key && frames.Count == 0 || !parameters.ContainsKey(7) || !parameters.ContainsKey(8)) return;
-            if (frames.Count >= maximumFrames || bytes + frame.Data.Length > maximumBytes)
+            if (frames.Count >= maximumFrames || bytes + frame.Data.Length > maximumBytes ||
+                frames.Count > 0 && time - frames[0].Time > maximumMilliseconds)
             { frames.Clear(); bytes = 0; return; }
             frames.Add((frame, time)); bytes += frame.Data.Length;
         }

@@ -21,6 +21,7 @@ python -m pip install imageio-ffmpeg==0.6.0
 python scripts/check_media_integration.py
 python scripts/check_recording_profiles.py
 python scripts/check_audio_integration.py
+python scripts/check_motion_integration.py
 # Windows player, including encoded low-rate recordings with audio:
 python scripts/check_player_integration.py
 ```

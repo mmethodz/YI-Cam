@@ -201,14 +201,26 @@ public sealed partial class MainForm : Form
             session.RecordingChanged += recordingActive => Ui(() =>
             {
                 if (session != active) return;
-                record.Text = recordingActive ? "Stop recording" : "Start recording"; recordState.Text = recordingActive ? "● Recording to local disk" : "Recording is off";
-                recordState.ForeColor = recordingActive ? Color.Firebrick : Color.DarkSlateGray;
+                UpdateRecordLabels();
                 if (!recordingActive) UpdatePrimaryGridState("Recording is off.");
                 UpdateKeepAwake();
+            });
+            session.MotionChanged += state => Ui(() =>
+            {
+                if (session != active || !active.Recording) return;
+                recordState.Text = state.Capturing ? $"● Motion · {state.RemainingSeconds:0} s remaining" : $"Watching · {state.ChangedPercent:0.0}% changed";
+                recordState.ForeColor = state.Capturing ? Color.Firebrick : Color.DarkGreen;
             });
             session.Audio += OnAudio; session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
         }
         finally { connect.Enabled = !importing; }
+    }
+    void UpdateRecordLabels()
+    {
+        bool armed = session?.Recording == true, motion = preferences.Recording.Mode == CaptureMode.Motion;
+        record.Text = motion ? armed ? "Disarm motion recording" : "Arm motion recording" : armed ? "Stop recording" : "Start recording";
+        recordState.Text = armed ? motion ? "Watching for motion" : "● Recording to local disk" : "Recording is off";
+        recordState.ForeColor = armed ? motion ? Color.DarkGreen : Color.Firebrick : Color.DarkSlateGray;
     }
     async Task DisconnectAsync()
     {
@@ -217,8 +229,7 @@ public sealed partial class MainForm : Form
         finally
         {
             ClearPreview(); ClearAudio(); listen.Checked = false; cameraControls.Enabled = record.Enabled = false;
-            connect.Text = "Connect camera"; record.Text = "Start recording";
-            recordState.Text = "Recording is off"; recordState.ForeColor = Color.DarkSlateGray;
+            connect.Text = "Connect camera"; UpdateRecordLabels();
             UpdateKeepAwake(); UpdatePrimaryGridState();
         }
     }
@@ -254,7 +265,7 @@ public sealed partial class MainForm : Form
         Field("Recording budget (GiB)", quota); Field("Keep disk space free (GiB)", free); Field("Clip length (minutes)", segment); Field("Maximum age (days; 0 = unlimited)", days);
         body.Controls.Add(recycle);
         body.Controls.Add(Label("Recycling is off by default. Only completed, unprotected recordings registered in this folder can be recycled. Changes apply to the next recording session."));
-        body.Controls.Add(Label("FFmpeg executable · needed for preview, snapshots, encoding profiles and 4K export")); body.Controls.Add(ffmpeg);
+        body.Controls.Add(Label("FFmpeg executable · needed for preview, snapshots, local motion detection, encoding profiles and 4K export")); body.Controls.Add(ffmpeg);
         body.Controls.Add(Button("Choose FFmpeg…", () => { using var dialog = new OpenFileDialog { Filter = "FFmpeg executable|ffmpeg*.exe|Executable|*.exe" }; if (dialog.ShowDialog(this) == DialogResult.OK) ffmpeg.Text = dialog.FileName; }));
         body.Controls.Add(Button("Save storage settings", () => _ = Guard(() =>
         {
