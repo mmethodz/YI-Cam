@@ -11,7 +11,7 @@ public sealed record StoragePolicy(double QuotaGiB = 20, double MinimumFreeGiB =
         if (!double.IsFinite(QuotaGiB) || QuotaGiB is < 0.1 or > 100000 ||
             !double.IsFinite(MinimumFreeGiB) || MinimumFreeGiB is < 0.1 or > 100000 ||
             !double.IsFinite(SegmentMinutes) || SegmentMinutes is < 0.1 or > 120 || KeepDays is < 0 or > 36500)
-            throw new ArgumentException("Invalid storage policy.");
+            throw new ArgumentException(L.Get("InvalidStoragePolicy"));
     }
 }
 public sealed record Clip(string Name, double Started, double Duration, int Width, int Height,
@@ -44,10 +44,10 @@ public sealed partial class RecordingLibrary : IDisposable
     }
     public string ClipPath(string name)
     {
-        if (!ManagedName().IsMatch(name)) throw new ArgumentException("Not an app-managed recording name.");
+        if (!ManagedName().IsMatch(name)) throw new ArgumentException(L.Get("NotAnAppManagedRecordingName"));
         string path = Path.Combine(Root, name);
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("Recording points outside its library.");
+            throw new IOException(L.Get("RecordingPointsOutsideItsLibrary"));
         return path;
     }
     public void Register(string name, int width, int height, ClipMetadata? metadata = null)
@@ -95,7 +95,7 @@ public sealed partial class RecordingLibrary : IDisposable
         cmd.CommandText = "SELECT complete,protected,EXISTS(SELECT 1 FROM clip_leases l WHERE l.name=clips.name AND l.expires>unixepoch()) FROM clips WHERE name=$n"; cmd.Parameters.AddWithValue("$n", name);
         using (var reader = cmd.ExecuteReader())
             if (!reader.Read() || reader.GetInt32(0) == 0 || reader.GetInt32(1) != 0 || reader.GetInt32(2) != 0)
-                throw new InvalidOperationException("Only finished, unprotected recordings that are not in use can be deleted.");
+                throw new InvalidOperationException(L.Get("OnlyFinishedUnprotectedRecordingsThatAreNotInUseCanBe"));
         File.Delete(ClipPath(name));
         cmd.CommandText = "DELETE FROM clip_details WHERE name=$n"; cmd.ExecuteNonQuery();
         cmd.CommandText = "DELETE FROM clip_audio WHERE name=$n"; cmd.ExecuteNonQuery();
@@ -119,21 +119,21 @@ public sealed partial class RecordingLibrary : IDisposable
             catch (InvalidOperationException) { continue; } // Protected/leased after the initial catalogue snapshot.
             total -= clip.Bytes; free = freeBytes(); deleted++;
         }
-        if (total + reserve > limit) throw new IOException("Recording budget reached. Free space, raise the budget, or enable recycling.");
-        if (free - reserve < floor) throw new IOException("Recording stopped to preserve free disk space.");
+        if (total + reserve > limit) throw new IOException(L.Get("RecordingBudgetReachedFreeSpaceRaiseTheBudgetOrEnableRecycling"));
+        if (free - reserve < floor) throw new IOException(L.Get("RecordingStoppedToPreserveFreeDiskSpace"));
         return deleted;
     }
     public void Dispose() => connection.Dispose();
 
     public ClipLease Hold(string name)
     {
-        if (!File.Exists(ClipPath(name))) throw new IOException("Recording file is missing.");
+        if (!File.Exists(ClipPath(name))) throw new IOException(L.Get("RecordingFileIsMissing"));
         string owner = Guid.NewGuid().ToString("N");
         using var tx = connection.BeginTransaction(deferred: false);
         using var cmd = connection.CreateCommand(); cmd.Transaction = tx;
         cmd.CommandText = "INSERT INTO clip_leases(name,owner,expires) SELECT name,$o,unixepoch()+120 FROM clips WHERE name=$n AND complete=1";
         cmd.Parameters.AddWithValue("$n", name); cmd.Parameters.AddWithValue("$o", owner);
-        if (cmd.ExecuteNonQuery() != 1) throw new IOException("Choose a completed recording.");
+        if (cmd.ExecuteNonQuery() != 1) throw new IOException(L.Get("ChooseACompletedRecording"));
         tx.Commit(); return new(Root, name, owner);
     }
     internal void RenewLease(string name, string owner) => Execute("UPDATE clip_leases SET expires=unixepoch()+120 WHERE name=$n AND owner=$o", ("$n", name), ("$o", owner));
@@ -167,7 +167,7 @@ public sealed class SegmentRecorder : IDisposable
         policy.Validate(); this.policy = policy; this.options = options ?? new(); this.options.Validate();
         this.ffmpeg = ffmpeg; this.cameraName = cameraName;
         if (this.options.Encoding != RecordingEncoding.Original && !File.Exists(ffmpeg))
-            throw new IOException("Choose an FFmpeg executable before using an encoding profile.");
+            throw new IOException(L.Get("ChooseAnFFmpegExecutableBeforeUsingAnEncodingProfile"));
         Directory.CreateDirectory(folder);
         writerLock = new FileStream(Path.Combine(folder, ".yi-writer.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         try { library = new(folder); library.Enforce(policy); }
@@ -179,7 +179,7 @@ public sealed class SegmentRecorder : IDisposable
         {
             waitingForAudio ??= Environment.TickCount64;
             if (Environment.TickCount64 - waitingForAudio > 15000)
-                throw new IOException("No supported microphone audio arrived within 15 seconds. Disable audio to record video only.");
+                throw new IOException(L.Get("NoSupportedMicrophoneAudioArrivedWithin15SecondsDisableAudioTo"));
         }
         CheckCompleted();
         string identity = $"{orderEpoch}:{frame.Generation}:{frame.Width}:{frame.Height}";
@@ -201,7 +201,7 @@ public sealed class SegmentRecorder : IDisposable
             if (!key || !parameters.ContainsKey(7) || !parameters.ContainsKey(8) || options.IncludeAudio && audioConfiguration is null) return;
             Recycled += library.Enforce(policy);
             string name = $"YI_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_{frame.Width}x{frame.Height}_{Guid.NewGuid().ToString("N")[..6]}.mp4";
-            if (finishing.Count > 1) throw new IOException("Recording encoders are not finishing in time.");
+            if (finishing.Count > 1) throw new IOException(L.Get("RecordingEncodersAreNotFinishingInTime"));
             if (options.Encoding == RecordingEncoding.Original)
                 writer = new(library.ClipPath(name), frame.Width, frame.Height, parameters[7], parameters[8], options.IncludeAudio ? audioConfiguration : null);
             else
@@ -218,7 +218,7 @@ public sealed class SegmentRecorder : IDisposable
     public void WriteAudio(AudioFrame frame, long time)
     {
         if (!options.IncludeAudio) return;
-        if (frame.Codec != 138) throw new NotSupportedException($"Unsupported camera audio codec {frame.Codec}.");
+        if (frame.Codec != 138) throw new NotSupportedException(L.Format("UnsupportedCameraAudioCodec0", frame.Codec));
         var (configuration, _) = AacConfiguration.Parse(frame.Data);
         if (audioConfiguration is not null && (audioConfiguration != configuration ||
             audioSequence is { } prior && frame.Sequence != (ushort)(prior + 1) || audioTime is { } previous && time <= previous))
@@ -231,7 +231,7 @@ public sealed class SegmentRecorder : IDisposable
     internal void PrimeAudio(AudioFrame frame)
     {
         if (!options.IncludeAudio) return;
-        if (frame.Codec != 138) throw new NotSupportedException($"Unsupported camera audio codec {frame.Codec}.");
+        if (frame.Codec != 138) throw new NotSupportedException(L.Format("UnsupportedCameraAudioCodec0", frame.Codec));
         audioConfiguration = AacConfiguration.Parse(frame.Data).Configuration;
     }
     internal void CheckCompleted()

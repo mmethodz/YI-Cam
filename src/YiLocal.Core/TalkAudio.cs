@@ -13,7 +13,7 @@ public static class TalkAudio
     {
         var (configuration, _) = AacConfiguration.Parse(adts);
         if (configuration.SampleRate != SampleRate || configuration.Channels != 1 || adts.Length > MaximumPacketBytes)
-            throw new InvalidDataException("Talk-back requires AAC-LC 16 kHz mono, at most 1024 bytes per ADTS packet.");
+            throw new InvalidDataException(L.Get("TalkBackRequiresAACLC16KHzMonoAtMost1024"));
     }
     internal static byte[] Message(byte[] adts, string key, uint frameNumber)
     {

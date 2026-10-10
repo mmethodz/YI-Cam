@@ -35,7 +35,7 @@ public sealed class MotionAlarmGate
     public MotionAlarmGate(AlarmOptions options) { options.Validate(); this.options = options; }
     public void Arm(long now)
     {
-        if (!options.Enabled) throw new InvalidOperationException("Enable the optional alarm first.");
+        if (!options.Enabled) throw new InvalidOperationException(L.Get("EnableTheOptionalAlarmFirst"));
         Home();
         Phase = options.ExitDelaySeconds > 0 ? AlarmPhase.ExitDelay : AlarmPhase.Watching;
         deadline = now + (long)(options.ExitDelaySeconds * 1000);

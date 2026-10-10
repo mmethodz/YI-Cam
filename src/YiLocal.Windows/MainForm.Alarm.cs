@@ -4,7 +4,7 @@ namespace YiLocal.Windows;
 
 public sealed partial class MainForm
 {
-    readonly CheckBox alarmEnabled = new() { Text = "Enable optional motion alarm", AutoSize = true };
+    readonly CheckBox alarmEnabled = new() { Text = L.Get("EnableOptionalMotionAlarm"), AutoSize = true };
     readonly NumericUpDown alarmThreshold = Number(.1m, 100, 10, 1);
     readonly NumericUpDown alarmDuration = Number(1, 3600, 30, 0);
     readonly NumericUpDown alarmEntry = Number(0, 300, 15, 0);
@@ -12,11 +12,11 @@ public sealed partial class MainForm
     readonly ComboBox alarmDurationPreset = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170 };
     readonly ComboBox alarmOutput = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
     readonly ComboBox alarmDevice = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 370, DropDownWidth = 480 };
-    readonly Label alarmSoundLabel = Label("Siren Noise — KevanGC (public domain)");
-    readonly Label alarmMotionLevel = Label("Live changed area: waiting for motion recording to be armed.");
-    readonly Label alarmBadge = new() { Text = "HOME · alarm disarmed", AutoSize = false, Width = 225, Height = 32, TextAlign = ContentAlignment.MiddleCenter };
-    readonly Button alarmMode = new() { Text = "Away / arm alarm", AutoSize = true, Margin = new Padding(3) };
-    readonly Button silenceAlarm = new() { Text = "Stop alarm", AutoSize = true, Enabled = false, Margin = new Padding(3) };
+    readonly Label alarmSoundLabel = Label(L.Get("SirenNoiseKevanGCPublicDomain"));
+    readonly Label alarmMotionLevel = Label(L.Get("LiveChangedAreaWaitingForMotionRecordingToBeArmed"));
+    readonly Label alarmBadge = new() { Text = L.Get("HOMEAlarmDisarmed"), AutoSize = false, Width = 225, Height = 32, TextAlign = ContentAlignment.MiddleCenter };
+    readonly Button alarmMode = new() { Text = L.Get("AwayArmAlarm"), AutoSize = true, Margin = new Padding(3) };
+    readonly Button silenceAlarm = new() { Text = L.Get("StopAlarm"), AutoSize = true, Enabled = false, Margin = new Padding(3) };
     readonly FlowLayoutPanel alarmSettings = Column();
     readonly NotifyIcon alarmTray = new();
     readonly Icon homeIcon = AlarmIcon(Color.SeaGreen), awayIcon = AlarmIcon(Color.Firebrick), delayIcon = AlarmIcon(Color.DarkOrange);
@@ -62,10 +62,10 @@ public sealed partial class MainForm
         });
         silenceAlarm.Click += (_, _) => _ = StopAlarmIncidentAsync();
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Open OpenYI", null, (_, _) => { Show(); WindowState = FormWindowState.Normal; Activate(); });
-        menu.Items.Add("Home / disarm alarm", null, (_, _) => _ = HomeAlarmAsync());
-        menu.Items.Add("Stop alarm", null, (_, _) => _ = StopAlarmIncidentAsync());
-        alarmTray.ContextMenuStrip = menu; alarmTray.Icon = homeIcon; alarmTray.Text = "OpenYI · HOME · alarm disarmed"; alarmTray.Visible = true;
+        menu.Items.Add(L.Get("OpenOpenYI"), null, (_, _) => { Show(); WindowState = FormWindowState.Normal; Activate(); });
+        menu.Items.Add(L.Get("HomeDisarmAlarm"), null, (_, _) => _ = HomeAlarmAsync());
+        menu.Items.Add(L.Get("StopAlarm"), null, (_, _) => _ = StopAlarmIncidentAsync());
+        alarmTray.ContextMenuStrip = menu; alarmTray.Icon = homeIcon; alarmTray.Text = L.Get("OpenYIHOMEAlarmDisarmed"); alarmTray.Visible = true;
         alarmTray.DoubleClick += (_, _) => { Show(); WindowState = FormWindowState.Normal; Activate(); };
         KeyDown += (_, e) => { if (e.KeyCode == Keys.Escape && (AlarmPlaying || alarmGate?.Phase == AlarmPhase.EntryDelay)) { e.Handled = true; _ = HomeAlarmAsync(); } };
         Disposed += (_, _) => { alarmTray.Visible = false; alarmTray.Dispose(); menu.Dispose(); homeIcon.Dispose(); awayIcon.Dispose(); delayIcon.Dispose(); };
@@ -73,28 +73,28 @@ public sealed partial class MainForm
     }
     void BuildAlarm()
     {
-        var body = alarmSettings; Page("Motion alarm").Controls.Add(new ScrollableColumn(body));
+        var body = alarmSettings; Page(L.Get("MotionAlarm")).Controls.Add(new ScrollableColumn(body));
         body.Controls.Add(alarmEnabled);
-        body.Controls.Add(AlarmNote("Primary camera: arm motion recording in Live camera, then choose Away below. Home silences and disarms the alarm while recording continues."));
-        body.Controls.Add(Row(Label("Alarm changed image area (%)", 260), alarmThreshold));
+        body.Controls.Add(AlarmNote(L.Get("PrimaryCameraArmMotionRecordingInLiveCameraThenChooseAway")));
+        body.Controls.Add(Row(Label(L.Get("AlarmChangedImageArea"), 260), alarmThreshold));
         alarmThreshold.Increment = .1m; body.Controls.Add(alarmMotionLevel);
-        alarmDurationPreset.Items.AddRange(["30 seconds", "1 minute", "5 minutes", "Custom", "Until stopped"]);
-        body.Controls.Add(Row(Label("Repeat sound for", 170), alarmDurationPreset, alarmDuration, Label("seconds (custom)", 150)));
-        body.Controls.Add(Row(Label("Entry grace (seconds)", 230), alarmEntry));
-        body.Controls.Add(Row(Label("Arm after (minutes)", 230), alarmExitMinutes));
+        alarmDurationPreset.Items.AddRange([L.Get("Duration.ThirtySeconds"), L.Get("Duration.OneMinute"), L.Get("Duration.FiveMinutes"), L.Get("Custom"), L.Get("UntilStopped")]);
+        body.Controls.Add(Row(Label(L.Get("RepeatSoundFor"), 170), alarmDurationPreset, alarmDuration, Label(L.Get("SecondsCustom"), 150)));
+        body.Controls.Add(Row(Label(L.Get("EntryGraceSeconds"), 230), alarmEntry));
+        body.Controls.Add(Row(Label(L.Get("ArmAfterMinutes"), 230), alarmExitMinutes));
         alarmExitMinutes.Increment = .5m;
-        body.Controls.Add(AlarmNote("Home cancels the entry countdown. Stop silences this incident; another trigger needs two quiet seconds. New motion extends recording, not the siren. Stream loss returns to Home."));
-        alarmOutput.Items.AddRange(["Camera speaker (default)", "Computer output", "Camera + computer"]);
-        body.Controls.Add(Row(Label("Play alarm through", 180), alarmOutput));
-        body.Controls.Add(Row(Label("Computer sound device", 200), alarmDevice));
+        body.Controls.Add(AlarmNote(L.Get("HomeCancelsTheEntryCountdownStopSilencesThisIncidentAnotherTrigger")));
+        alarmOutput.Items.AddRange([L.Get("CameraSpeakerDefault"), L.Get("ComputerOutput"), L.Get("CameraComputer")]);
+        body.Controls.Add(Row(Label(L.Get("PlayAlarmThrough"), 180), alarmOutput));
+        body.Controls.Add(Row(Label(L.Get("ComputerSoundDevice"), 200), alarmDevice));
         body.Controls.Add(alarmSoundLabel);
-        body.Controls.Add(Row(Button("Choose sound…", () => _ = Guard(ImportAlarmSoundAsync)), Button("Use default siren", () =>
-        { selectedAlarmFile = selectedAlarmName = null; alarmSoundLabel.Text = "Siren Noise — KevanGC (public domain)"; MarkAlarmDirty(); })));
-        body.Controls.Add(AlarmNote("WAV, MP3, AAC, FLAC, OGG and other FFmpeg audio formats. Imported sounds are copied locally; the first 60 seconds are looped."));
-        body.Controls.Add(AlarmNote("Maximum application playback level; Windows master/mute and amplifier volume still apply. Camera hardware gain is unverified. Camera playback can mute its microphone in recordings."));
-        body.Controls.Add(Row(Button("Save alarm settings", () => _ = Guard(() => { SaveAlarmOptions(); return Task.CompletedTask; })),
-            Button("Test sound (3 s, loud)", () => _ = Guard(TestAlarmAsync))));
-        body.Controls.Add(AlarmNote("Every launch starts in Home. Settings save automatically. Home and Stop stay available below and in the tray. Talking or Escape during an alarm returns to Home."));
+        body.Controls.Add(Row(Button(L.Get("ChooseSound"), () => _ = Guard(ImportAlarmSoundAsync)), Button(L.Get("UseDefaultSiren"), () =>
+        { selectedAlarmFile = selectedAlarmName = null; alarmSoundLabel.Text = L.Get("SirenNoiseKevanGCPublicDomain"); MarkAlarmDirty(); })));
+        body.Controls.Add(AlarmNote(L.Get("WAVMP3AACFLACOGGAndOtherFFmpegAudioFormatsImported")));
+        body.Controls.Add(AlarmNote(L.Get("MaximumApplicationPlaybackLevelWindowsMasterMuteAndAmplifierVolumeStill")));
+        body.Controls.Add(Row(Button(L.Get("SaveAlarmSettings"), () => _ = Guard(() => { SaveAlarmOptions(); return Task.CompletedTask; })),
+            Button(L.Get("TestSound3SLoud"), () => _ = Guard(TestAlarmAsync))));
+        body.Controls.Add(AlarmNote(L.Get("EveryLaunchStartsInHomeSettingsSaveAutomaticallyHomeAndStop")));
         alarmDurationPreset.SelectedIndexChanged += (_, _) =>
         {
             if (alarmDurationPreset.SelectedIndex is >= 0 and <= 2) alarmDuration.Value = new[] { 30, 60, 300 }[alarmDurationPreset.SelectedIndex];
@@ -118,7 +118,7 @@ public sealed partial class MainForm
             alarmEntry.Value = (decimal)saved.EntryGraceSeconds; alarmExitMinutes.Value = (decimal)saved.ExitDelaySeconds / 60;
             alarmOutput.SelectedIndex = (int)saved.Output;
             selectedAlarmFile = saved.SoundFile; selectedAlarmName = saved.SoundName;
-            alarmSoundLabel.Text = saved.SoundFile is null ? "Siren Noise — KevanGC (public domain)" : "Imported sound: " + (saved.SoundName ?? Path.GetFileName(saved.SoundFile));
+            alarmSoundLabel.Text = saved.SoundFile is null ? L.Get("SirenNoiseKevanGCPublicDomain") : L.Get("ImportedSound") + (saved.SoundName ?? Path.GetFileName(saved.SoundFile));
             ShowAlarmDevices(saved.ComputerDevice, fromSettings: true); UpdateAlarmControls();
         }
         finally { showingAlarm = false; alarmDirty = false; }
@@ -154,19 +154,19 @@ public sealed partial class MainForm
     }
     void SaveAlarmOptions()
     {
-        if (AlarmArmed || AlarmPlaying || alarmPreparation is not null) throw new InvalidOperationException("Choose Home and stop the alarm before changing its settings.");
+        if (AlarmArmed || AlarmPlaying || alarmPreparation is not null) throw new InvalidOperationException(L.Get("ChooseHomeAndStopTheAlarmBeforeChangingItsSettings"));
         var next = preferences.Copy(); next.Alarm = ReadAlarmOptions(); next.Save(); preferences = next; alarmDirty = false;
-        status.Text = "Alarm settings saved. Choose Away to arm; startup always remains Home.";
+        status.Text = L.Get("AlarmSettingsSavedChooseAwayToArmStartupAlwaysRemainsHome");
     }
     async Task ImportAlarmSoundAsync()
     {
-        using var dialog = new OpenFileDialog { Filter = "Audio files|*.wav;*.mp3;*.aac;*.m4a;*.flac;*.ogg;*.opus;*.wma|All files|*.*" };
+        using var dialog = new OpenFileDialog { Filter = L.Get("AudioFilesWavMp3AacM4aFlacOggOpusWmaAll") };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         await PrepareAlarmAsync(async token =>
         {
             var converted = await AlarmAudio.ImportAsync(ffmpeg.Text.Trim(), dialog.FileName, AlarmAudio.CacheDirectory, token);
             token.ThrowIfCancellationRequested(); selectedAlarmFile = converted.Path; selectedAlarmName = Path.GetFileName(dialog.FileName);
-            alarmSoundLabel.Text = $"Imported sound: {selectedAlarmName} · {converted.Clip.Seconds:0.0} s loop";
+            alarmSoundLabel.Text = L.Format("ImportedSound0100SLoop", selectedAlarmName, converted.Clip.Seconds);
             MarkAlarmDirty();
         });
         if (alarmDirty) SaveAlarmOptions();
@@ -192,20 +192,20 @@ public sealed partial class MainForm
     async Task ArmAlarmAsync()
     {
         SaveAlarmOptions();
-        if (!preferences.Alarm.Enabled) throw new IOException("Enable the optional alarm in Motion alarm first.");
-        if (!MotionReady) throw new IOException("Arm local motion recording for the primary camera and wait for live motion measurements before choosing Away.");
+        if (!preferences.Alarm.Enabled) throw new IOException(L.Get("EnableTheOptionalAlarmInMotionAlarmFirst"));
+        if (!MotionReady) throw new IOException(L.Get("ArmLocalMotionRecordingForThePrimaryCameraAndWaitFor"));
         await StopTalkAsync(); await alarmStopping;
         await PrepareAlarmAsync(async token =>
         {
             await LoadAlarmSoundAsync(token); token.ThrowIfCancellationRequested();
-            if (!MotionReady || closing) throw new IOException("Motion analysis stopped while preparing the alarm.");
+            if (!MotionReady || closing) throw new IOException(L.Get("MotionAnalysisStoppedWhilePreparingTheAlarm"));
             alarmGate = new(preferences.Alarm); alarmGate.Arm(Environment.TickCount64);
         });
     }
     async Task TestAlarmAsync()
     {
         SaveAlarmOptions(); await StopTalkAsync(); await alarmStopping;
-        if (preferences.Alarm.Output != AlarmOutput.Computer && session?.Client is not { Connected: true }) throw new IOException("Connect the camera to test its speaker.");
+        if (preferences.Alarm.Output != AlarmOutput.Computer && session?.Client is not { Connected: true }) throw new IOException(L.Get("ConnectTheCameraToTestItsSpeaker"));
         await PrepareAlarmAsync(async token =>
         {
             await LoadAlarmSoundAsync(token); token.ThrowIfCancellationRequested();
@@ -217,9 +217,9 @@ public sealed partial class MainForm
         if (AlarmPlaying || alarmClip is null) return;
         ClearAudio(); listen.Enabled = false;
         if (preferences.Alarm.Output != AlarmOutput.Computer)
-            cameraAlarm = new(profile ?? throw new IOException("No saved camera."), alarmClip, duration);
+            cameraAlarm = new(profile ?? throw new IOException(L.Get("NoSavedCamera")), alarmClip, duration);
         if (preferences.Alarm.Output != AlarmOutput.Camera)
-            computerAlarm = new(alarmPcm ?? throw new IOException("Computer alarm was not prepared."), preferences.Alarm.ComputerDevice, duration);
+            computerAlarm = new(alarmPcm ?? throw new IOException(L.Get("ComputerAlarmWasNotPrepared")), preferences.Alarm.ComputerDevice, duration);
     }
     Task StopAlarmPlaybackAsync()
     {
@@ -252,11 +252,11 @@ public sealed partial class MainForm
             if (sample is null || Environment.TickCount64 - received > 1000)
             {
                 lastAlarmMeasurement = 0;
-                if (AlarmArmed) { _ = HomeAlarmAsync(); status.Text = "Alarm returned to Home: motion analysis restarted or fell behind."; }
+                if (AlarmArmed) { _ = HomeAlarmAsync(); status.Text = L.Get("AlarmReturnedToHomeMotionAnalysisRestartedOrFellBehind"); }
                 return;
             }
             lastAlarmMeasurement = received;
-            alarmMotionLevel.Text = $"Live changed area: {sample.ChangedPercent:0.0}% · recording {preferences.Recording.MotionThresholdPercent:0.0}% / alarm {preferences.Alarm.ThresholdPercent:0.0}%";
+            alarmMotionLevel.Text = L.Format("LiveChangedArea000Recording100Alarm", sample.ChangedPercent, preferences.Recording.MotionThresholdPercent, preferences.Alarm.ThresholdPercent);
             alarmGate?.Observe(sample.ChangedPercent, received);
         });
     }
@@ -264,9 +264,9 @@ public sealed partial class MainForm
     {
         long now = Environment.TickCount64;
         if (AlarmArmed && !MotionReady)
-        { _ = HomeAlarmAsync(); status.Text = "Alarm returned to Home: recording stopped or fresh motion analysis is unavailable."; }
+        { _ = HomeAlarmAsync(); status.Text = L.Get("AlarmReturnedToHomeRecordingStoppedOrFreshMotionAnalysisIs"); }
         if ((cameraAlarm?.Error ?? computerAlarm?.Error) is { } error)
-        { _ = HomeAlarmAsync(); status.Text = "Alarm returned to Home: " + error; }
+        { _ = HomeAlarmAsync(); status.Text = L.Get("AlarmReturnedToHome") + error; }
         else if ((cameraAlarm is not null || computerAlarm is not null) &&
             (cameraAlarm?.Completion.IsCompleted ?? true) && (computerAlarm?.Completion.IsCompleted ?? true)) _ = StopAlarmIncidentAsync();
         if (cameraAlarm?.PacketsSent > 0 || computerAlarm?.Started == true) alarmGate?.PlaybackStarted(now);
@@ -280,21 +280,22 @@ public sealed partial class MainForm
     {
         long now = Environment.TickCount64;
         var phase = alarmGate?.Phase ?? AlarmPhase.Home;
-        string text = alarmPreparation is not null ? "HOME · preparing sound…" : alarmTest ? "TEST · LOUD alarm" : phase switch
+        string text = alarmPreparation is not null ? L.Get("HOMEPreparingSound") : alarmTest ? L.Get("TESTLOUDAlarm") : phase switch
         {
-            AlarmPhase.ExitDelay => $"EXIT · arming in {alarmGate!.RemainingSeconds(now):0} s",
-            AlarmPhase.Watching => "AWAY · ALARM ARMED",
-            AlarmPhase.EntryDelay => $"ENTRY · alarm in {alarmGate!.RemainingSeconds(now):0} s",
-            AlarmPhase.Sounding => alarmGate!.RemainingSeconds(now) is { } remaining ? $"ALARM · {remaining:0} s remaining" : "ALARM · until stopped",
-            AlarmPhase.WaitingForQuiet => "AWAY · waiting for quiet",
-            _ => "HOME · alarm disarmed"
+            AlarmPhase.ExitDelay => L.Format("EXITArmingIn00S", alarmGate!.RemainingSeconds(now)),
+            AlarmPhase.Watching => L.Get("AWAYALARMARMED"),
+            AlarmPhase.EntryDelay => L.Format("ENTRYAlarmIn00S", alarmGate!.RemainingSeconds(now)),
+            AlarmPhase.Sounding => alarmGate!.RemainingSeconds(now) is { } remaining ? L.Format("ALARM00SRemaining", remaining) : L.Get("ALARMUntilStopped"),
+            AlarmPhase.WaitingForQuiet => L.Get("AWAYWaitingForQuiet"),
+            _ => L.Get("HOMEAlarmDisarmed")
         };
         Color color = phase is AlarmPhase.ExitDelay or AlarmPhase.EntryDelay ? Color.DarkOrange : AlarmArmed || alarmTest ? Color.Firebrick : Color.DarkGreen;
         alarmBadge.Text = text; alarmBadge.ForeColor = Color.White; alarmBadge.BackColor = color;
-        alarmMode.Text = AlarmArmed || AlarmPlaying || alarmPreparation is not null ? "Home / disarm alarm" : "Away / arm alarm";
+        alarmMode.Text = AlarmArmed || AlarmPlaying || alarmPreparation is not null ? L.Get("HomeDisarmAlarm") : L.Get("AwayArmAlarm");
         silenceAlarm.Enabled = AlarmPlaying || phase == AlarmPhase.EntryDelay || phase == AlarmPhase.ExitDelay || alarmPreparation is not null;
         alarmSettings.Enabled = !closing && !AlarmArmed && !AlarmPlaying && alarmPreparation is null;
-        alarmTray.Text = "OpenYI · " + text;
+        string trayText = "OpenYI · " + text;
+        alarmTray.Text = trayText.Length <= 63 ? trayText : trayText[..62] + "…";
         var icon = color == Color.DarkOrange ? delayIcon : color == Color.Firebrick ? awayIcon : homeIcon;
         if (!ReferenceEquals(alarmTray.Icon, icon)) alarmTray.Icon = icon;
     }

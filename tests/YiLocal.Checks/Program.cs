@@ -10,6 +10,7 @@ static void Reject(Action action, string message)
 static VideoFrame Frame(ushort seq, bool key = false, uint ms = 100000) => new([0, 0, 0, 1, key ? (byte)0x65 : (byte)0x41, 1], seq, 1280, 720, 1, ms, key, 1, 78);
 if (AudioChecks.Fixture(args)) return;
 if (MotionChecks.Fixture(args)) return;
+if (args is ["--localization"]) { LocalizationChecks.Run(); return; }
 
 if (args.Length == 2 && args[0] == "--qr-fixture")
 {

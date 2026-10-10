@@ -19,16 +19,16 @@ public sealed record RecordingOptions(RecordingEncoding Encoding = RecordingEnco
     {
         if (!Enum.IsDefined(Encoding) || !Enum.IsDefined(Mode) ||
             FramesPerSecond is { } fps && (!double.IsFinite(fps) || fps is < 0.5 or > 120))
-            throw new ArgumentException("Recording rate must be between 0.5 and 120 fps, or the source rate.");
+            throw new ArgumentException(L.Get("RecordingRateMustBeBetween05And120FpsOr"));
         if (Encoding == RecordingEncoding.Original && (FramesPerSecond is not null || Mode == CaptureMode.Timelapse))
-            throw new ArgumentException("Original-stream recording preserves every source frame and its timing. Choose an H.264 profile for frame selection or timelapse.");
+            throw new ArgumentException(L.Get("OriginalStreamRecordingPreservesEverySourceFrameAndItsTimingChoose"));
         if (Mode == CaptureMode.Timelapse && FramesPerSecond is null)
-            throw new ArgumentException("Choose a capture rate for timelapse (played at 25 fps).");
+            throw new ArgumentException(L.Get("ChooseACaptureRateForTimelapsePlayedAt25Fps"));
         if (Mode == CaptureMode.Timelapse && IncludeAudio)
-            throw new ArgumentException("Timelapse has accelerated time and cannot retain synchronized real-time audio.");
+            throw new ArgumentException(L.Get("TimelapseHasAcceleratedTimeAndCannotRetainSynchronizedRealTimeAudio"));
         if (!double.IsFinite(PostMotionSeconds) || PostMotionSeconds is < 1 or > 3600 ||
             !double.IsFinite(MotionThresholdPercent) || MotionThresholdPercent is < 0.1 or > 100)
-            throw new ArgumentException("Post-motion recording must be 1–3600 seconds; the changed-area threshold must be 0.1–100 percent.");
+            throw new ArgumentException(L.Get("PostMotionRecordingMustBe13600SecondsTheChangedArea"));
     }
     internal string? Filter
     {

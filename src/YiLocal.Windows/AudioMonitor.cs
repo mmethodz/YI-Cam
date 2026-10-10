@@ -18,7 +18,7 @@ internal sealed class AudioMonitor : IDisposable
         var info = MediaTools.StartInfo(executable, "-hide_banner", "-loglevel", "error", "-probesize", "32", "-analyzeduration", "0",
             "-f", "aac", "-i", "pipe:0", "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-flush_packets", "1", "pipe:1");
         info.RedirectStandardInput = info.RedirectStandardOutput = true;
-        process = Process.Start(info) ?? throw new IOException("Could not start the audio decoder.");
+        process = Process.Start(info) ?? throw new IOException(L.Get("CouldNotStartTheAudioDecoder"));
         writer = Task.Run(async () =>
         {
             try
@@ -106,7 +106,7 @@ internal sealed class PcmOutput : IPcmPlaybackOutput
     bool disposed;
     readonly Queue<(IntPtr Header, IntPtr Data)> pending = new();
     static readonly uint HeaderSize = (uint)Marshal.SizeOf<Header>();
-    static void Check(uint result) { if (result != 0) throw new IOException($"Windows audio output failed ({result})."); }
+    static void Check(uint result) { if (result != 0) throw new IOException(L.Format("WindowsAudioOutputFailed0", result)); }
     public double Seconds
     {
         get
@@ -123,7 +123,7 @@ internal sealed class PcmOutput : IPcmPlaybackOutput
     }
     public static IReadOnlyList<PlaybackDevice> Devices()
     {
-        var result = new List<PlaybackDevice> { new(uint.MaxValue, "Windows default output") };
+        var result = new List<PlaybackDevice> { new(uint.MaxValue, L.Get("WindowsDefaultOutput")) };
         for (uint i = 0; i < waveOutGetNumDevs(); i++)
             if (waveOutGetDevCapsW((UIntPtr)i, out var caps, (uint)Marshal.SizeOf<Capabilities>()) == 0) result.Add(new(i, caps.Name));
         return result;
@@ -132,7 +132,7 @@ internal sealed class PcmOutput : IPcmPlaybackOutput
     {
         if (name is null) return Devices()[0];
         var matching = Devices().Skip(1).Where(device => device.Name == name).ToArray();
-        if (matching.Length != 1) throw new IOException("The saved alarm output is unavailable or its name is ambiguous. Select a uniquely named output device; no fallback speaker was used.");
+        if (matching.Length != 1) throw new IOException(L.Get("TheSavedAlarmOutputIsUnavailableOrItsNameIsAmbiguous"));
         return matching[0];
     }
     public PcmOutput(string? deviceName = null, bool fullVolume = false)

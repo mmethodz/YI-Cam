@@ -25,8 +25,8 @@ public sealed class MotionRecorder : IDisposable
     public MotionRecorder(string folder, StoragePolicy policy, RecordingOptions options, string? ffmpeg, string cameraName = "")
     {
         options.Validate();
-        if (options.Mode != CaptureMode.Motion) throw new ArgumentException("Select motion capture mode.");
-        if (!File.Exists(ffmpeg)) throw new IOException("Choose an FFmpeg executable for local motion detection.");
+        if (options.Mode != CaptureMode.Motion) throw new ArgumentException(L.Get("SelectMotionCaptureMode"));
+        if (!File.Exists(ffmpeg)) throw new IOException(L.Get("ChooseAnFFmpegExecutableForLocalMotionDetection"));
         this.options = options; this.ffmpeg = ffmpeg;
         window = new(options.PostMotionSeconds);
         recorder = new(folder, policy, options, ffmpeg, cameraName);
@@ -48,7 +48,7 @@ public sealed class MotionRecorder : IDisposable
         decoder.Push(frame, time);
         while (decoder.Measurements.TryRead(out var sample))
         {
-            if (time - sample.Milliseconds > 5000) throw new IOException("Local motion detection is more than five seconds behind. Recording has been disarmed.");
+            if (time - sample.Milliseconds > 5000) throw new IOException(L.Get("LocalMotionDetectionIsMoreThanFiveSecondsBehindRecordingHas"));
             Measurement?.Invoke(sample);
             bool wasActive = window.Active;
             bool active = window.Observe(sample);
@@ -94,7 +94,7 @@ public sealed class MotionRecorder : IDisposable
     public void WriteAudio(AudioFrame frame, long time)
     {
         if (!options.IncludeAudio) return;
-        if (frame.Data.Length > 1024 * 1024) throw new IOException("Audio packet exceeds the motion buffer limit.");
+        if (frame.Data.Length > 1024 * 1024) throw new IOException(L.Get("AudioPacketExceedsTheMotionBufferLimit"));
         audio.Enqueue((frame, time)); audioBytes += frame.Data.Length;
         while (audio.Count > 128 || audioBytes > 1024 * 1024 || audio.Count > 0 && time - audio.Peek().Time > 8000)
             audioBytes -= audio.Dequeue().Frame.Data.Length;

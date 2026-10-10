@@ -19,6 +19,7 @@ jobs:
       - run: python -m pip install -r requirements.txt imageio-ffmpeg==0.6.0
       - run: python -m unittest discover -s tests -v
       - run: dotnet run --project tests/YiLocal.Checks -c Release
+      - run: dotnet run --project tests/YiLocal.Checks -c Release -- --localization
       - if: runner.os == 'Windows'
         run: dotnet build YiLocal.sln -c Release --nologo
       - run: python scripts/check_media_integration.py

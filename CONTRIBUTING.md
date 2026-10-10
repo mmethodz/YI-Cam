@@ -4,6 +4,10 @@ Start with README.md and PROTOCOL.md. Python is the protocol prototype; the
 WinForms app and its recording backend are native C#. Keep equivalent wire
 behavior covered in both implementations when changing the protocol.
 
+For interface translations, follow [the localization guide](docs/LOCALIZATION.md).
+English and Finnish resources are separate from C# behavior; additional languages
+need a resource file and a catalogue entry. Keep saved/protocol identifiers invariant.
+
 Use synthetic video and fake keys in tests. Never submit device keys, pairing QR
 codes, camera UIDs, account credentials, Wi-Fi details, private packet captures,
 or camera footage. Describe a new model with its hardware number, firmware version,
@@ -15,6 +19,7 @@ Run:
 ```powershell
 dotnet build YiLocal.sln
 dotnet run --project tests/YiLocal.Checks
+dotnet run --project tests/YiLocal.Checks -c Release -- --localization
 python -m unittest discover -s tests -v
 # Independent native media integration checks:
 python -m pip install imageio-ffmpeg==0.6.0

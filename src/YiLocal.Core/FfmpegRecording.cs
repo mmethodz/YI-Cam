@@ -20,7 +20,7 @@ internal sealed class FfmpegRecording
     public FfmpegRecording(string executable, string path, int width, int height, byte[] sps, byte[] pps, RecordingOptions options, AacConfiguration? audio = null)
     {
         options.Validate();
-        if (!File.Exists(executable)) throw new IOException("Choose an FFmpeg executable before using an encoding profile.");
+        if (!File.Exists(executable)) throw new IOException(L.Get("ChooseAnFFmpegExecutableBeforeUsingAnEncodingProfile"));
         var info = new ProcessStartInfo(executable)
         {
             UseShellExecute = false, CreateNoWindow = true,
@@ -41,7 +41,7 @@ internal sealed class FfmpegRecording
         // delay_moov retains an audio track's nonzero first DTS instead of shifting it to zero.
         Add("-force_key_frames", "expr:gte(t,n_forced*10)", "-movflags", audio is null ? "+frag_keyframe+empty_moov+default_base_moof" : "+frag_keyframe+delay_moov+default_base_moof",
             "-frag_duration", "1000000", "-progress", "pipe:1", "-f", "mp4", path);
-        process = Process.Start(info) ?? throw new IOException("Could not start FFmpeg.");
+        process = Process.Start(info) ?? throw new IOException(L.Get("CouldNotStartFFmpeg"));
         worker = Task.Run(async () =>
         {
             var stderr = DrainErrorsAsync(); var progress = ReadProgressAsync();
@@ -60,19 +60,19 @@ internal sealed class FfmpegRecording
                 finally { input.Dispose(); }
                 double capture = input.DurationMilliseconds / 1000.0;
                 await process.WaitForExitAsync(); await Task.WhenAll(stderr, progress);
-                if (process.ExitCode != 0) throw new IOException("FFmpeg recording failed: " + errors);
-                if (outputFrames == 0) throw new IOException("FFmpeg produced no recording frames.");
+                if (process.ExitCode != 0) throw new IOException(L.Get("FFmpegRecordingFailed") + errors);
+                if (outputFrames == 0) throw new IOException(L.Get("FFmpegProducedNoRecordingFrames"));
                 // FFmpeg progress precedes the duration bitstream filter. Read final container
                 // timing so the catalogue agrees with playback, especially at 0.5 fps.
                 var saved = FragmentedVideoInfo.Read(path);
-                if (saved.Frames != outputFrames) throw new IOException("Encoded frame count does not match the saved MP4.");
+                if (saved.Frames != outputFrames) throw new IOException(L.Get("EncodedFrameCountDoesNotMatchTheSavedMP4"));
                 return new EncodedClipResult(saved.Duration, capture, saved.Frames);
             }
             catch (Exception e)
             {
                 failure = e; queue.Writer.TryComplete(e); Kill();
                 try { await Task.WhenAll(stderr, progress); } catch (IOException) { }
-                throw new IOException("Recording encoder failed: " + (errors.Length > 0 ? errors.ToString() : e.Message), e);
+                throw new IOException(L.Get("RecordingEncoderFailed") + (errors.Length > 0 ? errors.ToString() : e.Message), e);
             }
             finally { process.Dispose(); }
         });
@@ -98,11 +98,11 @@ internal sealed class FfmpegRecording
     }
     public void Write(byte[] data, long time, bool audio = false)
     {
-        if (failure is { } error) throw new IOException("Recording encoder failed.", error);
-        if (completed) throw new InvalidOperationException("Recording encoder has finished.");
+        if (failure is { } error) throw new IOException(L.Get("Recording.EncoderFailed"), error);
+        if (completed) throw new InvalidOperationException(L.Get("RecordingEncoderHasFinished"));
         if (Interlocked.Add(ref queuedBytes, data.Length) <= MaximumQueuedBytes && queue.Writer.TryWrite((data, time, audio))) return;
         Interlocked.Add(ref queuedBytes, -data.Length);
-        throw new IOException("Recording encoder cannot keep up. Choose a lighter profile or lower capture rate.");
+        throw new IOException(L.Get("RecordingEncoderCannotKeepUpChooseALighterProfileOrLower"));
     }
     public async Task<EncodedClipResult> FinishAsync()
     {
@@ -112,7 +112,7 @@ internal sealed class FfmpegRecording
         {
             Kill();
             try { await worker.WaitAsync(TimeSpan.FromSeconds(2)); } catch (Exception) { }
-            throw new IOException("Recording encoder did not finish within 15 seconds; the clip remains marked interrupted.");
+            throw new IOException(L.Get("RecordingEncoderDidNotFinishWithin15SecondsTheClipRemains"));
         }
     }
     void Kill()

@@ -38,7 +38,7 @@ internal static class MediaTools
             process.Start(); var error = process.StandardError.ReadToEndAsync(cancellation);
             using var registration = cancellation.Register(() => { try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } });
             await process.WaitForExitAsync(cancellation);
-            if (process.ExitCode != 0) throw new IOException("4K export failed: " + await error);
+            if (process.ExitCode != 0) throw new IOException(L.Get("Export.FourKFailed") + await error);
             File.Move(temporary, output, false);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
@@ -61,7 +61,7 @@ internal static class MediaTools
                 process.StandardInput.Close();
             }, timeout.Token);
             await process.WaitForExitAsync(timeout.Token);
-            if (process.ExitCode != 0 || !File.Exists(temporary)) throw new IOException("Snapshot failed: " + await errors);
+            if (process.ExitCode != 0 || !File.Exists(temporary)) throw new IOException(L.Get("SnapshotFailed") + await errors);
             File.Move(temporary, output, false);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
@@ -80,11 +80,11 @@ internal static class MediaTools
         int count;
         while ((count = await process.StandardOutput.BaseStream.ReadAsync(buffer, timeout.Token)) > 0)
         {
-            if (memory.Length + count > 1024 * 1024) { process.Kill(true); throw new IOException("Thumbnail exceeded its bound."); }
+            if (memory.Length + count > 1024 * 1024) { process.Kill(true); throw new IOException(L.Get("ThumbnailExceededItsBound")); }
             memory.Write(buffer, 0, count);
         }
         await process.WaitForExitAsync(timeout.Token);
-        if (process.ExitCode != 0) throw new IOException("Thumbnail unavailable: " + await errors);
+        if (process.ExitCode != 0) throw new IOException(L.Get("ThumbnailUnavailable") + await errors);
         memory.Position = 0; using var image = Image.FromStream(memory); return new Bitmap(image);
     }
 }
@@ -106,7 +106,7 @@ internal sealed class VideoPreview : IDisposable
         var info = MediaTools.StartInfo(executable, "-hide_banner", "-loglevel", "error", "-flags", "low_delay", "-probesize", "32768", "-analyzeduration", "0",
             "-f", "h264", "-i", "pipe:0", "-vf", $"scale={width}:{height}", "-an", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1");
         info.RedirectStandardInput = info.RedirectStandardOutput = true;
-        process = Process.Start(info) ?? throw new IOException("Unable to start FFmpeg.");
+        process = Process.Start(info) ?? throw new IOException(L.Get("UnableToStartFFmpeg"));
         // Drain stderr continuously, without keeping an unbounded log.
         errors = Task.Run(async () => { try { while (await process.StandardError.ReadLineAsync(stop.Token) is not null) { } } catch (OperationCanceledException) { } });
         writer = Task.Run(async () =>

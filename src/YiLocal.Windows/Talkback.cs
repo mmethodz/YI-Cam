@@ -41,7 +41,7 @@ internal sealed class Talkback : IAsyncDisposable
                     {
                         if (!clock.IsRunning) clock.Start();
                         double target = PacketsSent * .064, delay = target - clock.Elapsed.TotalSeconds;
-                        if (delay < -.8) throw new IOException("Talking fell behind real time. Start talking again to reconnect.");
+                        if (delay < -.8) throw new IOException(L.Get("TalkingFellBehindRealTimeStartTalkingAgainToReconnect"));
                         if (delay > 0) await Task.Delay(TimeSpan.FromSeconds(delay), stop.Token);
                         stop.Token.ThrowIfCancellationRequested(); client.SendTalkAudio(packet);
                         Interlocked.Increment(ref packetsSent);

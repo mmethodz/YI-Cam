@@ -1,0 +1,2179 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="Storage.ContinuousEstimate" xml:space="preserve">
+    <value>{0:0.0} MB/hour · {1:0.00} GB/day per camera · {2:0.00} GB/day for four similar cameras.
+</value>
+    <comment>MainForm.Capture.cs. {0}: perHour; {1}: perHour * 24 / 1000; {2}: perHour * 96 / 1000</comment>
+  </data>
+  <data name="Storage.MotionEstimate" xml:space="preserve">
+    <value>{0:0.0} MB per hour of recorded footage. Daily use depends on how often motion triggers.
+</value>
+    <comment>MainForm.Capture.cs. {0}: perHour</comment>
+  </data>
+  <data name="Capture.FrameRate" xml:space="preserve">
+    <value>{0:0.##} fps</value>
+    <comment>MainForm.Browser.cs; MainForm.Capture.cs. {0}: fps</comment>
+  </data>
+  <data name="Capture.FrameRatePreset" xml:space="preserve">
+    <value>{0:0.#} fps</value>
+    <comment>MainForm.Capture.cs. {0}: fps</comment>
+  </data>
+  <data name="Live.StreamMetrics" xml:space="preserve">
+    <value>{0} × {1}  ·  {2:0.0} source fps  ·  Local LAN</value>
+    <comment>MainForm.cs. {0}: frame.Width; {1}: frame.Height; {2}: fps</comment>
+  </data>
+  <data name="Browser.PageCount" xml:space="preserve">
+    <value>{0} matching · page {1}/{2}</value>
+    <comment>MainForm.Browser.cs. {0}: matching.Length; {1}: browserPage + 1; {2}: Math.Max(1, (matching.Length + BrowserPageSize - 1) / BrowserPageSize)</comment>
+  </data>
+  <data name="Browser.ClipDetails" xml:space="preserve">
+    <value>{0}
+Playback {1}
+Captured {2}
+{3:0.0} MiB
+{4}</value>
+    <comment>MainForm.Browser.cs. {0}: metadata?.Audio ?? "No audio"; {1}: Duration(clip.Duration); {2}: Duration(metadata is { CaptureDuration: &gt; 0 } ? metadata.CaptureDuration : clip.Duration); {3}: clip.Bytes / 1048576.0; {4}: clip.Name</comment>
+  </data>
+  <data name="Duration.OneMinuteShort" xml:space="preserve">
+    <value>1 min</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="Duration.OneMinute" xml:space="preserve">
+    <value>1 minute</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Duration.ThirtySecondsShort" xml:space="preserve">
+    <value>30 sec</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="Duration.ThirtySeconds" xml:space="preserve">
+    <value>30 seconds</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Export.FourKFailed" xml:space="preserve">
+    <value>4K export failed: </value>
+    <comment>MediaTools.cs</comment>
+  </data>
+  <data name="Duration.FiveMinutesShort" xml:space="preserve">
+    <value>5 min</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="Duration.FiveMinutes" xml:space="preserve">
+    <value>5 minutes</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="A15ByteDevicePairingKeyIsRequired" xml:space="preserve">
+    <value>A 15-byte device pairing key is required.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="AACConfigurationChangedWithinTheClip" xml:space="preserve">
+    <value>AAC configuration changed within the clip.</value>
+    <comment>FragmentedMp4.cs</comment>
+  </data>
+  <data name="AACSampleRatesAbove48KHzAreNotSupported" xml:space="preserve">
+    <value>AAC sample rates above 48 kHz are not supported.</value>
+    <comment>CameraAudio.cs</comment>
+  </data>
+  <data name="ADifferentCameraAnsweredAtThisAddress" xml:space="preserve">
+    <value>A different camera answered at this address.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="ADifferentCameraAnsweredTheSavedPairingWasNotChanged" xml:space="preserve">
+    <value>A different camera answered. The saved pairing was not changed.</value>
+    <comment>PairingImport.cs</comment>
+  </data>
+  <data name="ALARM00SRemaining" xml:space="preserve">
+    <value>ALARM · {0:0} s remaining</value>
+    <comment>MainForm.Alarm.cs. {0}: remaining</comment>
+  </data>
+  <data name="ALARMUntilStopped" xml:space="preserve">
+    <value>ALARM · until stopped</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ALowerAreaThresholdIsMoreSensitiveLocalDetectionChecksUp" xml:space="preserve">
+    <value>A lower area threshold is more sensitive. Local detection checks up to 5 times/second, independently of saved fps. New motion restarts the timer. Camera movement and lighting can also trigger it. A short buffered lead-in is included when available (up to one keyframe interval, capped at 5 seconds).</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="AWAYALARMARMED" xml:space="preserve">
+    <value>AWAY · ALARM ARMED</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AWAYWaitingForQuiet" xml:space="preserve">
+    <value>AWAY · waiting for quiet</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ActiveInterrupted" xml:space="preserve">
+    <value>Active / interrupted</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="AddCamera" xml:space="preserve">
+    <value>Add camera…</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="AddCameraExperimental" xml:space="preserve">
+    <value>Add camera · experimental</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="AdditionalCameraCouldNotBeLoaded" xml:space="preserve">
+    <value>Additional camera could not be loaded: </value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="AdditionalCameraVerifiedAndSavedMultiCameraHardwareCompatibilityRemainsExperimental" xml:space="preserve">
+    <value>Additional camera verified and saved. Multi-camera hardware compatibility remains experimental.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="AlarmAudioConversionFailed" xml:space="preserve">
+    <value>Alarm audio conversion failed: </value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlarmAudioFellBehindRealTime" xml:space="preserve">
+    <value>Alarm audio fell behind real time.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlarmChangedImageArea" xml:space="preserve">
+    <value>Alarm changed image area (%)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AlarmDecoderReturnedInvalidPCM" xml:space="preserve">
+    <value>Alarm decoder returned invalid PCM.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlarmReturnedToHome" xml:space="preserve">
+    <value>Alarm returned to Home: </value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AlarmReturnedToHomeMotionAnalysisRestartedOrFellBehind" xml:space="preserve">
+    <value>Alarm returned to Home: motion analysis restarted or fell behind.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AlarmReturnedToHomeRecordingStoppedOrFreshMotionAnalysisIs" xml:space="preserve">
+    <value>Alarm returned to Home: recording stopped or fresh motion analysis is unavailable.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AlarmSampleExceedsTheOneMiBAACLimit" xml:space="preserve">
+    <value>Alarm sample exceeds the one-MiB AAC limit.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlarmSampleIsTooLarge" xml:space="preserve">
+    <value>Alarm sample is too large.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlarmSamplesAreLimitedToSixtySeconds" xml:space="preserve">
+    <value>Alarm samples are limited to sixty seconds.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlarmSettingsNotSaved" xml:space="preserve">
+    <value>Alarm settings not saved: </value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="AlarmSettingsSavedChooseAwayToArmStartupAlwaysRemainsHome" xml:space="preserve">
+    <value>Alarm settings saved. Choose Away to arm; startup always remains Home.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AlarmSoundFileWasNotFound" xml:space="preserve">
+    <value>Alarm sound file was not found.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="AlertTimeRangeIsReversed" xml:space="preserve">
+    <value>Alert time range is reversed.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="AllCameras" xml:space="preserve">
+    <value>All cameras</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="AllRecordings" xml:space="preserve">
+    <value>All recordings</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="AllTypes" xml:space="preserve">
+    <value>All types</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="AnExportIsRunningWaitForItToFinishBeforeClosing" xml:space="preserve">
+    <value>An export is running. Wait for it to finish before closing.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ApplyFilters" xml:space="preserve">
+    <value>Apply filters</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ArmAfterMinutes" xml:space="preserve">
+    <value>Arm after (minutes)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ArmLocalMotionRecordingForThePrimaryCameraAndWaitFor" xml:space="preserve">
+    <value>Arm local motion recording for the primary camera and wait for live motion measurements before choosing Away.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ArmMotion" xml:space="preserve">
+    <value>Arm motion</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Arrange12Columns" xml:space="preserve">
+    <value>Arrange 1 / 2 columns</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="Audio.Metadata" xml:space="preserve">
+    <value>AAC-LC {0} Hz, {1} channel(s)</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="AudioAndVideoClocksDiverged" xml:space="preserve">
+    <value>Audio and video clocks diverged.</value>
+    <comment>VideoOrdering.cs</comment>
+  </data>
+  <data name="AudioControl" xml:space="preserve">
+    <value>Audio control: </value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="AudioFilesWavMp3AacM4aFlacOggOpusWmaAll" xml:space="preserve">
+    <value>Audio files|*.wav;*.mp3;*.aac;*.m4a;*.flac;*.ogg;*.opus;*.wma|All files|*.*</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="AudioIsOffByDefaultOriginalAndEncodedRealTimeProfiles" xml:space="preserve">
+    <value>Audio is off by default. Original and encoded real-time profiles retain camera-timestamped AAC; accelerated timelapse has no audio.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="AudioPacketExceedsTheMotionBufferLimit" xml:space="preserve">
+    <value>Audio packet exceeds the motion buffer limit.</value>
+    <comment>MotionRecorder.cs</comment>
+  </data>
+  <data name="AudioProcessingFellBehindReconnectToRecover" xml:space="preserve">
+    <value>Audio processing fell behind; reconnect to recover.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="AudioStream" xml:space="preserve">
+    <value>Audio stream: </value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="AutomaticLighting" xml:space="preserve">
+    <value>Automatic lighting</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="AutomaticQuality" xml:space="preserve">
+    <value>Automatic quality</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="AwayArmAlarm" xml:space="preserve">
+    <value>Away / arm alarm</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="BundledPublicDomainSirenIsMissing" xml:space="preserve">
+    <value>Bundled public-domain siren is missing.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="Camera" xml:space="preserve">
+    <value>Camera</value>
+    <comment>CameraEditor.cs; MainForm.Browser.cs; MainForm.cs; VendorClientImporter.cs</comment>
+  </data>
+  <data name="CameraComputer" xml:space="preserve">
+    <value>Camera + computer</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="CameraConnectionWasLost" xml:space="preserve">
+    <value>Camera connection was lost.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraDidNotAcknowledgeACommand" xml:space="preserve">
+    <value>Camera did not acknowledge a command.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraDidNotAcknowledgeSpeakerControl" xml:space="preserve">
+    <value>Camera did not acknowledge speaker control.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraDidNotConfirmTheGimbalRestoreSetting" xml:space="preserve">
+    <value>Camera did not confirm the gimbal restore setting.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraDidNotInitializeTheTalkStream" xml:space="preserve">
+    <value>Camera did not initialize the talk stream.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraDisconnected" xml:space="preserve">
+    <value>Camera disconnected.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraDoesNotSupportCommand0x0X4" xml:space="preserve">
+    <value>Camera does not support command 0x{0:x4}.</value>
+    <comment>CameraClient.cs. {0}: command</comment>
+  </data>
+  <data name="CameraEndedTheSession" xml:space="preserve">
+    <value>Camera ended the session.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraIPv4AddressOnYourLAN" xml:space="preserve">
+    <value>Camera IPv4 address on your LAN</value>
+    <comment>CameraEditor.cs; MainForm.cs</comment>
+  </data>
+  <data name="CameraIsDisconnected" xml:space="preserve">
+    <value>Camera is disconnected.</value>
+    <comment>CameraClient.cs; CameraSession.cs; GimbalControls.cs</comment>
+  </data>
+  <data name="CameraName" xml:space="preserve">
+    <value>Camera name</value>
+    <comment>CameraEditor.cs; MainForm.cs</comment>
+  </data>
+  <data name="CameraPacketSequenceExceedsReceiveWindow" xml:space="preserve">
+    <value>Camera packet sequence exceeds receive window.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraReadbackDiffersFromTheRequestedSetting" xml:space="preserve">
+    <value>Camera readback differs from the requested setting.</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="CameraReceiveBufferExceededItsLimit" xml:space="preserve">
+    <value>Camera receive buffer exceeded its limit.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraRegistryCouldNotBeLoaded" xml:space="preserve">
+    <value>Camera registry could not be loaded: </value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="CameraRegistryMustContainAtMostSevenDistinctAdditionalCameras" xml:space="preserve">
+    <value>Camera registry must contain at most seven distinct additional cameras.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="CameraRejectedTheDeviceKey0" xml:space="preserve">
+    <value>Camera rejected the device key ({0}).</value>
+    <comment>CameraClient.cs. {0}: result</comment>
+  </data>
+  <data name="CameraSetup" xml:space="preserve">
+    <value>Camera setup</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="CameraSpeakerDefault" xml:space="preserve">
+    <value>Camera speaker (default)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="CameraSpeakerInitializationTimedOut" xml:space="preserve">
+    <value>Camera speaker initialization timed out.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="CameraSpeakerIsNotStarted" xml:space="preserve">
+    <value>Camera speaker is not started.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="CameraStreamEnded" xml:space="preserve">
+    <value>Camera stream ended.</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="CameraTimestampJumpedReconnectingIsRequired" xml:space="preserve">
+    <value>Camera timestamp jumped; reconnecting is required.</value>
+    <comment>VideoOrdering.cs</comment>
+  </data>
+  <data name="CamerasExperimental" xml:space="preserve">
+    <value>Cameras · experimental</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="CannotPrepareComputerAlarm" xml:space="preserve">
+    <value>Cannot prepare computer alarm: </value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="CannotUseThePCMicrophoneWindowsAudioError0CheckThe" xml:space="preserve">
+    <value>Cannot use the PC microphone (Windows audio error {0}). Check the selected input and Windows microphone access for desktop apps.</value>
+    <comment>PcmInput.cs. {0}: error</comment>
+  </data>
+  <data name="CaptureMode" xml:space="preserve">
+    <value>Capture mode</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="CaptureOptions" xml:space="preserve">
+    <value>Capture options</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="CaptureSettingsSavedForTheNextRecording" xml:space="preserve">
+    <value>Capture settings saved for the next recording.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="Captured" xml:space="preserve">
+    <value>Captured</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ChangeWiFiExperimentalT1Format" xml:space="preserve">
+    <value>Change Wi-Fi — experimental t=1 format</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="ChangedImageArea" xml:space="preserve">
+    <value>Changed image area (%)</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="ChangesSaveAutomaticallyWhenNoRecordingIsRunningRecordingAndTalking" xml:space="preserve">
+    <value>Changes save automatically when no recording is running. Recording and talking always start manually.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="ChangesWillBeSavedAfterAllRecordingsStop" xml:space="preserve">
+    <value>Changes will be saved after all recordings stop.</value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="CheckingTheImportedKeyAgainstTheLANCamera" xml:space="preserve">
+    <value>Checking the imported key against the LAN camera…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ChooseACaptureRateForTimelapsePlayedAt25Fps" xml:space="preserve">
+    <value>Choose a capture rate for timelapse (played at 25 fps).</value>
+    <comment>RecordingOptions.cs</comment>
+  </data>
+  <data name="ChooseACompletedRecording" xml:space="preserve">
+    <value>Choose a completed recording.</value>
+    <comment>MainForm.Browser.cs; RecordingLibrary.cs</comment>
+  </data>
+  <data name="ChooseANewFilenameExportsDoNotOverwriteExistingFiles" xml:space="preserve">
+    <value>Choose a new filename; exports do not overwrite existing files.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ChooseANewFilenameSnapshotsDoNotOverwriteFiles" xml:space="preserve">
+    <value>Choose a new filename; snapshots do not overwrite files.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="ChooseARecordingFolder" xml:space="preserve">
+    <value>Choose a recording folder.</value>
+    <comment>MainForm.Preferences.cs; Preferences.cs</comment>
+  </data>
+  <data name="ChooseAnAlarmSampleAtLeastHalfASecondLong" xml:space="preserve">
+    <value>Choose an alarm sample at least half a second long.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="ChooseAnAudioFileNoLargerThan100MiB" xml:space="preserve">
+    <value>Choose an audio file no larger than 100 MiB.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="ChooseAnFFmpegExecutableBeforeUsingAnEncodingProfile" xml:space="preserve">
+    <value>Choose an FFmpeg executable before using an encoding profile.</value>
+    <comment>FfmpegRecording.cs; RecordingLibrary.cs</comment>
+  </data>
+  <data name="ChooseAnFFmpegExecutableForLocalMotionDetection" xml:space="preserve">
+    <value>Choose an FFmpeg executable for local motion detection.</value>
+    <comment>MotionRecorder.cs</comment>
+  </data>
+  <data name="ChooseAnFFmpegExecutableInStorageFirst" xml:space="preserve">
+    <value>Choose an FFmpeg executable in Storage first.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ChooseAnFFmpegExecutableInStorageForEncodingProfilesOrLocal" xml:space="preserve">
+    <value>Choose an FFmpeg executable in Storage for encoding profiles or local motion detection.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="ChooseAnFFmpegExecutableInStorageForSnapshots" xml:space="preserve">
+    <value>Choose an FFmpeg executable in Storage for snapshots.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="ChooseFFmpeg" xml:space="preserve">
+    <value>Choose FFmpeg…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ChooseFFmpegInStorageForTheRecordingPlayer" xml:space="preserve">
+    <value>Choose FFmpeg in Storage for the recording player.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ChooseFFmpegInStorageForTwoWayAudio" xml:space="preserve">
+    <value>Choose FFmpeg in Storage for two-way audio.</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="ChooseFFmpegInStorageToListen" xml:space="preserve">
+    <value>Choose FFmpeg in Storage to listen.</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="ChooseFolder" xml:space="preserve">
+    <value>Choose folder…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ChooseHomeAndStopTheAlarmBeforeChangingItsSettings" xml:space="preserve">
+    <value>Choose Home and stop the alarm before changing its settings.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ChooseSound" xml:space="preserve">
+    <value>Choose sound…</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ClearCredentials" xml:space="preserve">
+    <value>Clear credentials</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="ClearFilters" xml:space="preserve">
+    <value>Clear filters</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ClickToStartStopTalkingListeningPausesLeavingThisViewStops" xml:space="preserve">
+    <value>Click to start / stop talking. Listening pauses; leaving this view stops the mic.</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="Clip.Protected" xml:space="preserve">
+    <value>Protected</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="ClipLengthMinutes" xml:space="preserve">
+    <value>Clip length (minutes)</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ColourLights" xml:space="preserve">
+    <value>Colour lights</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ColourVisibleLights" xml:space="preserve">
+    <value>Colour — visible lights</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="CompatibilityInitiallyTestedOnTheAnykaFamilyYIIoTCameraReporting" xml:space="preserve">
+    <value>Compatibility: initially tested on the Anyka-family YI IoT camera reporting hardware 253. AAC microphone audio is optional. Native 4K capture is not verified.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ComputerAlarmOutputStoppedAcceptingAudio" xml:space="preserve">
+    <value>Computer alarm output stopped accepting audio.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="ComputerAlarmOutputStoppedResponding" xml:space="preserve">
+    <value>Computer alarm output stopped responding.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="ComputerAlarmWasNotPrepared" xml:space="preserve">
+    <value>Computer alarm was not prepared.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ComputerOutput" xml:space="preserve">
+    <value>Computer output</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ComputerSoundDevice" xml:space="preserve">
+    <value>Computer sound device</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Connect</value>
+    <comment>GridCamera.cs; MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ConnectCamera" xml:space="preserve">
+    <value>Connect camera</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ConnectConfiguredCameras" xml:space="preserve">
+    <value>Connect configured cameras</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ConnectTheCameraBeforeTalking" xml:space="preserve">
+    <value>Connect the camera before talking.</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="ConnectTheCameraFirst" xml:space="preserve">
+    <value>Connect the camera first.</value>
+    <comment>MainForm.Audio.cs; MainForm.Capture.cs</comment>
+  </data>
+  <data name="ConnectTheCameraToTestItsSpeaker" xml:space="preserve">
+    <value>Connect the camera to test its speaker.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ConnectThisCameraFirst" xml:space="preserve">
+    <value>Connect this camera first.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ConnectedLocally" xml:space="preserve">
+    <value>Connected locally.</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="ConnectingOverTheLAN" xml:space="preserve">
+    <value>Connecting over the LAN…</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="ContinuousLowRateRealElapsedTime" xml:space="preserve">
+    <value>Continuous / low-rate · real elapsed time</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="Controls" xml:space="preserve">
+    <value>Controls…</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="Camera.ControlsSuffix" xml:space="preserve">
+    <value> · controls</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ConvertedAlarmExceededItsSizeLimit" xml:space="preserve">
+    <value>Converted alarm exceeded its size limit.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="CouldNotFinishClip" xml:space="preserve">
+    <value>Could not finish clip: </value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="CouldNotReadTheRunningYIIoTClientOpenItsLive" xml:space="preserve">
+    <value>Could not read the running YI IoT client. Open its live view under the same Windows account, then try again.</value>
+    <comment>VendorClientImporter.cs</comment>
+  </data>
+  <data name="CouldNotStartFFmpeg" xml:space="preserve">
+    <value>Could not start FFmpeg.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="CouldNotStartLocalMotionDetection" xml:space="preserve">
+    <value>Could not start local motion detection.</value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="CouldNotStartTheAudioDecoder" xml:space="preserve">
+    <value>Could not start the audio decoder.</value>
+    <comment>AudioMonitor.cs</comment>
+  </data>
+  <data name="CouldNotStartTheMicrophoneEncoder" xml:space="preserve">
+    <value>Could not start the microphone encoder.</value>
+    <comment>MicrophoneEncoder.cs</comment>
+  </data>
+  <data name="CouldNotStartTheRecordingAudioDecoder" xml:space="preserve">
+    <value>Could not start the recording audio decoder.</value>
+    <comment>RecordingPlayback.cs</comment>
+  </data>
+  <data name="CouldNotStartTheRecordingPlayer" xml:space="preserve">
+    <value>Could not start the recording player.</value>
+    <comment>RecordingPlayback.cs</comment>
+  </data>
+  <data name="Custom" xml:space="preserve">
+    <value>Custom</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="DPAPIProfilesRequireWindowsTheLANProtocolItselfIsPortable" xml:space="preserve">
+    <value>DPAPI profiles require Windows. The LAN protocol itself is portable.</value>
+    <comment>DeviceProfile.cs</comment>
+  </data>
+  <data name="DecodedAlarmExceededItsLimit" xml:space="preserve">
+    <value>Decoded alarm exceeded its limit.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete…</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="DeleteRecording" xml:space="preserve">
+    <value>Delete recording</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="DeviceIDShownInTheVendorAppRequiredForWiFi" xml:space="preserve">
+    <value>Device ID shown in the vendor app · required for Wi-Fi change</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="DeviceKeyRejectedEditThisCameraAndImportItsRefreshedPairing" xml:space="preserve">
+    <value>Device key rejected. Edit this camera and import its refreshed pairing.</value>
+    <comment>GridCamera.cs</comment>
+  </data>
+  <data name="DeviceKeyRejectedRefreshItInCameraSetupAutomaticRetriesHave" xml:space="preserve">
+    <value>Device key rejected. Refresh it in Camera setup; automatic retries have stopped.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="DevicePairingKeyBlankKeepsTheExistingKey" xml:space="preserve">
+    <value>Device pairing key · blank keeps the existing key</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="DevicePairingKeyLeaveBlankToKeepTheSavedKey" xml:space="preserve">
+    <value>Device pairing key · leave blank to keep the saved key</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="DirectImportSupportsYIIoTPC0ItReadsTheExisting" xml:space="preserve">
+    <value>Direct import supports YI IoT PC {0}. It reads the existing pairing without changing the vendor app. After a successful import you can close YI IoT. QR generation is available in the experimental Setup QR tab.</value>
+    <comment>MainForm.cs. {0}: VendorClientImporter.SupportedVersion</comment>
+  </data>
+  <data name="DisarmMotion" xml:space="preserve">
+    <value>Disarm motion</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+    <comment>GridCamera.cs; MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="DisconnectAll" xml:space="preserve">
+    <value>Disconnect all</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+    <comment>GridCamera.cs; MainForm.Cameras.cs</comment>
+  </data>
+  <data name="DisconnectedRecordingsAreSaved" xml:space="preserve">
+    <value>Disconnected. Recordings are saved.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Down" xml:space="preserve">
+    <value>Down</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="ENTRYAlarmIn00S" xml:space="preserve">
+    <value>ENTRY · alarm in {0:0} s</value>
+    <comment>MainForm.Alarm.cs. {0}: alarmGate!.RemainingSeconds(now)</comment>
+  </data>
+  <data name="EXITArmingIn00S" xml:space="preserve">
+    <value>EXIT · arming in {0:0} s</value>
+    <comment>MainForm.Alarm.cs. {0}: alarmGate!.RemainingSeconds(now)</comment>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Edit…</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="EditCameraExperimental" xml:space="preserve">
+    <value>Edit camera · experimental</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="EmptyAlarmSample" xml:space="preserve">
+    <value>Empty alarm sample.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="EmptyDeviceProfile" xml:space="preserve">
+    <value>Empty device profile.</value>
+    <comment>DeviceProfile.cs</comment>
+  </data>
+  <data name="EmptyRecordingFolder" xml:space="preserve">
+    <value>Empty recording folder.</value>
+    <comment>Preferences.cs</comment>
+  </data>
+  <data name="EnableAdditionalCamerasExperimental" xml:space="preserve">
+    <value>Enable additional cameras · experimental</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="EnableOptionalMotionAlarm" xml:space="preserve">
+    <value>Enable optional motion alarm</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="EnableTheOptionalAlarmFirst" xml:space="preserve">
+    <value>Enable the optional alarm first.</value>
+    <comment>MotionAlarm.cs</comment>
+  </data>
+  <data name="EnableTheOptionalAlarmInMotionAlarmFirst" xml:space="preserve">
+    <value>Enable the optional alarm in Motion alarm first.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Enabled</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="EncodedFrameCountDoesNotMatchTheSavedMP4" xml:space="preserve">
+    <value>Encoded frame count does not match the saved MP4.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="EncryptedWindowsPairingProfileDpapi" xml:space="preserve">
+    <value>Encrypted Windows pairing profile|*.dpapi</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="EncryptedWindowsProfileDpapi" xml:space="preserve">
+    <value>Encrypted Windows profile|*.dpapi</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="EnterTheCameraSPrivateIPv4Address" xml:space="preserve">
+    <value>Enter the camera's private IPv4 address.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="EntryGraceSeconds" xml:space="preserve">
+    <value>Entry grace (seconds)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="EstimateOnlyMovementLightingAndSceneDetailChangeFileSizeMB" xml:space="preserve">
+    <value>Estimate only: movement, lighting and scene detail change file size. MB/GB use decimal units.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="EveryLaunchStartsInHomeSettingsSaveAutomaticallyHomeAndStop" xml:space="preserve">
+    <value>Every launch starts in Home. Settings save automatically. Home and Stop stay available below and in the tray. Talking or Escape during an alarm returns to Home.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ExistingBindingTokenDistinctFromTheDevicePairingKey" xml:space="preserve">
+    <value>Existing binding token · distinct from the device pairing key</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="ExpectedA16090GrayscaleFrame" xml:space="preserve">
+    <value>Expected a 160×90 grayscale frame.</value>
+    <comment>MotionDetection.cs</comment>
+  </data>
+  <data name="ExpectedASettingsObject" xml:space="preserve">
+    <value>Expected a settings object.</value>
+    <comment>Preferences.cs</comment>
+  </data>
+  <data name="ExpectedOneCompleteAACLCAccessUnit" xml:space="preserve">
+    <value>Expected one complete AAC-LC access unit.</value>
+    <comment>CameraAudio.cs</comment>
+  </data>
+  <data name="ExpectedOneVideoTrack" xml:space="preserve">
+    <value>Expected one video track.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="ExperimentalOnePhysicalCameraTestedEachAdditionalCameraHasAnIndependent" xml:space="preserve">
+    <value>Experimental: one physical camera tested. Each additional camera has an independent session, encrypted pairing and recording folder. The Storage budget applies to each camera; allow disk/CPU capacity for their combined use.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="Export4KUpscaled" xml:space="preserve">
+    <value>Export 4K (upscaled)…</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ExportOriginal" xml:space="preserve">
+    <value>Export original…</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ExportSaved" xml:space="preserve">
+    <value>Export saved: </value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Exporting4KUpscale" xml:space="preserve">
+    <value>Exporting 4K upscale…</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ExportingOriginal" xml:space="preserve">
+    <value>Exporting original…</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="FFmpegExecutableFfmpegExeExecutableExe" xml:space="preserve">
+    <value>FFmpeg executable|ffmpeg*.exe|Executable|*.exe</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="FFmpegExecutableNeededForPreviewSnapshotsLocalMotionDetectionEncodingProfiles" xml:space="preserve">
+    <value>FFmpeg executable · needed for preview, snapshots, local motion detection, encoding profiles and 4K export</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="FFmpegProducedNoRecordingFrames" xml:space="preserve">
+    <value>FFmpeg produced no recording frames.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="FFmpegRecordingFailed" xml:space="preserve">
+    <value>FFmpeg recording failed: </value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="FilterCamera" xml:space="preserve">
+    <value>Filter camera</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="FinishARecordingWithTheSavedProfileToMeasureStorageUse" xml:space="preserve">
+    <value>Finish a recording with the saved profile to measure storage use. Changes in lighting, movement and scene detail affect the result.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="FinishingACameraOperationPleaseWaitBeforeClosing" xml:space="preserve">
+    <value>Finishing a camera operation. Please wait before closing.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="FinishingPairingVerificationPleaseWaitBeforeClosing" xml:space="preserve">
+    <value>Finishing pairing verification. Please wait before closing.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="FinishingTheSnapshotPleaseWaitBeforeClosing" xml:space="preserve">
+    <value>Finishing the snapshot. Please wait before closing.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="FrameSelectionAffectsSavedRecordingsOnlyLivePreviewAndCameraStream" xml:space="preserve">
+    <value>Frame selection affects saved recordings only. Live preview and camera stream quality stay independent. Low-rate recordings preserve elapsed time; timelapse deliberately plays faster.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="FramesSecondAtMostTheSourceRate" xml:space="preserve">
+    <value>frames / second (at most the source rate)</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="FreshSetupExistingBindingTokenRequired" xml:space="preserve">
+    <value>Fresh setup — existing binding token required</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="FreshSetupNeedsAValidExistingBindingTokenAccountFreeToken" xml:space="preserve">
+    <value>Fresh setup needs a valid existing binding token. Account-free token generation has not been established.</value>
+    <comment>QrProvisioning.cs</comment>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>From</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="GenerateAQRImageLocallySaveItAsPNGAndDisplay" xml:space="preserve">
+    <value>Generate a QR image locally, save it as PNG, and display it on your phone for the camera to scan.</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="H264BalancedCRF28" xml:space="preserve">
+    <value>H.264 balanced · CRF 28</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="H264SmallerCRF32" xml:space="preserve">
+    <value>H.264 smaller · CRF 32</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="HDOriginalStream" xml:space="preserve">
+    <value>HD — original stream</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="HOMEAlarmDisarmed" xml:space="preserve">
+    <value>HOME · alarm disarmed</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="HOMEPreparingSound" xml:space="preserve">
+    <value>HOME · preparing sound…</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="HomeCancelsTheEntryCountdownStopSilencesThisIncidentAnotherTrigger" xml:space="preserve">
+    <value>Home cancels the entry countdown. Stop silences this incident; another trigger needs two quiet seconds. New motion extends recording, not the siren. Stream loss returns to Home.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="HomeDisarmAlarm" xml:space="preserve">
+    <value>Home / disarm alarm</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ImportAPairedDeviceProfileOrEnterItsDeviceKeyFirst" xml:space="preserve">
+    <value>Import a paired device profile or enter its device key first.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ImportEncryptedPairingProfile" xml:space="preserve">
+    <value>Import encrypted pairing profile…</value>
+    <comment>CameraEditor.cs; MainForm.cs</comment>
+  </data>
+  <data name="ImportFromRunningYIIoT" xml:space="preserve">
+    <value>Import from running YI IoT</value>
+    <comment>CameraEditor.cs; MainForm.cs</comment>
+  </data>
+  <data name="ImportFromYIIoTRequiresThe64BitWindowsApplication" xml:space="preserve">
+    <value>Import from YI IoT requires the 64-bit Windows application.</value>
+    <comment>VendorClientImporter.cs</comment>
+  </data>
+  <data name="ImportedSound" xml:space="preserve">
+    <value>Imported sound: </value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="ImportedSound0100SLoop" xml:space="preserve">
+    <value>Imported sound: {0} · {1:0.0} s loop</value>
+    <comment>MainForm.Alarm.cs. {0}: selectedAlarmName; {1}: converted.Clip.Seconds</comment>
+  </data>
+  <data name="InUse" xml:space="preserve">
+    <value>In use</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="IncludeCameraMicrophoneAudioAAC" xml:space="preserve">
+    <value>Include camera microphone audio (AAC)</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="IncompleteAVCConfiguration" xml:space="preserve">
+    <value>Incomplete AVC configuration.</value>
+    <comment>FragmentedMp4.cs</comment>
+  </data>
+  <data name="InfraredInDarkness" xml:space="preserve">
+    <value>Infrared (in darkness)</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Camera.InfraredInDarkness" xml:space="preserve">
+    <value>Infrared in darkness</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="InputLevelMinus60ToZeroDB" xml:space="preserve">
+    <value>Input level, minus 60 to zero dB</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="InputOff" xml:space="preserve">
+    <value>Input off</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="InvalidAlarmAACPacketLength" xml:space="preserve">
+    <value>Invalid alarm AAC packet length.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="InvalidCameraMessageHeader" xml:space="preserve">
+    <value>Invalid camera message header.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="InvalidCameraRegistrationID" xml:space="preserve">
+    <value>Invalid camera registration ID.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="InvalidMP4BoxSize" xml:space="preserve">
+    <value>Invalid MP4 box size.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="InvalidMicrophonePCMBlock" xml:space="preserve">
+    <value>Invalid microphone PCM block.</value>
+    <comment>PcmInput.cs</comment>
+  </data>
+  <data name="InvalidNestedMP4BoxSize" xml:space="preserve">
+    <value>Invalid nested MP4 box size.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="InvalidOrTruncatedAlertHistory" xml:space="preserve">
+    <value>Invalid or truncated alert history.</value>
+    <comment>CameraAlerts.cs</comment>
+  </data>
+  <data name="InvalidPCMSample" xml:space="preserve">
+    <value>Invalid PCM sample.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="InvalidSampleTiming" xml:space="preserve">
+    <value>Invalid sample timing.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="InvalidStoragePolicy" xml:space="preserve">
+    <value>Invalid storage policy.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="KeepDiskSpaceFreeGiB" xml:space="preserve">
+    <value>Keep disk space free (GiB)</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Kind.Continuous" xml:space="preserve">
+    <value>Continuous</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Kind.LowRate" xml:space="preserve">
+    <value>Low-rate</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Kind.Motion" xml:space="preserve">
+    <value>Motion</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Kind.Timelapse" xml:space="preserve">
+    <value>Timelapse</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Active" xml:space="preserve">
+    <value>Current language: {0}</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Help" xml:space="preserve">
+    <value>English is the default and the fallback for missing translations. Date and number formats follow your Windows regional settings.</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Location" xml:space="preserve">
+    <value>Settings are stored per Windows user in:
+{0}</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Restart" xml:space="preserve">
+    <value>Language changes apply the next time you start OpenYI. Current camera connections and recordings continue.</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Saved" xml:space="preserve">
+    <value>Language saved. Restart OpenYI when convenient to apply it.</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Settings" xml:space="preserve">
+    <value>Settings</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Language.Title" xml:space="preserve">
+    <value>App language / Kieli</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Last00DB" xml:space="preserve">
+    <value>Last: {0:0} dB</value>
+    <comment>MainForm.Audio.cs. {0}: 20 * Math.Log10(previous.MaximumInputPeak)</comment>
+  </data>
+  <data name="LastSilent" xml:space="preserve">
+    <value>Last: silent</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="Left" xml:space="preserve">
+    <value>Left</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="LimitRecordingCaptureRate" xml:space="preserve">
+    <value>Limit recording capture rate</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="ListenToCamera" xml:space="preserve">
+    <value>Listen to camera</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="LiveCamera" xml:space="preserve">
+    <value>Live camera</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="LiveChangedArea000Recording100Alarm" xml:space="preserve">
+    <value>Live changed area: {0:0.0}% · recording {1:0.0}% / alarm {2:0.0}%</value>
+    <comment>MainForm.Alarm.cs. {0}: sample.ChangedPercent; {1}: preferences.Recording.MotionThresholdPercent; {2}: preferences.Alarm.ThresholdPercent</comment>
+  </data>
+  <data name="LiveChangedAreaWaitingForMotionRecordingToBeArmed" xml:space="preserve">
+    <value>Live changed area: waiting for motion recording to be armed.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="LiveControls" xml:space="preserve">
+    <value>Live controls</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="LocalMotionDetectionIsMoreThanFiveSecondsBehindRecordingHas" xml:space="preserve">
+    <value>Local motion detection is more than five seconds behind. Recording has been disarmed.</value>
+    <comment>MotionRecorder.cs</comment>
+  </data>
+  <data name="LocalMotionDetectionStopped" xml:space="preserve">
+    <value>Local motion detection stopped: </value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="LocalMotionDetectorCannotKeepUpRecordingHasBeenDisarmed" xml:space="preserve">
+    <value>Local motion detector cannot keep up. Recording has been disarmed.</value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="MP4MetadataExceededItsBound" xml:space="preserve">
+    <value>MP4 metadata exceeded its bound.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="MP4VideoMp4" xml:space="preserve">
+    <value>MP4 video|*.mp4</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="MaximumAgeDays0Unlimited" xml:space="preserve">
+    <value>Maximum age (days; 0 = unlimited)</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="MaximumApplicationPlaybackLevelWindowsMasterMuteAndAmplifierVolumeStill" xml:space="preserve">
+    <value>Maximum application playback level; Windows master/mute and amplifier volume still apply. Camera hardware gain is unverified. Camera playback can mute its microphone in recordings.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="MeasuredFrom0RecentClips100MinutesCaptured" xml:space="preserve">
+    <value>Measured from {0} recent clips ({1:0.0} minutes captured):
+</value>
+    <comment>MainForm.Capture.cs. {0}: matching.Length; {1}: seconds / 60</comment>
+  </data>
+  <data name="MicLive" xml:space="preserve">
+    <value>● Mic live</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="MicrophoneCaptureStopped" xml:space="preserve">
+    <value>Microphone capture stopped: </value>
+    <comment>MicrophoneEncoder.cs</comment>
+  </data>
+  <data name="MicrophoneEncoderReturnedAnInvalidAACFrame" xml:space="preserve">
+    <value>Microphone encoder returned an invalid AAC frame.</value>
+    <comment>MicrophoneEncoder.cs</comment>
+  </data>
+  <data name="MicrophoneEncoderStopped" xml:space="preserve">
+    <value>Microphone encoder stopped. </value>
+    <comment>MicrophoneEncoder.cs</comment>
+  </data>
+  <data name="MicrophoneOff" xml:space="preserve">
+    <value>Microphone off</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="MicrophoneProcessingFellBehindTalkingStoppedToAvoidDelayedSpeech" xml:space="preserve">
+    <value>Microphone processing fell behind. Talking stopped to avoid delayed speech.</value>
+    <comment>PcmInput.cs</comment>
+  </data>
+  <data name="Missing" xml:space="preserve">
+    <value>Missing</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="MissingAACADTSHeader" xml:space="preserve">
+    <value>Missing AAC ADTS header.</value>
+    <comment>CameraAudio.cs</comment>
+  </data>
+  <data name="MissingAlertCount" xml:space="preserve">
+    <value>Missing alert count.</value>
+    <comment>CameraAlerts.cs</comment>
+  </data>
+  <data name="MissingVideoTimescale" xml:space="preserve">
+    <value>Missing video timescale.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="MoreThanOneActivePairingWasFoundKeepOnlyThisCamera" xml:space="preserve">
+    <value>More than one active pairing was found. Keep only this camera's live view open in YI IoT and try again.</value>
+    <comment>VendorClientImporter.cs</comment>
+  </data>
+  <data name="Motion00SRemaining" xml:space="preserve">
+    <value>● Motion · {0:0} s remaining</value>
+    <comment>MainForm.cs. {0}: state.RemainingSeconds</comment>
+  </data>
+  <data name="MotionAlarm" xml:space="preserve">
+    <value>Motion alarm</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="MotionAnalysisResultsAreNotBeingConsumed" xml:space="preserve">
+    <value>Motion analysis results are not being consumed.</value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="MotionAnalysisStoppedWhilePreparingTheAlarm" xml:space="preserve">
+    <value>Motion analysis stopped while preparing the alarm.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="MotionDecoderExited" xml:space="preserve">
+    <value>Motion decoder exited: </value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="MotionDecoderFrameTimingLostAlignment" xml:space="preserve">
+    <value>Motion decoder frame timing lost alignment.</value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="MotionDecoderIsFallingBehind" xml:space="preserve">
+    <value>Motion decoder is falling behind.</value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="MotionLocalDetectionOnThisPC" xml:space="preserve">
+    <value>Motion · local detection on this PC</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="MotionRecording00SAfterLastMotion100" xml:space="preserve">
+    <value>Motion recording · {0:0} s after last motion · {1:0.0}% changed</value>
+    <comment>CameraSession.cs. {0}: state.RemainingSeconds; {1}: state.ChangedPercent</comment>
+  </data>
+  <data name="MotionRecordingArmedStartingLocalDetection" xml:space="preserve">
+    <value>Motion recording armed; starting local detection.</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="MotionTracking" xml:space="preserve">
+    <value>Motion tracking</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="MotionTrackingSettingConfirmedByTheCamera" xml:space="preserve">
+    <value>Motion-tracking setting confirmed by the camera.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="NextPage" xml:space="preserve">
+    <value>Next page</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Night" xml:space="preserve">
+    <value>Night</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="NightVisionModeConfirmedByTheCamera" xml:space="preserve">
+    <value>Night-vision mode confirmed by the camera.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="NoAudio" xml:space="preserve">
+    <value>No audio</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="NoDecodedMotionFramesFor10SecondsRecordingHasBeenDisarmed" xml:space="preserve">
+    <value>No decoded motion frames for 10 seconds. Recording has been disarmed.</value>
+    <comment>MotionVideoDecoder.cs</comment>
+  </data>
+  <data name="NoMatchingLiveCameraWasFoundInYIIoTOpenThe" xml:space="preserve">
+    <value>No matching live camera was found in YI IoT. Open the saved camera's live view and try again.</value>
+    <comment>VendorClientImporter.cs</comment>
+  </data>
+  <data name="NoSavedCamera" xml:space="preserve">
+    <value>No saved camera.</value>
+    <comment>GimbalControls.cs; MainForm.Alarm.cs</comment>
+  </data>
+  <data name="NoSavedCameraEnterItsLANAddressOpenItsLiveView" xml:space="preserve">
+    <value>No saved camera. Enter its LAN address, open its live view in YI IoT, and import the existing pairing below.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Camera.None" xml:space="preserve">
+    <value>No saved camera</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="NoSupportedMicrophoneAudioArrivedWithin15SecondsDisableAudioTo" xml:space="preserve">
+    <value>No supported microphone audio arrived within 15 seconds. Disable audio to record video only.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="NoTimedVideoSamplesInTheRecording" xml:space="preserve">
+    <value>No timed video samples in the recording.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="NonMonotonicAudioTimestamps" xml:space="preserve">
+    <value>Non-monotonic audio timestamps.</value>
+    <comment>FragmentedMp4.cs</comment>
+  </data>
+  <data name="NonMonotonicVideoTimestamps" xml:space="preserve">
+    <value>Non-monotonic video timestamps.</value>
+    <comment>FragmentedMp4.cs</comment>
+  </data>
+  <data name="NotAnAppManagedRecordingName" xml:space="preserve">
+    <value>Not an app-managed recording name.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="OnlyAPrivateLANCameraAddressIsAccepted" xml:space="preserve">
+    <value>Only a private LAN camera address is accepted.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="OnlyFinishedUnprotectedRecordingsCanBeDeleted" xml:space="preserve">
+    <value>Only finished, unprotected recordings can be deleted.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="OnlyFinishedUnprotectedRecordingsThatAreNotInUseCanBe" xml:space="preserve">
+    <value>Only finished, unprotected recordings that are not in use can be deleted.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="OnlyMonoStereoAACLCIsSupported" xml:space="preserve">
+    <value>Only mono/stereo AAC-LC is supported.</value>
+    <comment>CameraAudio.cs</comment>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="OpenOpenYI" xml:space="preserve">
+    <value>Open OpenYI</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="OpenTheYIIoTPCAppAndThisCameraSLive" xml:space="preserve">
+    <value>Open the YI IoT PC app and this camera's live view first.</value>
+    <comment>VendorClientImporter.cs</comment>
+  </data>
+  <data name="OpenThisCameraSLiveViewInYIIoTBeforeImporting" xml:space="preserve">
+    <value>Open this camera's live view in YI IoT before importing from it. The new key is saved only after LAN authentication succeeds.</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="OpenThisCameraSLiveViewInYIIoTFirstImport" xml:space="preserve">
+    <value>Open this camera's live view in YI IoT first. Import checks the key against the camera before replacing your saved profile and connecting. An active recording is finished before import. You do not need to pair the camera again.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="OpenYICameraRecordingsWindows" xml:space="preserve">
+    <value>OpenYI — Camera &amp; Recordings (Windows)</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="OpenYIHOMEAlarmDisarmed" xml:space="preserve">
+    <value>OpenYI · HOME · alarm disarmed</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="OpenYIIsAlreadyRunning" xml:space="preserve">
+    <value>OpenYI is already running.</value>
+    <comment>Program.cs</comment>
+  </data>
+  <data name="OriginalKeepsTheCameraSEncodedVideoEveryFrameAndOriginal" xml:space="preserve">
+    <value>Original keeps the camera's encoded video, every frame and original timing. Encoding profiles trade CPU and some detail for smaller files; the saving depends on the scene.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="OriginalStreamLocalConnection" xml:space="preserve">
+    <value>Original stream · local connection</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="OriginalStreamLosslessDefault" xml:space="preserve">
+    <value>Original stream · lossless (default)</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="OriginalStreamRecordingPreservesEverySourceFrameAndItsTimingChoose" xml:space="preserve">
+    <value>Original-stream recording preserves every source frame and its timing. Choose an H.264 profile for frame selection or timelapse.</value>
+    <comment>RecordingOptions.cs</comment>
+  </data>
+  <data name="PCMicrophoneForTalkBack" xml:space="preserve">
+    <value>PC microphone for talk-back</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="PNGImagePng" xml:space="preserve">
+    <value>PNG image|*.png</value>
+    <comment>MainForm.Capture.cs; MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="PairingImportTimedOut" xml:space="preserve">
+    <value>Pairing import timed out.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="PairingVerificationTimedOut" xml:space="preserve">
+    <value>Pairing verification timed out.</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="PairingVerifiedAndSavedConnectingLocally" xml:space="preserve">
+    <value>Pairing verified and saved. Connecting locally…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Pause" xml:space="preserve">
+    <value>Pause</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="PermanentlyDeleteThisRecording" xml:space="preserve">
+    <value>Permanently delete this recording?
+</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Play</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="PlayAlarmThrough" xml:space="preserve">
+    <value>Play alarm through</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Playback" xml:space="preserve">
+    <value>Playback</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="PlaybackClosedItsCatalogueReservationWillExpire" xml:space="preserve">
+    <value>Playback closed; its catalogue reservation will expire: </value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="PlaybackFailed" xml:space="preserve">
+    <value>Playback failed.</value>
+    <comment>RecordingPlayback.cs</comment>
+  </data>
+  <data name="PlaybackPosition" xml:space="preserve">
+    <value>Playback position</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Playback.ErrorPrefix" xml:space="preserve">
+    <value>Playback: </value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="PostMotionRecordingMustBe13600SecondsTheChangedArea" xml:space="preserve">
+    <value>Post-motion recording must be 1–3600 seconds; the changed-area threshold must be 0.1–100 percent.</value>
+    <comment>RecordingOptions.cs</comment>
+  </data>
+  <data name="Preview" xml:space="preserve">
+    <value>Preview: </value>
+    <comment>GridCamera.cs</comment>
+  </data>
+  <data name="PreviewUnavailable" xml:space="preserve">
+    <value>Preview unavailable: </value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="PreviousPage" xml:space="preserve">
+    <value>Previous page</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Primary" xml:space="preserve">
+    <value> · primary</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="PrimaryCamera" xml:space="preserve">
+    <value>Primary camera</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="PrimaryCameraArmMotionRecordingInLiveCameraThenChooseAway" xml:space="preserve">
+    <value>Primary camera: arm motion recording in Live camera, then choose Away below. Home silences and disarms the alarm while recording continues.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Profile.Balanced" xml:space="preserve">
+    <value>H.264 balanced (CRF 28)</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Profile.Original" xml:space="preserve">
+    <value>Original stream</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="Profile.Small" xml:space="preserve">
+    <value>H.264 smaller (CRF 32)</value>
+    <comment>Display only; never use translations as persisted identifiers.</comment>
+  </data>
+  <data name="ProfileType" xml:space="preserve">
+    <value>Profile / type</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ProtectUnprotect" xml:space="preserve">
+    <value>Protect / unprotect</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Protected" xml:space="preserve">
+    <value>Protected</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ProtectionFilter" xml:space="preserve">
+    <value>Protection filter</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="QRFormat" xml:space="preserve">
+    <value>QR format</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="QRImageSavedCameraAcceptanceRemainsExperimental" xml:space="preserve">
+    <value>QR image saved. Camera acceptance remains experimental.</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="Quality" xml:space="preserve">
+    <value>Quality</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ReadingAndVerifyingTheLocalPairing" xml:space="preserve">
+    <value>Reading and verifying the local pairing…</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="ReadingThePairingTheSavedProfileIsKeptUntilVerificationSucceeds" xml:space="preserve">
+    <value>Reading the pairing; the saved profile is kept until verification succeeds…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="ReadyConnectASavedCameraToBegin" xml:space="preserve">
+    <value>Ready. Connect a saved camera to begin.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>Record</value>
+    <comment>GridCamera.cs; MainForm.Cameras.cs</comment>
+  </data>
+  <data name="Recorded" xml:space="preserve">
+    <value>Recorded</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="RecordingArmedWaitingForAACAudioAndTheNextKeyframe" xml:space="preserve">
+    <value>Recording armed; waiting for AAC audio and the next keyframe.</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="RecordingArmedWaitingForTheNextKeyframe" xml:space="preserve">
+    <value>Recording armed; waiting for the next keyframe.</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="RecordingBrowser" xml:space="preserve">
+    <value>Recording browser</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="RecordingBudgetGiB" xml:space="preserve">
+    <value>Recording budget (GiB)</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="RecordingBudgetReachedFreeSpaceRaiseTheBudgetOrEnableRecycling" xml:space="preserve">
+    <value>Recording budget reached. Free space, raise the budget, or enable recycling.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="RecordingCaptureSettings" xml:space="preserve">
+    <value>Recording capture settings</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="RecordingEncoderCannotKeepUpChooseALighterProfileOrLower" xml:space="preserve">
+    <value>Recording encoder cannot keep up. Choose a lighter profile or lower capture rate.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="RecordingEncoderDidNotFinishWithin15SecondsTheClipRemains" xml:space="preserve">
+    <value>Recording encoder did not finish within 15 seconds; the clip remains marked interrupted.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="RecordingEncoderFailed" xml:space="preserve">
+    <value>Recording encoder failed: </value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="Recording.EncoderFailed" xml:space="preserve">
+    <value>Recording encoder failed.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="RecordingEncoderHasFinished" xml:space="preserve">
+    <value>Recording encoder has finished.</value>
+    <comment>FfmpegRecording.cs</comment>
+  </data>
+  <data name="RecordingEncodersAreNotFinishingInTime" xml:space="preserve">
+    <value>Recording encoders are not finishing in time.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="RecordingFileIsMissing" xml:space="preserve">
+    <value>Recording file is missing.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="RecordingFilters" xml:space="preserve">
+    <value>Recording filters</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="RecordingFolder" xml:space="preserve">
+    <value>Recording folder</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="RecordingIsOff" xml:space="preserve">
+    <value>Recording is off</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Recording.OffStatus" xml:space="preserve">
+    <value>Recording is off.</value>
+    <comment>GridCamera.cs; MainForm.cs</comment>
+  </data>
+  <data name="RecordingPointsOutsideItsLibrary" xml:space="preserve">
+    <value>Recording points outside its library.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="RecordingProfile" xml:space="preserve">
+    <value>Recording profile</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="RecordingRateMustBeBetween05And120FpsOr" xml:space="preserve">
+    <value>Recording rate must be between 0.5 and 120 fps, or the source rate.</value>
+    <comment>RecordingOptions.cs</comment>
+  </data>
+  <data name="RecordingReservation" xml:space="preserve">
+    <value>Recording reservation: </value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="RecordingSaved" xml:space="preserve">
+    <value>Recording saved.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="RecordingStopped" xml:space="preserve">
+    <value>Recording stopped: </value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="RecordingStoppedToPreserveFreeDiskSpace" xml:space="preserve">
+    <value>Recording stopped to preserve free disk space.</value>
+    <comment>RecordingLibrary.cs</comment>
+  </data>
+  <data name="RecordingToLocalDisk" xml:space="preserve">
+    <value>● Recording to local disk</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Recording.ActivePrefix" xml:space="preserve">
+    <value>Recording to local disk · </value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="RecordingType" xml:space="preserve">
+    <value>Recording type</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Recordings" xml:space="preserve">
+    <value>Recordings</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="RecoveredThePreviousSettingsBackup" xml:space="preserve">
+    <value>Recovered the previous settings backup. </value>
+    <comment>Preferences.cs</comment>
+  </data>
+  <data name="RecycleOldestUnprotectedRecordingsWhenLimitsAreReached" xml:space="preserve">
+    <value>Recycle oldest unprotected recordings when limits are reached</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="RecyclingIsOffByDefaultOnlyCompletedUnprotectedRecordingsRegisteredIn" xml:space="preserve">
+    <value>Recycling is off by default. Only completed, unprotected recordings registered in this folder can be recycled. Changes apply to the next recording session.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="RefreshMeasuredStorageEstimate" xml:space="preserve">
+    <value>Refresh measured storage estimate</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="RefreshTheSavedKeyInCameraSetupUsingImportFromRunning" xml:space="preserve">
+    <value> Refresh the saved key in Camera setup using Import from running YI IoT.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove…</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="RemoveCamera" xml:space="preserve">
+    <value>Remove camera</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="RemoveThisAdditionalCameraSConfigurationAndEncryptedPairingItsRecordings" xml:space="preserve">
+    <value>Remove this additional camera's configuration and encrypted pairing? Its recordings will remain on disk.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="RepeatSoundFor" xml:space="preserve">
+    <value>Repeat sound for</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Resolution" xml:space="preserve">
+    <value>Resolution</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="ResolveTheCameraRegistryErrorBeforeAddingACamera" xml:space="preserve">
+    <value>Resolve the camera registry error before adding a camera.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="RestoreGimbalExperimental" xml:space="preserve">
+    <value>Restore gimbal · experimental</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="RestoreGimbalReading" xml:space="preserve">
+    <value>Restore gimbal · reading…</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="RestoreGimbalUnavailable" xml:space="preserve">
+    <value>Restore gimbal · unavailable</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="RetryingIn3Seconds" xml:space="preserve">
+    <value> Retrying in 3 seconds.</value>
+    <comment>CameraSession.cs</comment>
+  </data>
+  <data name="ReverseLeftRightControls" xml:space="preserve">
+    <value>Reverse left / right controls</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="ReverseUpDownControls" xml:space="preserve">
+    <value>Reverse up / down controls</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="Right" xml:space="preserve">
+    <value>Right</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="RotateImage180" xml:space="preserve">
+    <value>Rotate image 180°</value>
+    <comment>GimbalControls.cs</comment>
+  </data>
+  <data name="SDSmallerStream" xml:space="preserve">
+    <value>SD — smaller stream</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SaveAlarmSettings" xml:space="preserve">
+    <value>Save alarm settings</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="SaveCaptureSettings" xml:space="preserve">
+    <value>Save capture settings</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="SaveQRImage" xml:space="preserve">
+    <value>Save QR image…</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="SaveStorageSettings" xml:space="preserve">
+    <value>Save storage settings</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>Saved</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="SavedCamera0ItsDeviceKeyIsEncryptedForThisWindows" xml:space="preserve">
+    <value>Saved camera: {0}. Its device key is encrypted for this Windows account. No cloud account login is used.</value>
+    <comment>MainForm.cs. {0}: profile.Name</comment>
+  </data>
+  <data name="SavedCameraPairingCouldNotBeLoaded" xml:space="preserve">
+    <value>Saved camera pairing could not be loaded: </value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SavedProfile01" xml:space="preserve">
+    <value>Saved profile: {0} · {1}
+</value>
+    <comment>MainForm.Capture.cs. {0}: preferences.Recording.Label; {1}: (preferences.Recording.FramesPerSecond is { } fps ? $"{fps:0.##} fps" : "source fps")</comment>
+  </data>
+  <data name="SavingRecordingAndDisconnecting" xml:space="preserve">
+    <value>Saving recording and disconnecting…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SavingSettings" xml:space="preserve">
+    <value>Saving settings…</value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="SecondsAfterLastMotion" xml:space="preserve">
+    <value>Seconds after last motion</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="SecondsCustom" xml:space="preserve">
+    <value>seconds (custom)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="SelectARecording" xml:space="preserve">
+    <value>Select a recording.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="SelectARecordingToInspectItThenClickPlay" xml:space="preserve">
+    <value>Select a recording to inspect it, then click Play.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="SelectFFmpegForPreview" xml:space="preserve">
+    <value>  ·  Select FFmpeg for preview</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SelectMotionCaptureMode" xml:space="preserve">
+    <value>Select motion capture mode.</value>
+    <comment>MotionRecorder.cs</comment>
+  </data>
+  <data name="SettingsCouldNotBeRead" xml:space="preserve">
+    <value>Settings could not be read: </value>
+    <comment>Preferences.cs</comment>
+  </data>
+  <data name="SettingsLocation" xml:space="preserve">
+    <value>Settings location: </value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SettingsNotSaved" xml:space="preserve">
+    <value>Settings not saved: </value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="SettingsSaveAutomatically" xml:space="preserve">
+    <value>Settings save automatically.</value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="SettingsSaveAutomaticallyChangesApplyToTheNextRecordingSession" xml:space="preserve">
+    <value>Settings save automatically. Changes apply to the next recording session.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SettingsSavedAutomaticallyChangesApplyToTheNextRecordingSession" xml:space="preserve">
+    <value>Settings saved automatically. Changes apply to the next recording session.</value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="SetupQRExperimental" xml:space="preserve">
+    <value>Setup QR · experimental</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="ShutdownNeedsAttention" xml:space="preserve">
+    <value>Shutdown needs attention: </value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="Silent" xml:space="preserve">
+    <value>Silent</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="SirenNoiseKevanGCPublicDomain" xml:space="preserve">
+    <value>Siren Noise — KevanGC (public domain)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Size" xml:space="preserve">
+    <value>Size</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Snapshot" xml:space="preserve">
+    <value>Snapshot…</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="SnapshotFailed" xml:space="preserve">
+    <value>Snapshot failed: </value>
+    <comment>MediaTools.cs</comment>
+  </data>
+  <data name="SnapshotSavedAtOriginal01Resolution2" xml:space="preserve">
+    <value>Snapshot saved at original {0} × {1} resolution: {2}</value>
+    <comment>MainForm.Capture.cs. {0}: snapshot.Width; {1}: snapshot.Height; {2}: dialog.FileName</comment>
+  </data>
+  <data name="SomeSavedSettingsNeedAttention" xml:space="preserve">
+    <value>Some saved settings need attention: </value>
+    <comment>Preferences.cs</comment>
+  </data>
+  <data name="Sound" xml:space="preserve">
+    <value>Sound</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="SourceFps" xml:space="preserve">
+    <value>source fps</value>
+    <comment>MainForm.Browser.cs; MainForm.Capture.cs</comment>
+  </data>
+  <data name="SpeakerTest" xml:space="preserve">
+    <value>● Speaker test</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="StartRecording" xml:space="preserve">
+    <value>Start recording</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="StartingMicrophone" xml:space="preserve">
+    <value>Starting microphone…</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="StartingTest" xml:space="preserve">
+    <value>Starting test…</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="Stop" xml:space="preserve">
+    <value>Stop</value>
+    <comment>MainForm.Browser.cs; MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="StopAlarm" xml:space="preserve">
+    <value>Stop alarm</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="StopAllRecordingsAndLetCameraChangesExportsFinishBeforeChanging" xml:space="preserve">
+    <value>Stop all recordings and let camera changes/exports finish before changing settings.</value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="StopOrDisarmAllRecordingsBeforeChangingTheCaptureProfile" xml:space="preserve">
+    <value>Stop or disarm all recordings before changing the capture profile.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="StopRecording" xml:space="preserve">
+    <value>Stop recording</value>
+    <comment>GridCamera.cs; MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="StopTalking" xml:space="preserve">
+    <value>Stop talking</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="StopTest" xml:space="preserve">
+    <value>Stop test</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>Stopping…</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="Storage" xml:space="preserve">
+    <value>Storage</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="StorageEstimateUnavailable" xml:space="preserve">
+    <value>Storage estimate unavailable: </value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="StorageEstimatesAppearAfterACompletedRecording" xml:space="preserve">
+    <value>Storage estimates appear after a completed recording.</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="StorageSettingsSaved" xml:space="preserve">
+    <value>Storage settings saved.</value>
+    <comment>MainForm.Preferences.cs</comment>
+  </data>
+  <data name="TESTLOUDAlarm" xml:space="preserve">
+    <value>TEST · LOUD alarm</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="TalkBackRequiresAACLC16KHzMonoAtMost1024" xml:space="preserve">
+    <value>Talk-back requires AAC-LC 16 kHz mono, at most 1024 bytes per ADTS packet.</value>
+    <comment>TalkAudio.cs</comment>
+  </data>
+  <data name="TalkSessionDisconnected" xml:space="preserve">
+    <value>Talk session disconnected.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="TalkToCamera" xml:space="preserve">
+    <value>Talk to camera</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="TalkTransportFellBehindStopAndRestartTalking" xml:space="preserve">
+    <value>Talk transport fell behind. Stop and restart talking.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="TalkingFellBehindRealTimeStartTalkingAgainToReconnect" xml:space="preserve">
+    <value>Talking fell behind real time. Start talking again to reconnect.</value>
+    <comment>Talkback.cs</comment>
+  </data>
+  <data name="TalkingStopped" xml:space="preserve">
+    <value>Talking stopped: </value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="TestSound3SLoud" xml:space="preserve">
+    <value>Test sound (3 s, loud)</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="TestSpeaker" xml:space="preserve">
+    <value>Test speaker</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="TestTone" xml:space="preserve">
+    <value>Test tone</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="TheCameraDidNotAnswerLANDiscovery" xml:space="preserve">
+    <value>The camera did not answer LAN discovery.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="TheCameraDidNotReturnItsIdentity" xml:space="preserve">
+    <value>The camera did not return its identity.</value>
+    <comment>PairingImport.cs</comment>
+  </data>
+  <data name="TheCameraRejectedTheSavedDeviceKeyOpenThisCameraS" xml:space="preserve">
+    <value>The camera rejected the saved device key. Open this camera's live view in YI IoT, then click Import from running YI IoT below. No new camera pairing is needed.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="TheExperimentalGridSupportsEightCamerasIncludingThePrimary" xml:space="preserve">
+    <value>The experimental grid supports eight cameras including the primary.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="TheFilterEndMustBeAfterItsStart" xml:space="preserve">
+    <value>The filter end must be after its start.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="TheFormatIsReverseEngineeredFreshSetupStillNeedsAVendor" xml:space="preserve">
+    <value>The format is reverse engineered. Fresh setup still needs a vendor-issued binding token; account-free provisioning and Wi-Fi change have not been physically verified. This tool does not reset or reconfigure your connected camera.</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="TheImportedProfileBelongsToAnotherCameraAddItAsA" xml:space="preserve">
+    <value>The imported profile belongs to another camera. Add it as a separate entry.</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="TheMicrophoneStoppedSupplyingAudio" xml:space="preserve">
+    <value>The microphone stopped supplying audio.</value>
+    <comment>PcmInput.cs</comment>
+  </data>
+  <data name="TheSavedAlarmOutputIsUnavailableOrItsNameIsAmbiguous" xml:space="preserve">
+    <value>The saved alarm output is unavailable or its name is ambiguous. Select a uniquely named output device; no fallback speaker was used.</value>
+    <comment>AudioMonitor.cs</comment>
+  </data>
+  <data name="TheSavedCameraProfileWasNotReplaced" xml:space="preserve">
+    <value> The saved camera profile was not replaced.</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="TheSavedMicrophoneIsUnavailableSelectAnAvailableMicrophoneBeforeTalking" xml:space="preserve">
+    <value>The saved microphone is unavailable. Select an available microphone before talking.</value>
+    <comment>PcmInput.cs</comment>
+  </data>
+  <data name="TheSavedPNGContainsRecoverableWiFiCredentialsTheseFieldsAre" xml:space="preserve">
+    <value>The saved PNG contains recoverable Wi-Fi credentials. These fields are not saved in app preferences or logs.</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="TheWiFiNameMustContain132UTF8Bytes" xml:space="preserve">
+    <value>The Wi-Fi name must contain 1–32 UTF-8 bytes without a NUL character.</value>
+    <comment>QrProvisioning.cs</comment>
+  </data>
+  <data name="TheWiFiPasswordMustContainAtMost64CharactersWithout" xml:space="preserve">
+    <value>The Wi-Fi password must contain at most 64 characters without NUL.</value>
+    <comment>QrProvisioning.cs</comment>
+  </data>
+  <data name="TheYIIoTMemoryScanReachedItsLimitCloseExtraVendor" xml:space="preserve">
+    <value>The YI IoT memory scan reached its limit. Close extra vendor app instances and retry.</value>
+    <comment>VendorClientImporter.cs</comment>
+  </data>
+  <data name="TheseControlsAffectThisCameraOnlyTrackingControlsDoNotProvide" xml:space="preserve">
+    <value>These controls affect this camera only. Tracking controls do not provide a recording trigger.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ThisCameraAlreadyHasAConfigurationEditThatEntryInstead" xml:space="preserve">
+    <value>This camera already has a configuration. Edit that entry instead.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="ThisCameraAlreadyHasAnAdditionalCameraEntryKeepOneConfiguration" xml:space="preserve">
+    <value>This camera already has an additional-camera entry. Keep one configuration for each camera.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="ThisCameraIsAlreadyThePrimaryCamera" xml:space="preserve">
+    <value>This camera is already the primary camera.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="ThisClipHasNoAudioTrack" xml:space="preserve">
+    <value>This clip has no audio track.</value>
+    <comment>FragmentedMp4.cs</comment>
+  </data>
+  <data name="ThisImporterSupportsYIIoTPC0OnlyNoSavedPairing" xml:space="preserve">
+    <value>This importer supports YI IoT PC {0} only. No saved pairing was changed.</value>
+    <comment>VendorClientImporter.cs. {0}: SupportedVersion</comment>
+  </data>
+  <data name="ThisVersionSupportsTheVerifiedHardware253SettingsLayout" xml:space="preserve">
+    <value>This version supports the verified hardware-253 settings layout.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="ThumbnailExceededItsBound" xml:space="preserve">
+    <value>Thumbnail exceeded its bound.</value>
+    <comment>MediaTools.cs</comment>
+  </data>
+  <data name="ThumbnailUnavailable" xml:space="preserve">
+    <value>Thumbnail unavailable: </value>
+    <comment>MediaTools.cs</comment>
+  </data>
+  <data name="TimelapseHasAcceleratedTimeAndCannotRetainSynchronizedRealTimeAudio" xml:space="preserve">
+    <value>Timelapse has accelerated time and cannot retain synchronized real-time audio.</value>
+    <comment>RecordingOptions.cs</comment>
+  </data>
+  <data name="TimelapseSelectedFramesPlayedAt25Fps" xml:space="preserve">
+    <value>Timelapse · selected frames played at 25 fps</value>
+    <comment>MainForm.Capture.cs</comment>
+  </data>
+  <data name="TooManySamplesInAnMP4Fragment" xml:space="preserve">
+    <value>Too many samples in an MP4 fragment.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="TruncatedAlarmAACHeader" xml:space="preserve">
+    <value>Truncated alarm AAC header.</value>
+    <comment>AlarmAudio.cs</comment>
+  </data>
+  <data name="TruncatedCommandResponse" xml:space="preserve">
+    <value>Truncated command response.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="TruncatedMP4Box" xml:space="preserve">
+    <value>Truncated MP4 box.</value>
+    <comment>FragmentedVideoInfo.cs</comment>
+  </data>
+  <data name="UnableToOpenSaveThisWindowsAccountSEncryptedCameraProfile" xml:space="preserve">
+    <value>Unable to open/save this Windows account's encrypted camera profile.</value>
+    <comment>DeviceProfile.cs</comment>
+  </data>
+  <data name="UnableToStartFFmpeg" xml:space="preserve">
+    <value>Unable to start FFmpeg.</value>
+    <comment>MediaTools.cs</comment>
+  </data>
+  <data name="UnknownCameraRegistration" xml:space="preserve">
+    <value>Unknown camera registration.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="Unprotected" xml:space="preserve">
+    <value>Unprotected</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="UnrecognizedGimbalRestoreResponse" xml:space="preserve">
+    <value>Unrecognized gimbal restore response.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="Unspecified" xml:space="preserve">
+    <value>Unspecified</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="UnspecifiedCamera" xml:space="preserve">
+    <value>Unspecified camera</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="UnspecifiedLegacy" xml:space="preserve">
+    <value>(Unspecified / legacy)</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="UnsupportedAACSampleRate" xml:space="preserve">
+    <value>Unsupported AAC sample rate.</value>
+    <comment>CameraAudio.cs</comment>
+  </data>
+  <data name="UnsupportedAudioOrSpeakerMonitoringFellBehind" xml:space="preserve">
+    <value>Unsupported audio or speaker monitoring fell behind.</value>
+    <comment>MainForm.Audio.cs</comment>
+  </data>
+  <data name="UnsupportedCameraAudioCodec0" xml:space="preserve">
+    <value>Unsupported camera audio codec {0}.</value>
+    <comment>RecordingLibrary.cs. {0}: frame.Codec</comment>
+  </data>
+  <data name="Until" xml:space="preserve">
+    <value>Until</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="UntilStopped" xml:space="preserve">
+    <value>Until stopped</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="Up" xml:space="preserve">
+    <value>Up</value>
+    <comment>MainForm.Cameras.cs; MainForm.cs</comment>
+  </data>
+  <data name="UseACameraNameOf1100Characters" xml:space="preserve">
+    <value>Use a camera name of 1–100 characters.</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="UseDefaultSiren" xml:space="preserve">
+    <value>Use default siren</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="VerifyAndSave" xml:space="preserve">
+    <value>Verify and save</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="VerifyAndSaveCamera" xml:space="preserve">
+    <value>Verify and save camera</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="VerifyTheCameraIdentityBeforeSavingIt" xml:space="preserve">
+    <value>Verify the camera identity before saving it.</value>
+    <comment>CameraRegistry.cs</comment>
+  </data>
+  <data name="VideoProcessingFellBehindReconnectToRecover" xml:space="preserve">
+    <value>Video processing fell behind; reconnect to recover.</value>
+    <comment>CameraClient.cs</comment>
+  </data>
+  <data name="WAVMP3AACFLACOGGAndOtherFFmpegAudioFormatsImported" xml:space="preserve">
+    <value>WAV, MP3, AAC, FLAC, OGG and other FFmpeg audio formats. Imported sounds are copied locally; the first 60 seconds are looped.</value>
+    <comment>MainForm.Alarm.cs</comment>
+  </data>
+  <data name="WaitForPairingVerificationToFinish" xml:space="preserve">
+    <value>Wait for pairing verification to finish.</value>
+    <comment>CameraEditor.cs</comment>
+  </data>
+  <data name="WaitForTheExportToFinishBeforeChangingClips" xml:space="preserve">
+    <value>Wait for the export to finish before changing clips.</value>
+    <comment>MainForm.Browser.cs</comment>
+  </data>
+  <data name="WaitForTheNextCameraKeyframeBeforeTakingASnapshot" xml:space="preserve">
+    <value>Wait for the next camera keyframe before taking a snapshot.</value>
+    <comment>VideoSnapshot.cs</comment>
+  </data>
+  <data name="WaitForThisCameraToConnect" xml:space="preserve">
+    <value>Wait for this camera to connect.</value>
+    <comment>MainForm.Cameras.cs</comment>
+  </data>
+  <data name="Watching000Changed" xml:space="preserve">
+    <value>Watching · {0:0.0}% changed</value>
+    <comment>MainForm.cs. {0}: state.ChangedPercent</comment>
+  </data>
+  <data name="WatchingForMotion" xml:space="preserve">
+    <value>Watching for motion</value>
+    <comment>MainForm.cs</comment>
+  </data>
+  <data name="WatchingForMotion000Changed100Threshold" xml:space="preserve">
+    <value>Watching for motion · {0:0.0}% changed / {1:0.0}% threshold</value>
+    <comment>CameraSession.cs. {0}: state.ChangedPercent; {1}: recordingOptions.MotionThresholdPercent</comment>
+  </data>
+  <data name="WiFiChangeQRNeedsTheCameraSDeviceIDShown" xml:space="preserve">
+    <value>Wi-Fi-change QR needs the camera's device ID shown in the vendor app (not the wire UID).</value>
+    <comment>QrProvisioning.cs</comment>
+  </data>
+  <data name="WiFiNameSSID" xml:space="preserve">
+    <value>Wi-Fi name (SSID)</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="WiFiPassword" xml:space="preserve">
+    <value>Wi-Fi password</value>
+    <comment>MainForm.Provisioning.cs</comment>
+  </data>
+  <data name="WindowsAudioOutputFailed0" xml:space="preserve">
+    <value>Windows audio output failed ({0}).</value>
+    <comment>AudioMonitor.cs. {0}: result</comment>
+  </data>
+  <data name="WindowsDefaultMicrophone" xml:space="preserve">
+    <value>Windows default microphone</value>
+    <comment>PcmInput.cs</comment>
+  </data>
+  <data name="WindowsDefaultOutput" xml:space="preserve">
+    <value>Windows default output</value>
+    <comment>AudioMonitor.cs</comment>
+  </data>
+  <data name="Track.Video" xml:space="preserve">
+    <value>Video</value>
+    <comment>RecordingPlayback: diagnostic wrapping FFmpeg error output.</comment>
+  </data>
+  <data name="Track.Audio" xml:space="preserve">
+    <value>Audio</value>
+    <comment>RecordingPlayback: diagnostic wrapping FFmpeg error output.</comment>
+  </data>
+  <data name="Playback.DecoderError" xml:space="preserve">
+    <value>{0} decoder: {1}</value>
+    <comment>RecordingPlayback: diagnostic wrapping FFmpeg error output.</comment>
+  </data>
+</root>

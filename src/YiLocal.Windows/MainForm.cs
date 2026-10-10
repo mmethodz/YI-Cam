@@ -21,14 +21,14 @@ public sealed partial class MainForm : Form
     readonly System.Windows.Forms.Timer timer = new() { Interval = 40 };
     readonly TabControl tabs = new() { Dock = DockStyle.Fill };
     readonly PictureBox picture = new() { Dock = DockStyle.Fill, BackColor = Color.FromArgb(26, 29, 34), SizeMode = PictureBoxSizeMode.Zoom };
-    readonly Label status = new() { Text = "Ready. Connect a saved camera to begin.", Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
-    readonly Label metrics = new() { Text = "Original stream · local connection", AutoSize = true };
-    readonly Label recordState = new() { Text = "Recording is off", AutoSize = true, ForeColor = Color.DarkSlateGray };
-    readonly Button connect = new() { Text = "Connect camera", AutoSize = true };
-    readonly Button record = new() { Text = "Start recording", AutoSize = true, Enabled = false };
+    readonly Label status = new() { Text = L.Get("ReadyConnectASavedCameraToBegin"), Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
+    readonly Label metrics = new() { Text = L.Get("OriginalStreamLocalConnection"), AutoSize = true };
+    readonly Label recordState = new() { Text = L.Get("RecordingIsOff"), AutoSize = true, ForeColor = Color.DarkSlateGray };
+    readonly Button connect = new() { Text = L.Get("ConnectCamera"), AutoSize = true };
+    readonly Button record = new() { Text = L.Get("StartRecording"), AutoSize = true, Enabled = false };
     readonly ComboBox quality = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 174 };
     readonly ComboBox night = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 174, Enabled = false };
-    readonly CheckBox tracking = new() { Text = "Motion tracking", AutoSize = true, Enabled = false };
+    readonly CheckBox tracking = new() { Text = L.Get("MotionTracking"), AutoSize = true, Enabled = false };
     readonly FlowLayoutPanel cameraControls = new() { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty, Enabled = false };
     readonly RecordingListView clips = new() { View = View.Details, FullRowSelect = true, MultiSelect = false, Dock = DockStyle.Fill, HideSelection = false };
     readonly TextBox folder = new() { Width = 610 };
@@ -37,7 +37,7 @@ public sealed partial class MainForm : Form
     readonly NumericUpDown free = Number(0.1m, 100000, 2);
     readonly NumericUpDown segment = Number(0.1m, 120, 10);
     readonly NumericUpDown days = Number(0, 36500, 0, 0);
-    readonly CheckBox recycle = new() { Text = "Recycle oldest unprotected recordings when limits are reached", AutoSize = true };
+    readonly CheckBox recycle = new() { Text = L.Get("RecycleOldestUnprotectedRecordingsWhenLimitsAreReached"), AutoSize = true };
     readonly TextBox ip = new() { Width = 280 };
     readonly TextBox cameraName = new() { Width = 280 };
     readonly TextBox key = new() { Width = 280, UseSystemPasswordChar = true };
@@ -47,7 +47,7 @@ public sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "OpenYI — Camera & Recordings (Windows)";
+        Text = L.Get("OpenYICameraRecordingsWindows");
         Font = new Font("Segoe UI", 10); ClientSize = new Size(1180, 740); MinimumSize = new Size(1000, 650);
         StartPosition = FormStartPosition.CenterScreen;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
@@ -55,7 +55,8 @@ public sealed partial class MainForm : Form
         layout.Controls.Add(tabs, 0, 0); layout.Controls.Add(BuildAlarmStatus(), 0, 1); Controls.Add(layout);
         BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning(); BuildCapture(); BuildAlarm(); BuildCameras();
         preferences = Preferences.Load(out string? settingsNotice);
-        settingsMessage.Text = settingsNotice ?? "Settings save automatically. Changes apply to the next recording session.";
+        BuildLanguage();
+        settingsMessage.Text = settingsNotice ?? L.Get("SettingsSaveAutomaticallyChangesApplyToTheNextRecordingSession");
         if (settingsNotice is not null) status.Text = settingsNotice;
         try
         {
@@ -65,7 +66,7 @@ public sealed partial class MainForm : Form
                     if (File.Exists(Path.Combine(dir.FullName, "YiLocal.sln")) && File.Exists(Path.Combine(dir.FullName, ".local", "device.dpapi")))
                     { profile = DeviceProfile.Load(Path.Combine(dir.FullName, ".local", "device.dpapi")); profile.Save(DeviceProfile.DefaultPath); break; }
         }
-        catch (Exception e) { status.Text = "Saved camera pairing could not be loaded: " + e.Message; }
+        catch (Exception e) { status.Text = L.Get("SavedCameraPairingCouldNotBeLoaded") + e.Message; }
         folder.Text = preferences.Folder; ffmpeg.Text = preferences.Ffmpeg ?? MediaTools.FindFfmpeg() ?? "";
         quota.Value = (decimal)preferences.Storage.QuotaGiB; free.Value = (decimal)preferences.Storage.MinimumFreeGiB;
         segment.Value = (decimal)preferences.Storage.SegmentMinutes; days.Value = preferences.Storage.KeepDays; recycle.Checked = preferences.Storage.Recycle;
@@ -105,39 +106,39 @@ public sealed partial class MainForm : Form
     }
     void BuildLive()
     {
-        var page = Page("Live camera");
+        var page = Page(L.Get("LiveCamera"));
         var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2 };
         grid.ColumnStyles.Add(new(SizeType.Percent, 100)); grid.ColumnStyles.Add(new(SizeType.Absolute, 300));
         grid.RowStyles.Add(new(SizeType.Percent, 100)); grid.RowStyles.Add(new(SizeType.Absolute, 36));
         grid.Controls.Add(picture, 0, 0); grid.Controls.Add(metrics, 0, 1);
         var side = Column(); var scroll = new ScrollableColumn(side); grid.Controls.Add(scroll, 1, 0); grid.SetRowSpan(scroll, 2); page.Controls.Add(grid);
         side.Controls.Add(Row(connect, record)); side.Controls.Add(recordState); side.Controls.Add(cameraControls);
-        var snapshot = Button("Snapshot…", () => _ = Guard(SaveSnapshotAsync)); snapshot.Margin = new Padding(3);
+        var snapshot = Button(L.Get("Snapshot"), () => _ = Guard(SaveSnapshotAsync)); snapshot.Margin = new Padding(3);
         side.Controls.Add(Row(snapshot, listen)); BuildAudio(side);
         connect.Click += async (_, _) => await Guard(ToggleConnection);
         record.Click += async (_, _) => await Guard(ToggleRecordingAsync);
-        quality.Items.AddRange(["HD — original stream", "SD — smaller stream", "Automatic quality"]); quality.SelectedIndex = 0;
-        cameraControls.Controls.Add(Row(new Label { Text = "Quality", Width = 66, Height = 26, TextAlign = ContentAlignment.MiddleLeft }, quality));
+        quality.Items.AddRange([L.Get("HDOriginalStream"), L.Get("SDSmallerStream"), L.Get("AutomaticQuality")]); quality.SelectedIndex = 0;
+        cameraControls.Controls.Add(Row(new Label { Text = L.Get("Quality"), Width = 66, Height = 26, TextAlign = ContentAlignment.MiddleLeft }, quality));
         quality.SelectionChangeCommitted += async (_, _) => await Guard(async () =>
         {
             if (session is null || profile is null) return;
             await session.SetQualityAsync(new byte[] { 1, 2, 0 }[quality.SelectedIndex]);
             profile.StreamQuality = session.Quality; profile.Save();
         });
-        night.Items.AddRange(["Infrared (in darkness)", "Colour — visible lights", "Automatic lighting"]);
-        cameraControls.Controls.Add(Row(new Label { Text = "Night", Width = 66, Height = 26, TextAlign = ContentAlignment.MiddleLeft }, night));
+        night.Items.AddRange([L.Get("InfraredInDarkness"), L.Get("ColourVisibleLights"), L.Get("AutomaticLighting")]);
+        cameraControls.Controls.Add(Row(new Label { Text = L.Get("Night"), Width = 66, Height = 26, TextAlign = ContentAlignment.MiddleLeft }, night));
         night.SelectionChangeCommitted += async (_, _) => await Guard(async () =>
         {
             if (session?.Client is not { } client) return;
             await client.NightVisionAsync((uint)night.SelectedIndex); var read = await client.SettingsAsync(); night.SelectedIndex = read.NightVision;
-            status.Text = "Night-vision mode confirmed by the camera.";
+            status.Text = L.Get("NightVisionModeConfirmedByTheCamera");
         });
         cameraControls.Controls.Add(tracking);
         tracking.Click += async (_, _) => await Guard(async () =>
         {
             if (session?.Client is not { } client) return;
             await client.TrackingAsync(tracking.Checked); tracking.Checked = (await client.SettingsAsync()).Tracking != 0;
-            status.Text = "Motion-tracking setting confirmed by the camera.";
+            status.Text = L.Get("MotionTrackingSettingConfirmedByTheCamera");
         });
         var directions = new TableLayoutPanel { ColumnCount = 3, RowCount = 3, AutoSize = true, Margin = new Padding(3, 4, 3, 4) };
         void Move(string label, uint value, int x, int y)
@@ -145,8 +146,8 @@ public sealed partial class MainForm : Form
             var b = Button(label, () => _ = Guard(async () => { if (session is { } active) await active.MoveAsync(value); }));
             b.MinimumSize = new Size(68, 28); b.Margin = new Padding(2); directions.Controls.Add(b, x, y);
         }
-        Move("Up", 1, 1, 0); Move("Left", 3, 0, 1); Move("Right", 4, 2, 1); Move("Down", 2, 1, 2);
-        var stopMoving = Button("Stop", () => _ = Guard(async () => { if (session?.Client is { } c) await c.StopMovingAsync(); }));
+        Move(L.Get("Up"), 1, 1, 0); Move(L.Get("Left"), 3, 0, 1); Move(L.Get("Right"), 4, 2, 1); Move(L.Get("Down"), 2, 1, 2);
+        var stopMoving = Button(L.Get("Stop"), () => _ = Guard(async () => { if (session?.Client is { } c) await c.StopMovingAsync(); }));
         stopMoving.Margin = new Padding(2); directions.Controls.Add(stopMoving, 1, 1);
         cameraControls.Controls.Add(directions);
         gimbal = new(() => session, () => profile, Guard); cameraControls.Controls.Add(gimbal);
@@ -157,7 +158,7 @@ public sealed partial class MainForm : Form
         record.Enabled = false;
         try
         {
-            if (active.Recording) { await HomeAlarmAsync(); await Task.Run(active.StopRecording); status.Text = "Recording saved."; RefreshClips(); }
+            if (active.Recording) { await HomeAlarmAsync(); await Task.Run(active.StopRecording); status.Text = L.Get("RecordingSaved"); RefreshClips(); }
             else
             {
                 if (!extraCameras.Any(camera => camera.Recording)) { SavePendingPreferences(); SaveCaptureOptions(); }
@@ -173,9 +174,9 @@ public sealed partial class MainForm : Form
         {
             if (session is not null)
             {
-                await DisconnectAsync(); status.Text = "Disconnected. Recordings are saved."; return;
+                await DisconnectAsync(); status.Text = L.Get("DisconnectedRecordingsAreSaved"); return;
             }
-            if (profile is null) { tabs.SelectedIndex = 3; throw new InvalidOperationException("Import a paired device profile or enter its device key first."); }
+            if (profile is null) { tabs.SelectedIndex = 3; throw new InvalidOperationException(L.Get("ImportAPairedDeviceProfileOrEnterItsDeviceKeyFirst")); }
             EnsurePrimaryDistinct(profile);
             preferences.Ffmpeg = ffmpeg.Text.Trim();
             var active = new CameraSession(profile); session = active;
@@ -184,8 +185,8 @@ public sealed partial class MainForm : Form
             {
                 if (session != active) return;
                 await DisconnectAsync(); tabs.SelectedIndex = 3;
-                pairing.Text = "The camera rejected the saved device key. Open this camera's live view in YI IoT, then click Import from running YI IoT below. No new camera pairing is needed.";
-                status.Text = "Device key rejected. Refresh it in Camera setup; automatic retries have stopped.";
+                pairing.Text = L.Get("TheCameraRejectedTheSavedDeviceKeyOpenThisCameraS");
+                status.Text = L.Get("DeviceKeyRejectedRefreshItInCameraSetupAutomaticRetriesHave");
             }));
             session.Settings += settings =>
             {
@@ -204,25 +205,25 @@ public sealed partial class MainForm : Form
             {
                 if (session != active) return;
                 UpdateRecordLabels();
-                if (!recordingActive) { lastAlarmMeasurement = 0; _ = HomeAlarmAsync(); UpdatePrimaryGridState("Recording is off."); }
+                if (!recordingActive) { lastAlarmMeasurement = 0; _ = HomeAlarmAsync(); UpdatePrimaryGridState(L.Get("Recording.OffStatus")); }
                 UpdateKeepAwake();
             });
             session.MotionChanged += state => Ui(() =>
             {
                 if (session != active || !active.Recording) return;
-                recordState.Text = state.Capturing ? $"● Motion · {state.RemainingSeconds:0} s remaining" : $"Watching · {state.ChangedPercent:0.0}% changed";
+                recordState.Text = state.Capturing ? L.Format("Motion00SRemaining", state.RemainingSeconds) : L.Format("Watching000Changed", state.ChangedPercent);
                 recordState.ForeColor = state.Capturing ? Color.Firebrick : Color.DarkGreen;
             });
             session.MotionMeasured += sample => OnAlarmMeasurement(active, sample);
-            session.Audio += OnAudio; session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
+            session.Audio += OnAudio; session.Frame += OnFrame; session.Start(); connect.Text = L.Get("Disconnect"); record.Enabled = true;
         }
         finally { connect.Enabled = !importing; }
     }
     void UpdateRecordLabels()
     {
         bool armed = session?.Recording == true, motion = preferences.Recording.Mode == CaptureMode.Motion;
-        record.Text = motion ? armed ? "Disarm motion" : "Arm motion" : armed ? "Stop recording" : "Start recording";
-        recordState.Text = armed ? motion ? "Watching for motion" : "● Recording to local disk" : "Recording is off";
+        record.Text = motion ? armed ? L.Get("DisarmMotion") : L.Get("ArmMotion") : armed ? L.Get("StopRecording") : L.Get("StartRecording");
+        recordState.Text = armed ? motion ? L.Get("WatchingForMotion") : L.Get("RecordingToLocalDisk") : L.Get("RecordingIsOff");
         recordState.ForeColor = armed ? motion ? Color.DarkGreen : Color.Firebrick : Color.DarkSlateGray;
     }
     async Task DisconnectAsync()
@@ -234,7 +235,7 @@ public sealed partial class MainForm : Form
         finally
         {
             ClearPreview(); ClearAudio(); listen.Checked = false; cameraControls.Enabled = record.Enabled = false;
-            connect.Text = "Connect camera"; UpdateRecordLabels();
+            connect.Text = L.Get("ConnectCamera"); UpdateRecordLabels();
             UpdateKeepAwake(); UpdatePrimaryGridState();
         }
     }
@@ -250,7 +251,7 @@ public sealed partial class MainForm : Form
             string identity = $"{frame.Generation}:{frame.Width}:{frame.Height}:{epoch}";
             if (previewIdentity != identity || preview?.Failed == true) { preview?.Dispose(); preview = null; previewIdentity = identity; }
             if (preview is null && frame.Keyframe && File.Exists(preferences.Ffmpeg))
-                try { preview = new(preferences.Ffmpeg!); } catch (Exception e) { Ui(() => status.Text = "Preview unavailable: " + e.Message); }
+                try { preview = new(preferences.Ffmpeg!); } catch (Exception e) { Ui(() => status.Text = L.Get("PreviewUnavailable") + e.Message); }
             if (preview is not null && !preview.Push(frame.Data)) { preview.Dispose(); preview = null; }
         }
         if (frameCount++ == 0) firstTime = time;
@@ -258,53 +259,53 @@ public sealed partial class MainForm : Form
         {
             lastMetrics = Environment.TickCount64;
             double fps = time > firstTime ? (frameCount - 1) * 1000.0 / (time - firstTime) : 0;
-            Ui(() => metrics.Text = $"{frame.Width} × {frame.Height}  ·  {fps:0.0} source fps  ·  Local LAN" + (string.IsNullOrEmpty(preferences.Ffmpeg) ? "  ·  Select FFmpeg for preview" : ""));
+            Ui(() => metrics.Text = L.Format("Live.StreamMetrics", frame.Width, frame.Height, fps) + (string.IsNullOrEmpty(preferences.Ffmpeg) ? L.Get("SelectFFmpegForPreview") : ""));
         }
     }
     void BuildStorage()
     {
-        var body = Column(); Page("Storage").Controls.Add(new ScrollableColumn(body));
-        body.Controls.Add(Label("Recording folder")); body.Controls.Add(folder);
-        body.Controls.Add(Button("Choose folder…", () => { using var dialog = new FolderBrowserDialog { InitialDirectory = folder.Text }; if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; }));
+        var body = Column(); Page(L.Get("Storage")).Controls.Add(new ScrollableColumn(body));
+        body.Controls.Add(Label(L.Get("RecordingFolder"))); body.Controls.Add(folder);
+        body.Controls.Add(Button(L.Get("ChooseFolder"), () => { using var dialog = new FolderBrowserDialog { InitialDirectory = folder.Text }; if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; }));
         void Field(string text, Control control) { var row = new FlowLayoutPanel { AutoSize = true }; row.Controls.Add(new Label { Text = text, Width = 245, AutoSize = false, Height = 28, TextAlign = ContentAlignment.MiddleLeft }); row.Controls.Add(control); body.Controls.Add(row); }
-        Field("Recording budget (GiB)", quota); Field("Keep disk space free (GiB)", free); Field("Clip length (minutes)", segment); Field("Maximum age (days; 0 = unlimited)", days);
+        Field(L.Get("RecordingBudgetGiB"), quota); Field(L.Get("KeepDiskSpaceFreeGiB"), free); Field(L.Get("ClipLengthMinutes"), segment); Field(L.Get("MaximumAgeDays0Unlimited"), days);
         body.Controls.Add(recycle);
-        body.Controls.Add(Label("Recycling is off by default. Only completed, unprotected recordings registered in this folder can be recycled. Changes apply to the next recording session."));
-        body.Controls.Add(Label("FFmpeg executable · needed for preview, snapshots, local motion detection, encoding profiles and 4K export")); body.Controls.Add(ffmpeg);
-        body.Controls.Add(Button("Choose FFmpeg…", () => { using var dialog = new OpenFileDialog { Filter = "FFmpeg executable|ffmpeg*.exe|Executable|*.exe" }; if (dialog.ShowDialog(this) == DialogResult.OK) ffmpeg.Text = dialog.FileName; }));
-        body.Controls.Add(Button("Save storage settings", () => _ = Guard(() => { SaveStorageOptions(); return Task.CompletedTask; })));
+        body.Controls.Add(Label(L.Get("RecyclingIsOffByDefaultOnlyCompletedUnprotectedRecordingsRegisteredIn")));
+        body.Controls.Add(Label(L.Get("FFmpegExecutableNeededForPreviewSnapshotsLocalMotionDetectionEncodingProfiles"))); body.Controls.Add(ffmpeg);
+        body.Controls.Add(Button(L.Get("ChooseFFmpeg"), () => { using var dialog = new OpenFileDialog { Filter = L.Get("FFmpegExecutableFfmpegExeExecutableExe") }; if (dialog.ShowDialog(this) == DialogResult.OK) ffmpeg.Text = dialog.FileName; }));
+        body.Controls.Add(Button(L.Get("SaveStorageSettings"), () => _ = Guard(() => { SaveStorageOptions(); return Task.CompletedTask; })));
         body.Controls.Add(settingsMessage);
-        body.Controls.Add(Label("Settings location: " + Preferences.FilePath));
+        body.Controls.Add(Label(L.Get("SettingsLocation") + Preferences.FilePath));
     }
     void ShowProfile()
     {
-        ip.Text = profile?.Ip ?? ""; cameraName.Text = profile?.Name ?? "Camera"; key.Clear();
+        ip.Text = profile?.Ip ?? ""; cameraName.Text = profile?.Name ?? L.Get("Camera"); key.Clear();
         quality.SelectedIndex = profile?.StreamQuality switch { 0 => 2, 2 => 1, _ => 0 };
-        pairing.Text = profile is null ? "No saved camera. Enter its LAN address, open its live view in YI IoT, and import the existing pairing below."
-            : $"Saved camera: {profile.Name}. Its device key is encrypted for this Windows account. No cloud account login is used.";
+        pairing.Text = profile is null ? L.Get("NoSavedCameraEnterItsLANAddressOpenItsLiveView")
+            : L.Format("SavedCamera0ItsDeviceKeyIsEncryptedForThisWindows", profile.Name);
     }
     void BuildCamera()
     {
-        var body = pairingControls; Page("Camera setup").Controls.Add(new ScrollableColumn(body)); body.Controls.Add(pairing);
-        body.Controls.Add(Label("Camera name")); body.Controls.Add(cameraName); body.Controls.Add(Label("Camera IPv4 address on your LAN")); body.Controls.Add(ip);
-        body.Controls.Add(Button("Import from running YI IoT", () => _ = Guard(() => UpdatePairingAsync(token =>
+        var body = pairingControls; Page(L.Get("CameraSetup")).Controls.Add(new ScrollableColumn(body)); body.Controls.Add(pairing);
+        body.Controls.Add(Label(L.Get("CameraName"))); body.Controls.Add(cameraName); body.Controls.Add(Label(L.Get("CameraIPv4AddressOnYourLAN"))); body.Controls.Add(ip);
+        body.Controls.Add(Button(L.Get("ImportFromRunningYIIoT"), () => _ = Guard(() => UpdatePairingAsync(token =>
             VendorClientImporter.ReadProfileAsync(ip.Text.Trim(), cameraName.Text.Trim(), profile?.Uid, token)))));
-        body.Controls.Add(Label("Open this camera's live view in YI IoT first. Import checks the key against the camera before replacing your saved profile and connecting. An active recording is finished before import. You do not need to pair the camera again."));
-        body.Controls.Add(Label("Device pairing key · leave blank to keep the saved key")); body.Controls.Add(key);
-        body.Controls.Add(Button("Verify and save camera", () => _ = Guard(() => UpdatePairingAsync(_ =>
+        body.Controls.Add(Label(L.Get("OpenThisCameraSLiveViewInYIIoTFirstImport")));
+        body.Controls.Add(Label(L.Get("DevicePairingKeyLeaveBlankToKeepTheSavedKey"))); body.Controls.Add(key);
+        body.Controls.Add(Button(L.Get("VerifyAndSaveCamera"), () => _ = Guard(() => UpdatePairingAsync(_ =>
         {
             string password = key.Text.Length > 0 ? key.Text : profile?.Password ?? "";
             return Task.FromResult(new DeviceProfile { Ip = ip.Text.Trim(), Name = cameraName.Text.Trim(), Password = password,
                 Uid = key.Text.Length == 0 ? profile?.Uid : null });
         }))));
-        body.Controls.Add(Button("Import encrypted pairing profile…", () => _ = Guard(async () =>
+        body.Controls.Add(Button(L.Get("ImportEncryptedPairingProfile"), () => _ = Guard(async () =>
         {
-            using var dialog = new OpenFileDialog { Filter = "Encrypted Windows profile|*.dpapi" };
+            using var dialog = new OpenFileDialog { Filter = L.Get("EncryptedWindowsProfileDpapi") };
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
             await UpdatePairingAsync(_ => Task.FromResult(DeviceProfile.Load(dialog.FileName)));
         })));
-        body.Controls.Add(Label($"Direct import supports YI IoT PC {VendorClientImporter.SupportedVersion}. It reads the existing pairing without changing the vendor app. After a successful import you can close YI IoT. QR generation is available in the experimental Setup QR tab."));
-        body.Controls.Add(Label("Compatibility: initially tested on the Anyka-family YI IoT camera reporting hardware 253. AAC microphone audio is optional. Native 4K capture is not verified."));
+        body.Controls.Add(Label(L.Format("DirectImportSupportsYIIoTPC0ItReadsTheExisting", VendorClientImporter.SupportedVersion)));
+        body.Controls.Add(Label(L.Get("CompatibilityInitiallyTestedOnTheAnykaFamilyYIIoTCameraReporting")));
     }
     async Task UpdatePairingAsync(Func<CancellationToken, Task<DeviceProfile>> read)
     {
@@ -317,9 +318,9 @@ public sealed partial class MainForm : Form
             try
             {
                 await DisconnectAsync();
-                status.Text = "Reading the pairing; the saved profile is kept until verification succeeds…";
+                status.Text = L.Get("ReadingThePairingTheSavedProfileIsKeptUntilVerificationSucceeds");
                 var candidate = await read(timeout.Token);
-                status.Text = "Checking the imported key against the LAN camera…";
+                status.Text = L.Get("CheckingTheImportedKeyAgainstTheLANCamera");
                 var verified = await PairingImport.VerifyAsync(candidate, timeout.Token);
                 EnsurePrimaryDistinct(verified);
                 verified.KeepControlsFrom(profile);
@@ -327,11 +328,11 @@ public sealed partial class MainForm : Form
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException((e is OperationCanceledException ? "Pairing import timed out." : e.Message) +
-                    " The saved camera profile was not replaced.", e);
+                throw new InvalidOperationException((e is OperationCanceledException ? L.Get("PairingImportTimedOut") : e.Message) +
+                    L.Get("TheSavedCameraProfileWasNotReplaced"), e);
             }
             ShowProfile(); tabs.SelectedIndex = 0;
-            status.Text = "Pairing verified and saved. Connecting locally…";
+            status.Text = L.Get("PairingVerifiedAndSavedConnectingLocally");
             await ToggleConnection();
             if (resumeRecording) session?.StartRecording(preferences.Folder, preferences.Storage, preferences.Recording, preferences.Ffmpeg);
         }
@@ -342,13 +343,13 @@ public sealed partial class MainForm : Form
         if (closed) return;
         e.Cancel = true;
         if (closing) return;
-        if (importing) { status.Text = "Finishing pairing verification. Please wait before closing."; return; }
-        if (gridBusy) { status.Text = "Finishing a camera operation. Please wait before closing."; return; }
-        if (exporting) { status.Text = "An export is running. Wait for it to finish before closing."; return; }
-        if (savingSnapshot) { status.Text = "Finishing the snapshot. Please wait before closing."; return; }
-        closing = true; preferencesTimer.Stop(); Enabled = false; status.Text = "Saving recording and disconnecting…";
+        if (importing) { status.Text = L.Get("FinishingPairingVerificationPleaseWaitBeforeClosing"); return; }
+        if (gridBusy) { status.Text = L.Get("FinishingACameraOperationPleaseWaitBeforeClosing"); return; }
+        if (exporting) { status.Text = L.Get("AnExportIsRunningWaitForItToFinishBeforeClosing"); return; }
+        if (savingSnapshot) { status.Text = L.Get("FinishingTheSnapshotPleaseWaitBeforeClosing"); return; }
+        closing = true; preferencesTimer.Stop(); Enabled = false; status.Text = L.Get("SavingRecordingAndDisconnecting");
         try { await HomeAlarmAsync(); await StopTalkAsync(); await Task.WhenAll(StopExtraCameras(), session?.DisposeAsync().AsTask() ?? Task.CompletedTask); SavePendingPreferences(); }
-        catch (Exception error) { MessageBox.Show(this, "Shutdown needs attention: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        catch (Exception error) { MessageBox.Show(this, L.Get("ShutdownNeedsAttention") + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {
             timer.Stop(); timer.Dispose(); StopPlayback(); thumbnailStop?.Cancel(); thumbnailStop?.Dispose(); thumbnails.Dispose(); ClearPreview(); ClearAudio(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();

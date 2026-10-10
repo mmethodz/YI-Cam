@@ -24,7 +24,7 @@ internal sealed class MotionVideoDecoder : IDisposable
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (string arg in new[] { "-hide_banner", "-loglevel", "error", "-flags", "low_delay", "-probesize", "32", "-analyzeduration", "0",
             "-f", "h264", "-i", "pipe:0", "-an", "-vf", "scale=160:90:flags=area", "-fps_mode", "passthrough", "-pix_fmt", "gray", "-f", "rawvideo", "pipe:1" }) info.ArgumentList.Add(arg);
-        process = Process.Start(info) ?? throw new IOException("Could not start local motion detection.");
+        process = Process.Start(info) ?? throw new IOException(L.Get("CouldNotStartLocalMotionDetection"));
         writer = Task.Run(async () =>
         {
             try
@@ -32,7 +32,7 @@ internal sealed class MotionVideoDecoder : IDisposable
                 await foreach (var item in input.Reader.ReadAllAsync(stop.Token))
                 {
                     Interlocked.Add(ref queuedBytes, -item.Frame.Data.Length);
-                    if (timestamps.Count >= 180) throw new IOException("Motion decoder is falling behind.");
+                    if (timestamps.Count >= 180) throw new IOException(L.Get("MotionDecoderIsFallingBehind"));
                     timestamps.Enqueue(item.Time);
                     await process.StandardInput.BaseStream.WriteAsync(item.Frame.Data, stop.Token);
                     await process.StandardInput.BaseStream.FlushAsync(stop.Token);
@@ -48,10 +48,10 @@ internal sealed class MotionVideoDecoder : IDisposable
                 while (!stop.IsCancellationRequested)
                 {
                     await process.StandardOutput.BaseStream.ReadExactlyAsync(gray, stop.Token);
-                    if (!timestamps.TryDequeue(out long time)) throw new IOException("Motion decoder frame timing lost alignment.");
+                    if (!timestamps.TryDequeue(out long time)) throw new IOException(L.Get("MotionDecoderFrameTimingLostAlignment"));
                     Interlocked.Exchange(ref lastOutput, Environment.TickCount64);
                     if (detector.Analyze(gray, time) is { } sample && !output.Writer.TryWrite(sample))
-                        throw new IOException("Motion analysis results are not being consumed.");
+                        throw new IOException(L.Get("MotionAnalysisResultsAreNotBeingConsumed"));
                 }
             }
             catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException) { Fail(e); }
@@ -64,7 +64,7 @@ internal sealed class MotionVideoDecoder : IDisposable
                 while (await process.StandardError.ReadLineAsync(stop.Token) is { } line)
                 { text += line + "\n"; if (text.Length > 1500) text = text[^1500..]; }
                 await process.WaitForExitAsync(stop.Token);
-                if (!stop.IsCancellationRequested) Fail(new IOException("Motion decoder exited: " + text));
+                if (!stop.IsCancellationRequested) Fail(new IOException(L.Get("MotionDecoderExited") + text));
             }
             catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException) { Fail(e); }
         });
@@ -73,13 +73,13 @@ internal sealed class MotionVideoDecoder : IDisposable
     { if (!stop.IsCancellationRequested) Interlocked.CompareExchange(ref failure, error, null); }
     public void Push(VideoFrame frame, long time)
     {
-        if (failure is { } error) throw new IOException("Local motion detection stopped: " + error.Message, error);
+        if (failure is { } error) throw new IOException(L.Get("LocalMotionDetectionStopped") + error.Message, error);
         if (Environment.TickCount64 - Interlocked.Read(ref lastOutput) > 10000)
-            throw new IOException("No decoded motion frames for 10 seconds. Recording has been disarmed.");
+            throw new IOException(L.Get("NoDecodedMotionFramesFor10SecondsRecordingHasBeenDisarmed"));
         if (!FragmentedMp4.Nals(frame.Data).Any(nal => (nal[0] & 31) is 1 or 5)) return;
         if (Interlocked.Add(ref queuedBytes, frame.Data.Length) <= 16 * 1024 * 1024 && input.Writer.TryWrite((frame, time))) return;
         Interlocked.Add(ref queuedBytes, -frame.Data.Length);
-        throw new IOException("Local motion detector cannot keep up. Recording has been disarmed.");
+        throw new IOException(L.Get("LocalMotionDetectorCannotKeepUpRecordingHasBeenDisarmed"));
     }
     public void Dispose()
     {

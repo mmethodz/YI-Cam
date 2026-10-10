@@ -16,18 +16,23 @@ internal sealed class RecordingListView : ListView
 public sealed partial class MainForm
 {
     sealed record BrowserEntry(string Root, Clip Clip);
-    readonly DateTimePicker recordedFrom = new() { Format = DateTimePickerFormat.Custom, CustomFormat = "yyyy-MM-dd HH:mm", ShowCheckBox = true, Checked = false, Width = 200 };
-    readonly DateTimePicker recordedUntil = new() { Format = DateTimePickerFormat.Custom, CustomFormat = "yyyy-MM-dd HH:mm", ShowCheckBox = true, Checked = false, Width = 200 };
+    sealed record CameraFilterChoice(string? Name)
+    {
+        public override string ToString() => Name is null ? L.Get("AllCameras") : Name.Length == 0 ? L.Get("UnspecifiedLegacy") : Name;
+    }
+    static string DateFilterFormat => System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " + System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+    readonly DateTimePicker recordedFrom = new() { Format = DateTimePickerFormat.Custom, CustomFormat = DateFilterFormat, ShowCheckBox = true, Checked = false, Width = 200 };
+    readonly DateTimePicker recordedUntil = new() { Format = DateTimePickerFormat.Custom, CustomFormat = DateFilterFormat, ShowCheckBox = true, Checked = false, Width = 200 };
     readonly ComboBox filterCamera = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 160 };
     readonly ComboBox filterKind = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 125 };
     readonly ComboBox filterProtection = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 125 };
     readonly Label browserCount = new() { AutoSize = true };
     readonly PictureBox playbackPicture = new() { Dock = DockStyle.Fill, BackColor = Color.FromArgb(26, 29, 34), SizeMode = PictureBoxSizeMode.Zoom };
-    readonly Label playbackDetails = new() { Dock = DockStyle.Fill, Text = "Select a recording to inspect it, then click Play.", Padding = new Padding(10), AutoEllipsis = true };
-    readonly TrackBar playbackSeek = new() { Dock = DockStyle.Fill, Minimum = 0, Maximum = 10000, SmallChange = 100, LargeChange = 500, TickStyle = TickStyle.None, Enabled = false, AccessibleName = "Playback position" };
+    readonly Label playbackDetails = new() { Dock = DockStyle.Fill, Text = L.Get("SelectARecordingToInspectItThenClickPlay"), Padding = new Padding(10), AutoEllipsis = true };
+    readonly TrackBar playbackSeek = new() { Dock = DockStyle.Fill, Minimum = 0, Maximum = 10000, SmallChange = 100, LargeChange = 500, TickStyle = TickStyle.None, Enabled = false, AccessibleName = L.Get("PlaybackPosition") };
     readonly Label playbackTime = new() { AutoSize = true, Text = "00:00 / 00:00" };
-    readonly Button playbackButton = new() { AutoSize = true, Text = "Play", Enabled = false };
-    readonly CheckBox playbackSound = new() { AutoSize = true, Text = "Sound", Checked = true, Enabled = false };
+    readonly Button playbackButton = new() { AutoSize = true, Text = L.Get("Play"), Enabled = false };
+    readonly CheckBox playbackSound = new() { AutoSize = true, Text = L.Get("Sound"), Checked = true, Enabled = false };
     readonly ImageList thumbnails = new() { ImageSize = new Size(96, 54), ColorDepth = ColorDepth.Depth24Bit };
     readonly Dictionary<string, Bitmap> thumbnailImages = [];
     readonly SemaphoreSlim thumbnailWorker = new(1);
@@ -45,21 +50,23 @@ public sealed partial class MainForm
 
     void BuildRecordings()
     {
-        var page = Page("Recordings"); var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, AccessibleName = "Recording browser" };
+        var page = Page(L.Get("Recordings")); var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, AccessibleName = L.Get("RecordingBrowser") };
         layout.RowStyles.Add(new(SizeType.AutoSize)); layout.RowStyles.Add(new(SizeType.Percent, 100)); layout.RowStyles.Add(new(SizeType.AutoSize));
-        var filters = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, AccessibleName = "Recording filters" };
-        filters.Controls.Add(new Label { Text = "From", AutoSize = true, Padding = new Padding(0, 7, 0, 0) }); filters.Controls.Add(recordedFrom);
-        filters.Controls.Add(new Label { Text = "Until", AutoSize = true, Padding = new Padding(0, 7, 0, 0) }); filters.Controls.Add(recordedUntil);
-        filterCamera.Items.Add("All cameras"); filterCamera.SelectedIndex = 0;
-        filterKind.Items.AddRange(["All types", "Continuous", "Low-rate", "Timelapse", "Motion"]); filterKind.SelectedIndex = 0;
-        filterProtection.Items.AddRange(["All recordings", "Protected", "Unprotected"]); filterProtection.SelectedIndex = 0;
-        filterCamera.AccessibleName = "Filter camera"; filterKind.AccessibleName = "Recording type"; filterProtection.AccessibleName = "Protection filter";
+        var filters = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, AccessibleName = L.Get("RecordingFilters") };
+        filters.Controls.Add(new Label { Text = L.Get("From"), AutoSize = true, Padding = new Padding(0, 7, 0, 0) }); filters.Controls.Add(recordedFrom);
+        filters.Controls.Add(new Label { Text = L.Get("Until"), AutoSize = true, Padding = new Padding(0, 7, 0, 0) }); filters.Controls.Add(recordedUntil);
+        filterCamera.Items.Add(new CameraFilterChoice(null)); filterCamera.SelectedIndex = 0;
+        filterKind.Items.Add(L.Get("AllTypes"));
+        for (int index = 1; index <= 4; index++) filterKind.Items.Add(RecordingText.Kind(RecordingText.FilterKind(index)));
+        filterKind.SelectedIndex = 0;
+        filterProtection.Items.AddRange([L.Get("AllRecordings"), L.Get("Protected"), L.Get("Unprotected")]); filterProtection.SelectedIndex = 0;
+        filterCamera.AccessibleName = L.Get("FilterCamera"); filterKind.AccessibleName = L.Get("RecordingType"); filterProtection.AccessibleName = L.Get("ProtectionFilter");
         filters.Controls.Add(filterCamera); filters.Controls.Add(filterKind); filters.Controls.Add(filterProtection);
-        filters.Controls.Add(Button("Apply filters", () => { browserPage = 0; RefreshClips(); }));
-        filters.Controls.Add(Button("Clear filters", () => { recordedFrom.Checked = recordedUntil.Checked = false; filterCamera.SelectedIndex = filterKind.SelectedIndex = filterProtection.SelectedIndex = 0; browserPage = 0; RefreshClips(); }));
+        filters.Controls.Add(Button(L.Get("ApplyFilters"), () => { browserPage = 0; RefreshClips(); }));
+        filters.Controls.Add(Button(L.Get("ClearFilters"), () => { recordedFrom.Checked = recordedUntil.Checked = false; filterCamera.SelectedIndex = filterKind.SelectedIndex = filterProtection.SelectedIndex = 0; browserPage = 0; RefreshClips(); }));
         layout.Controls.Add(filters, 0, 0);
         var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, Size = new Size(1000, 530), SplitterDistance = 220, Panel1MinSize = 100, Panel2MinSize = 180 };
-        foreach (var (text, width) in new[] { ("Recorded", 265), ("Camera", 115), ("Playback", 90), ("Captured", 90), ("Resolution", 105), ("Profile / type", 210), ("Size", 90), ("Status", 150) }) clips.Columns.Add(text, width);
+        foreach (var (text, width) in new[] { (L.Get("Recorded"), 265), (L.Get("Camera"), 115), (L.Get("Playback"), 90), (L.Get("Captured"), 90), (L.Get("Resolution"), 105), (L.Get("ProfileType"), 210), (L.Get("Size"), 90), (L.Get("Status"), 150) }) clips.Columns.Add(text, width);
         clips.SmallImageList = thumbnails; split.Panel1.Controls.Add(clips);
         clips.SelectedIndexChanged += (_, _) => { if (!refreshingBrowser) SelectRecording(); };
         clips.DoubleClick += (_, _) => _ = Guard(TogglePlayback);
@@ -70,7 +77,7 @@ public sealed partial class MainForm
         player.Controls.Add(playbackPicture, 0, 0); player.Controls.Add(playbackDetails, 1, 0); player.Controls.Add(playbackSeek, 0, 1); player.SetColumnSpan(playbackSeek, 2);
         var transport = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
         transport.Controls.Add(playbackButton); playbackButton.Click += (_, _) => _ = Guard(TogglePlayback);
-        transport.Controls.Add(Button("Stop", () => { StopPlayback(); pausedAt = 0; UpdatePlaybackTime(); }));
+        transport.Controls.Add(Button(L.Get("Stop"), () => { StopPlayback(); pausedAt = 0; UpdatePlaybackTime(); }));
         transport.Controls.Add(playbackSound); playbackSound.Click += (_, _) => _ = Guard(async () => { if (playback is not null) { PausePlayback(); await StartPlayback(); } });
         transport.Controls.Add(playbackTime); player.Controls.Add(transport, 0, 2); player.SetColumnSpan(transport, 2);
         playbackSeek.MouseDown += (_, _) => scrubbing = true;
@@ -78,20 +85,20 @@ public sealed partial class MainForm
         playbackSeek.KeyUp += (_, _) => _ = Guard(SeekPlayback);
         split.Panel2.Controls.Add(player); layout.Controls.Add(split, 0, 1);
         var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
-        buttons.Controls.Add(Button("Refresh", RefreshClips));
-        buttons.Controls.Add(Button("Previous page", () => { browserPage = Math.Max(0, browserPage - 1); RefreshClips(); }));
-        buttons.Controls.Add(Button("Next page", () => { browserPage++; RefreshClips(); }));
+        buttons.Controls.Add(Button(L.Get("Refresh"), RefreshClips));
+        buttons.Controls.Add(Button(L.Get("PreviousPage"), () => { browserPage = Math.Max(0, browserPage - 1); RefreshClips(); }));
+        buttons.Controls.Add(Button(L.Get("NextPage"), () => { browserPage++; RefreshClips(); }));
         buttons.Controls.Add(browserCount);
-        buttons.Controls.Add(Button("Protect / unprotect", () => ClipAction((library, clip) => library.Protect(clip.Name, !clip.Protected))));
-        buttons.Controls.Add(Button("Export original…", () => _ = Export(false)));
-        buttons.Controls.Add(Button("Export 4K (upscaled)…", () => _ = Export(true)));
-        buttons.Controls.Add(Button("Delete…", () => ClipAction((library, clip) =>
+        buttons.Controls.Add(Button(L.Get("ProtectUnprotect"), () => ClipAction((library, clip) => library.Protect(clip.Name, !clip.Protected))));
+        buttons.Controls.Add(Button(L.Get("ExportOriginal"), () => _ = Export(false)));
+        buttons.Controls.Add(Button(L.Get("Export4KUpscaled"), () => _ = Export(true)));
+        buttons.Controls.Add(Button(L.Get("Delete"), () => ClipAction((library, clip) =>
         {
-            if (clip.Protected || !clip.Complete) throw new InvalidOperationException("Only finished, unprotected recordings can be deleted.");
-            if (MessageBox.Show(this, "Permanently delete this recording?\n" + clip.Name, "Delete recording", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+            if (clip.Protected || !clip.Complete) throw new InvalidOperationException(L.Get("OnlyFinishedUnprotectedRecordingsCanBeDeleted"));
+            if (MessageBox.Show(this, L.Get("PermanentlyDeleteThisRecording") + clip.Name, L.Get("DeleteRecording"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
             { StopPlayback(); library.Delete(clip.Name); }
         })));
-        buttons.Controls.Add(Button("Open folder", () => _ = Guard(() =>
+        buttons.Controls.Add(Button(L.Get("OpenFolder"), () => _ = Guard(() =>
         {
             string root = selectedRecording?.Root ?? preferences.Folder; Directory.CreateDirectory(root);
             Process.Start(new ProcessStartInfo(root) { UseShellExecute = true }); return Task.CompletedTask;
@@ -113,15 +120,15 @@ public sealed partial class MainForm
             string? selectedKey = selectedRecording is { } current ? EntryKey(current) : null;
             var entries = RecordingRoots().Distinct(StringComparer.OrdinalIgnoreCase).SelectMany(root =>
             { using var library = new RecordingLibrary(root); return library.Clips().Select(clip => new BrowserEntry(library.Root, clip)).ToArray(); }).OrderByDescending(entry => entry.Clip.Started).ToArray();
-            string? camera = filterCamera.SelectedIndex > 0 ? filterCamera.Text : null;
-            filterCamera.Items.Clear(); filterCamera.Items.Add("All cameras");
-            foreach (var name in entries.Select(entry => entry.Clip.Metadata?.Camera ?? "").Distinct().Order()) filterCamera.Items.Add(name.Length > 0 ? name : "(Unspecified / legacy)");
+            var camera = filterCamera.SelectedItem as CameraFilterChoice;
+            filterCamera.Items.Clear(); filterCamera.Items.Add(new CameraFilterChoice(null));
+            foreach (var name in entries.Select(entry => entry.Clip.Metadata?.Camera ?? "").Distinct().Order()) filterCamera.Items.Add(new CameraFilterChoice(name));
             filterCamera.SelectedIndex = camera is not null && filterCamera.Items.Contains(camera) ? filterCamera.Items.IndexOf(camera) : 0;
             double? from = recordedFrom.Checked ? new DateTimeOffset(recordedFrom.Value).ToUnixTimeMilliseconds() / 1000.0 : null;
             double? until = recordedUntil.Checked ? new DateTimeOffset(recordedUntil.Value).ToUnixTimeMilliseconds() / 1000.0 : null;
-            if (from > until) throw new ArgumentException("The filter end must be after its start.");
-            var filter = new ClipFilter(from, until, filterCamera.SelectedIndex == 0 ? null : filterCamera.Text == "(Unspecified / legacy)" ? "" : filterCamera.Text,
-                filterKind.SelectedIndex == 0 ? null : filterKind.Text, filterProtection.SelectedIndex == 0 ? null : filterProtection.SelectedIndex == 1);
+            if (from > until) throw new ArgumentException(L.Get("TheFilterEndMustBeAfterItsStart"));
+            var filter = new ClipFilter(from, until, (filterCamera.SelectedItem as CameraFilterChoice)?.Name,
+                RecordingText.FilterKind(filterKind.SelectedIndex), filterProtection.SelectedIndex == 0 ? null : filterProtection.SelectedIndex == 1);
             var matching = entries.Where(entry => filter.Matches(entry.Clip)).ToArray();
             browserPage = Math.Clamp(browserPage, 0, Math.Max(0, (matching.Length - 1) / BrowserPageSize));
             thumbnailStop?.Cancel(); thumbnailStop?.Dispose(); thumbnailStop = new();
@@ -130,15 +137,15 @@ public sealed partial class MainForm
             foreach (var entry in matching.Skip(browserPage * BrowserPageSize).Take(BrowserPageSize))
             {
                 var clip = entry.Clip; var metadata = clip.Metadata;
-                var item = new ListViewItem([DateTimeOffset.FromUnixTimeMilliseconds((long)(clip.Started * 1000)).LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                    string.IsNullOrEmpty(metadata?.Camera) ? "Unspecified" : metadata.Camera, Duration(clip.Duration), Duration(metadata is { CaptureDuration: > 0 } ? metadata.CaptureDuration : clip.Duration),
-                    $"{clip.Width} × {clip.Height}", $"{metadata?.Profile ?? "Original stream"} · {metadata?.Kind ?? "Continuous"}", $"{clip.Bytes / 1048576.0:0.0} MiB",
-                    !clip.Exists ? "Missing" : !clip.Complete ? "Active / interrupted" : clip.Protected ? "Protected" : clip.InUse ? "In use" : "Saved"])
+                var item = new ListViewItem([DateTimeOffset.FromUnixTimeMilliseconds((long)(clip.Started * 1000)).LocalDateTime.ToString("G"),
+                    string.IsNullOrEmpty(metadata?.Camera) ? L.Get("Unspecified") : metadata.Camera, Duration(clip.Duration), Duration(metadata is { CaptureDuration: > 0 } ? metadata.CaptureDuration : clip.Duration),
+                    $"{clip.Width} × {clip.Height}", $"{RecordingText.Profile(metadata?.Profile)} · {RecordingText.Kind(metadata?.Kind)}", $"{clip.Bytes / 1048576.0:0.0} MiB",
+                    !clip.Exists ? L.Get("Missing") : !clip.Complete ? L.Get("ActiveInterrupted") : clip.Protected ? L.Get("Clip.Protected") : clip.InUse ? L.Get("InUse") : L.Get("Saved")])
                 { Tag = entry, Selected = EntryKey(entry) == selectedKey, ToolTipText = clip.Name };
                 clips.Items.Add(item);
             }
-            browserCount.Text = $"{matching.Length} matching · page {browserPage + 1}/{Math.Max(1, (matching.Length + BrowserPageSize - 1) / BrowserPageSize)}";
-            if (clips.SelectedItems.Count == 0 && selectedRecording is not null) { StopPlayback(); selectedRecording = null; playbackButton.Enabled = playbackSeek.Enabled = false; playbackDetails.Text = "Select a recording."; }
+            browserCount.Text = L.Format("Browser.PageCount", matching.Length, browserPage + 1, Math.Max(1, (matching.Length + BrowserPageSize - 1) / BrowserPageSize));
+            if (clips.SelectedItems.Count == 0 && selectedRecording is not null) { StopPlayback(); selectedRecording = null; playbackButton.Enabled = playbackSeek.Enabled = false; playbackDetails.Text = L.Get("SelectARecording"); }
         }
         catch (Exception e) { status.Text = e.Message; }
         finally { clips.EndUpdate(); refreshingBrowser = false; }
@@ -183,9 +190,9 @@ public sealed partial class MainForm
         var clip = entry.Clip; var metadata = clip.Metadata;
         playbackButton.Enabled = playbackSeek.Enabled = clip.Complete && clip.Exists && clip.Duration > 0;
         playbackSound.Enabled = metadata?.Audio is not null;
-        playbackDetails.Text = $"{(string.IsNullOrEmpty(metadata?.Camera) ? "Unspecified camera" : metadata.Camera)}\n{DateTimeOffset.FromUnixTimeMilliseconds((long)(clip.Started * 1000)).LocalDateTime:g}\n" +
-            $"{clip.Width} × {clip.Height}\n{metadata?.Profile ?? "Original stream"}\n{metadata?.Kind ?? "Continuous"} · {(metadata?.TargetFps is { } fps ? $"{fps:0.##} fps" : "source fps")}\n" +
-            $"{metadata?.Audio ?? "No audio"}\nPlayback {Duration(clip.Duration)}\nCaptured {Duration(metadata is { CaptureDuration: > 0 } ? metadata.CaptureDuration : clip.Duration)}\n{clip.Bytes / 1048576.0:0.0} MiB\n{clip.Name}";
+        playbackDetails.Text = $"{(string.IsNullOrEmpty(metadata?.Camera) ? L.Get("UnspecifiedCamera") : metadata.Camera)}\n{DateTimeOffset.FromUnixTimeMilliseconds((long)(clip.Started * 1000)).LocalDateTime:g}\n" +
+            $"{clip.Width} × {clip.Height}\n{RecordingText.Profile(metadata?.Profile)}\n{RecordingText.Kind(metadata?.Kind)} · {(metadata?.TargetFps is { } fps ? L.Format("Capture.FrameRate", fps) : L.Get("SourceFps"))}\n" +
+            L.Format("Browser.ClipDetails", RecordingText.Audio(metadata?.Audio), Duration(clip.Duration), Duration(metadata is { CaptureDuration: > 0 } ? metadata.CaptureDuration : clip.Duration), clip.Bytes / 1048576.0, clip.Name);
         SetPlaybackPicture(thumbnailImages.TryGetValue(EntryKey(entry), out var image) ? new Bitmap(image) : null); UpdatePlaybackTime(); _ = LoadVisibleThumbnails();
     }
     void SetPlaybackPicture(Bitmap? bitmap) { var old = playbackPicture.Image; playbackPicture.Image = bitmap; old?.Dispose(); }
@@ -199,21 +206,21 @@ public sealed partial class MainForm
     async Task StartPlayback()
     {
         if (selectedRecording is not { } entry || !entry.Clip.Complete || !entry.Clip.Exists) return;
-        if (!File.Exists(preferences.Ffmpeg)) throw new IOException("Choose FFmpeg in Storage for the recording player.");
+        if (!File.Exists(preferences.Ffmpeg)) throw new IOException(L.Get("ChooseFFmpegInStorageForTheRecordingPlayer"));
         if (pausedAt >= entry.Clip.Duration - .05) pausedAt = 0;
         if (listen.Checked) { listen.Checked = false; ClearAudio(); if (session is { } active) await active.SetMonitoringAsync(false); }
         using var library = new RecordingLibrary(entry.Root); playbackLease = library.Hold(entry.Clip.Name);
         try { playback = new(preferences.Ffmpeg!, library.ClipPath(entry.Clip.Name), pausedAt, entry.Clip.Duration, playbackSound.Checked && entry.Clip.Metadata?.Audio is not null); }
         catch { playbackLease.Dispose(); playbackLease = null; throw; }
-        lastLeaseRenewal = Environment.TickCount64; playbackButton.Text = "Pause";
+        lastLeaseRenewal = Environment.TickCount64; playbackButton.Text = L.Get("Pause");
     }
     void PausePlayback() { if (playback is not null) pausedAt = playback.Position; StopPlayback(); UpdatePlaybackTime(); }
     void StopPlayback()
     {
         playback?.Dispose(); playback = null;
         var lease = playbackLease; playbackLease = null;
-        try { lease?.Dispose(); } catch (Exception e) when (e is IOException or Microsoft.Data.Sqlite.SqliteException) { status.Text = "Playback closed; its catalogue reservation will expire: " + e.Message; }
-        playbackButton.Text = "Play";
+        try { lease?.Dispose(); } catch (Exception e) when (e is IOException or Microsoft.Data.Sqlite.SqliteException) { status.Text = L.Get("PlaybackClosedItsCatalogueReservationWillExpire") + e.Message; }
+        playbackButton.Text = L.Get("Play");
     }
     void UpdatePlaybackTime()
     {
@@ -227,18 +234,18 @@ public sealed partial class MainForm
         {
             if (playing.Take() is { } bitmap) SetPlaybackPicture(bitmap);
             UpdatePlaybackTime();
-            if (playing.Finished) { pausedAt = playing.Position; if (playing.Error is { } error) status.Text = "Playback: " + error; StopPlayback(); }
+            if (playing.Finished) { pausedAt = playing.Position; if (playing.Error is { } error) status.Text = L.Get("Playback.ErrorPrefix") + error; StopPlayback(); }
         }
         if (Environment.TickCount64 - lastLeaseRenewal > 30000)
         {
             try { playbackLease?.Renew(); exportLease?.Renew(); }
-            catch (Exception e) { status.Text = "Recording reservation: " + e.Message; StopPlayback(); }
+            catch (Exception e) { status.Text = L.Get("RecordingReservation") + e.Message; StopPlayback(); }
             lastLeaseRenewal = Environment.TickCount64;
         }
     }
     void ClipAction(Action<RecordingLibrary, Clip> action) => _ = Guard(() =>
     {
-        if (exporting) throw new InvalidOperationException("Wait for the export to finish before changing clips.");
+        if (exporting) throw new InvalidOperationException(L.Get("WaitForTheExportToFinishBeforeChangingClips"));
         if (clips.SelectedItems.Count == 0) return Task.CompletedTask;
         var entry = (BrowserEntry)clips.SelectedItems[0].Tag!;
         using var library = new RecordingLibrary(entry.Root); action(library, entry.Clip); RefreshClips(); return Task.CompletedTask;
@@ -247,18 +254,18 @@ public sealed partial class MainForm
     {
         if (exporting || clips.SelectedItems.Count == 0) return;
         var entry = (BrowserEntry)clips.SelectedItems[0].Tag!; var clip = entry.Clip;
-        if (!clip.Complete || !clip.Exists) throw new IOException("Choose a completed recording.");
-        if (upscale && !File.Exists(preferences.Ffmpeg)) throw new IOException("Choose an FFmpeg executable in Storage first.");
-        using var dialog = new SaveFileDialog { Filter = "MP4 video|*.mp4", FileName = (upscale ? "4K_upscaled_" : "Export_") + clip.Name };
+        if (!clip.Complete || !clip.Exists) throw new IOException(L.Get("ChooseACompletedRecording"));
+        if (upscale && !File.Exists(preferences.Ffmpeg)) throw new IOException(L.Get("ChooseAnFFmpegExecutableInStorageFirst"));
+        using var dialog = new SaveFileDialog { Filter = L.Get("MP4VideoMp4"), FileName = (upscale ? "4K_upscaled_" : "Export_") + clip.Name };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        if (File.Exists(dialog.FileName)) throw new IOException("Choose a new filename; exports do not overwrite existing files.");
+        if (File.Exists(dialog.FileName)) throw new IOException(L.Get("ChooseANewFilenameExportsDoNotOverwriteExistingFiles"));
         using var library = new RecordingLibrary(entry.Root); exportLease = library.Hold(clip.Name); exporting = true;
         try
         {
-            status.Text = upscale ? "Exporting 4K upscale…" : "Exporting original…";
+            status.Text = upscale ? L.Get("Exporting4KUpscale") : L.Get("ExportingOriginal");
             if (upscale) await MediaTools.Export4K(preferences.Ffmpeg!, library.ClipPath(clip.Name), dialog.FileName, exportStop.Token);
             else await Task.Run(() => File.Copy(library.ClipPath(clip.Name), dialog.FileName, false));
-            status.Text = "Export saved: " + dialog.FileName;
+            status.Text = L.Get("ExportSaved") + dialog.FileName;
         }
         finally { exportLease.Dispose(); exportLease = null; exporting = false; RefreshClips(); }
     });

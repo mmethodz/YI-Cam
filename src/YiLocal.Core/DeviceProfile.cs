@@ -20,7 +20,7 @@ public sealed class DeviceProfile
     public static DeviceProfile Load(string? path = null)
     {
         path = Path.GetFullPath(path ?? DefaultPath);
-        var profile = JsonSerializer.Deserialize<DeviceProfile>(Crypt(File.ReadAllBytes(path), false)) ?? throw new InvalidDataException("Empty device profile.");
+        var profile = JsonSerializer.Deserialize<DeviceProfile>(Crypt(File.ReadAllBytes(path), false)) ?? throw new InvalidDataException(L.Get("EmptyDeviceProfile"));
         if (profile.StreamQuality > 2) profile.StreamQuality = 1;
         profile.StoragePath = path; return profile;
     }
@@ -53,14 +53,14 @@ public sealed class DeviceProfile
     [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr memory);
     static byte[] Crypt(byte[] data, bool protect)
     {
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("DPAPI profiles require Windows. The LAN protocol itself is portable.");
+        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException(L.Get("DPAPIProfilesRequireWindowsTheLANProtocolItselfIsPortable"));
         var input = new Blob { Size = data.Length, Data = Marshal.AllocHGlobal(data.Length) };
         try
         {
             Marshal.Copy(data, 0, input.Data, data.Length); Blob output;
             bool ok = protect ? CryptProtectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output)
                 : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output);
-            if (!ok) throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to open/save this Windows account's encrypted camera profile.");
+            if (!ok) throw new Win32Exception(Marshal.GetLastWin32Error(), L.Get("UnableToOpenSaveThisWindowsAccountSEncryptedCameraProfile"));
             try { var result = new byte[output.Size]; Marshal.Copy(output.Data, result, 0, result.Length); return result; }
             finally { LocalFree(output.Data); }
         }

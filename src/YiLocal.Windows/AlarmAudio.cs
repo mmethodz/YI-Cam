@@ -18,30 +18,30 @@ internal static class AlarmAudio
     static byte[] ReadBounded(string path)
     {
         using var file = File.OpenRead(path);
-        if (file.Length > MaximumBytes) throw new IOException("Alarm sample exceeds the one-MiB AAC limit.");
+        if (file.Length > MaximumBytes) throw new IOException(L.Get("AlarmSampleExceedsTheOneMiBAACLimit"));
         var bytes = new byte[(int)file.Length]; file.ReadExactly(bytes); return bytes;
     }
     internal static AlarmClip Parse(byte[] bytes)
     {
-        if (bytes.Length > MaximumBytes) throw new IOException("Alarm sample is too large.");
+        if (bytes.Length > MaximumBytes) throw new IOException(L.Get("AlarmSampleIsTooLarge"));
         var packets = new List<byte[]>();
         for (int at = 0; at < bytes.Length;)
         {
-            if (bytes.Length - at < 7) throw new InvalidDataException("Truncated alarm AAC header.");
+            if (bytes.Length - at < 7) throw new InvalidDataException(L.Get("TruncatedAlarmAACHeader"));
             int length = ((bytes[at + 3] & 3) << 11) | (bytes[at + 4] << 3) | (bytes[at + 5] >> 5);
             if (length <= 7 || length > TalkAudio.MaximumPacketBytes || length > bytes.Length - at)
-                throw new InvalidDataException("Invalid alarm AAC packet length.");
+                throw new InvalidDataException(L.Get("InvalidAlarmAACPacketLength"));
             var packet = bytes[at..(at + length)]; TalkAudio.Validate(packet);
             packets.Add(packet); at += length;
-            if (packets.Count > 950) throw new IOException("Alarm samples are limited to sixty seconds.");
+            if (packets.Count > 950) throw new IOException(L.Get("AlarmSamplesAreLimitedToSixtySeconds"));
         }
-        if (packets.Count < 8) throw new IOException("Choose an alarm sample at least half a second long.");
+        if (packets.Count < 8) throw new IOException(L.Get("ChooseAnAlarmSampleAtLeastHalfASecondLong"));
         return new(packets);
     }
     public static async Task<(AlarmClip Clip, string Path)> ImportAsync(string executable, string source, string cache, CancellationToken cancellation)
     {
-        if (!File.Exists(source)) throw new IOException("Alarm sound file was not found.");
-        if (new FileInfo(source).Length > 100L * 1024 * 1024) throw new IOException("Choose an audio file no larger than 100 MiB.");
+        if (!File.Exists(source)) throw new IOException(L.Get("AlarmSoundFileWasNotFound"));
+        if (new FileInfo(source).Length > 100L * 1024 * 1024) throw new IOException(L.Get("ChooseAnAudioFileNoLargerThan100MiB"));
         var info = MediaTools.StartInfo(executable, "-hide_banner", "-loglevel", "error", "-nostdin",
             "-protocol_whitelist", "file,pipe", "-i", Path.GetFullPath(source), "-map", "0:a:0", "-vn", "-t", "60",
             "-af", "loudnorm=I=-9:TP=-1:LRA=7", "-ar", "16000", "-ac", "1",
@@ -63,11 +63,11 @@ internal static class AlarmAudio
             int count;
             while ((count = await process.StandardOutput.BaseStream.ReadAsync(buffer, timeout.Token)) > 0)
             {
-                if (output.Length + count > MaximumBytes) throw new IOException("Converted alarm exceeded its size limit.");
+                if (output.Length + count > MaximumBytes) throw new IOException(L.Get("ConvertedAlarmExceededItsSizeLimit"));
                 output.Write(buffer, 0, count);
             }
             await process.WaitForExitAsync(timeout.Token); await errors;
-            if (process.ExitCode != 0) throw new IOException("Alarm audio conversion failed: " + lastError);
+            if (process.ExitCode != 0) throw new IOException(L.Get("AlarmAudioConversionFailed") + lastError);
             byte[] bytes = output.ToArray(); var clip = Parse(bytes);
             Directory.CreateDirectory(cache);
             string path = Path.Combine(cache, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() + ".aac");
@@ -93,7 +93,7 @@ internal static class AlarmAudio
         try
         {
             await using (var resource = typeof(AlarmAudio).Assembly.GetManifestResourceStream("OpenYI.SirenNoise.wav")
-                ?? throw new IOException("Bundled public-domain siren is missing."))
+                ?? throw new IOException(L.Get("BundledPublicDomainSirenIsMissing")))
             await using (var file = File.Create(temporary)) await resource.CopyToAsync(file, cancellation);
             return (await ImportAsync(executable, temporary, CacheDirectory, cancellation)).Clip;
         }
@@ -119,12 +119,12 @@ internal static class AlarmAudio
             using var output = new MemoryStream(); var buffer = new byte[8192]; int count;
             while ((count = await process.StandardOutput.BaseStream.ReadAsync(buffer, timeout.Token)) > 0)
             {
-                if (output.Length + count > 2 * MaximumBytes) throw new IOException("Decoded alarm exceeded its limit.");
+                if (output.Length + count > 2 * MaximumBytes) throw new IOException(L.Get("DecodedAlarmExceededItsLimit"));
                 output.Write(buffer, 0, count);
             }
             await write; await process.WaitForExitAsync(timeout.Token);
-            if (process.ExitCode != 0) throw new IOException("Cannot prepare computer alarm: " + await errors);
-            if (output.Length < 16000 || output.Length % 2 != 0) throw new IOException("Alarm decoder returned invalid PCM.");
+            if (process.ExitCode != 0) throw new IOException(L.Get("CannotPrepareComputerAlarm") + await errors);
+            if (output.Length < 16000 || output.Length % 2 != 0) throw new IOException(L.Get("AlarmDecoderReturnedInvalidPCM"));
             return output.ToArray();
         }
         finally
@@ -160,12 +160,12 @@ internal sealed class CameraAlarm : IAsyncDisposable
                 }
                 finally { if (client.Connected) await client.StopSpeakerAsync(); }
             }
-            catch (Exception e) { if (!stop.IsCancellationRequested) Error = e is OperationCanceledException ? "Camera speaker initialization timed out." : e.Message; }
+            catch (Exception e) { if (!stop.IsCancellationRequested) Error = e is OperationCanceledException ? L.Get("CameraSpeakerInitializationTimedOut") : e.Message; }
         });
     }
     internal static async Task SendLoopAsync(AlarmClip clip, double? durationSeconds, Action<byte[]> send, CancellationToken cancellation)
     {
-        if (clip.Packets.Count == 0) throw new ArgumentException("Empty alarm sample.");
+        if (clip.Packets.Count == 0) throw new ArgumentException(L.Get("EmptyAlarmSample"));
         var clock = Stopwatch.StartNew(); long sent = 0;
         while (!cancellation.IsCancellationRequested)
         {
@@ -177,7 +177,7 @@ internal sealed class CameraAlarm : IAsyncDisposable
                 return;
             }
             double delay = target - clock.Elapsed.TotalSeconds;
-            if (delay < -.8) throw new IOException("Alarm audio fell behind real time.");
+            if (delay < -.8) throw new IOException(L.Get("AlarmAudioFellBehindRealTime"));
             if (delay > 0) await Task.Delay(TimeSpan.FromSeconds(delay), cancellation);
             cancellation.ThrowIfCancellationRequested();
             send(clip.Packets[(int)(sent % clip.Packets.Count)]); sent++;
@@ -212,7 +212,7 @@ internal sealed class ComputerAlarm : IAsyncDisposable
     }
     internal static async Task PlayAsync(byte[] pcm, double? durationSeconds, IPcmPlaybackOutput output, Action started, CancellationToken cancellation)
     {
-        if (pcm.Length == 0 || pcm.Length % 2 != 0) throw new ArgumentException("Invalid PCM sample.");
+        if (pcm.Length == 0 || pcm.Length % 2 != 0) throw new ArgumentException(L.Get("InvalidPCMSample"));
         long remaining = durationSeconds is { } duration ? (long)(duration * 16000) * 2 : long.MaxValue;
         int at = 0;
         while (remaining > 0)
@@ -225,14 +225,14 @@ internal sealed class ComputerAlarm : IAsyncDisposable
                 writeTimeout.CancelAfter(3000);
                 try { await output.WriteAsync(pcm[at..(at + count)], writeTimeout.Token); }
                 catch (OperationCanceledException e) when (!cancellation.IsCancellationRequested)
-                { throw new IOException("Computer alarm output stopped accepting audio.", e); }
+                { throw new IOException(L.Get("ComputerAlarmOutputStoppedAcceptingAudio"), e); }
             }
             started(); remaining -= count; at = (at + count) % pcm.Length;
         }
         using var drainTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation); drainTimeout.CancelAfter(3000);
         try { await output.DrainAsync(drainTimeout.Token); }
         catch (OperationCanceledException e) when (!cancellation.IsCancellationRequested)
-        { throw new IOException("Computer alarm output stopped responding.", e); }
+        { throw new IOException(L.Get("ComputerAlarmOutputStoppedResponding"), e); }
     }
     public async ValueTask DisposeAsync()
     {

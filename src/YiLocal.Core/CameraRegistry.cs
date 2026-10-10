@@ -17,12 +17,12 @@ public sealed class CameraRegistry
         {
             var entries = JsonSerializer.Deserialize<List<CameraRegistration>>(File.ReadAllText(IndexPath)) ?? [];
             if (entries.Count > 7 || entries.Select(entry => entry.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != entries.Count)
-                throw new InvalidDataException("Camera registry must contain at most seven distinct additional cameras.");
+                throw new InvalidDataException(L.Get("CameraRegistryMustContainAtMostSevenDistinctAdditionalCameras"));
             foreach (var entry in entries) ValidateId(entry.Id);
             Entries = entries;
         }
     }
-    static string ValidateId(string id) => Guid.TryParseExact(id, "N", out var parsed) ? parsed.ToString("N") : throw new ArgumentException("Invalid camera registration ID.");
+    static string ValidateId(string id) => Guid.TryParseExact(id, "N", out var parsed) ? parsed.ToString("N") : throw new ArgumentException(L.Get("InvalidCameraRegistrationID"));
     public string ProfilePath(string id) => Path.Combine(directory, "camera-profiles", ValidateId(id) + ".dpapi");
     public static string RecordingFolder(string root, string id) => Path.Combine(Path.GetFullPath(root), "Cameras", ValidateId(id));
     public static IEnumerable<string> ExistingRecordingFolders(string root)
@@ -39,16 +39,16 @@ public sealed class CameraRegistry
         static bool Same(DeviceProfile left, DeviceProfile right) =>
             string.Equals(left.Ip, right.Ip, StringComparison.OrdinalIgnoreCase) ||
             left.Uid is not null && string.Equals(left.Uid, right.Uid, StringComparison.OrdinalIgnoreCase);
-        if (primary is not null && Same(profile, primary)) throw new InvalidOperationException("This camera is already the primary camera.");
+        if (primary is not null && Same(profile, primary)) throw new InvalidOperationException(L.Get("ThisCameraIsAlreadyThePrimaryCamera"));
         foreach (var entry in Entries.Where(entry => !string.Equals(entry.Id, exceptId, StringComparison.OrdinalIgnoreCase)))
-            if (Same(profile, LoadProfile(entry.Id))) throw new InvalidOperationException("This camera already has a configuration. Edit that entry instead.");
+            if (Same(profile, LoadProfile(entry.Id))) throw new InvalidOperationException(L.Get("ThisCameraAlreadyHasAConfigurationEditThatEntryInstead"));
     }
     public CameraRegistration SaveVerified(DeviceProfile profile, DeviceProfile? primary = null, string? id = null)
     {
-        if (string.IsNullOrWhiteSpace(profile.Uid)) throw new InvalidOperationException("Verify the camera identity before saving it.");
+        if (string.IsNullOrWhiteSpace(profile.Uid)) throw new InvalidOperationException(L.Get("VerifyTheCameraIdentityBeforeSavingIt"));
         EnsureDistinct(profile, primary, id);
-        if (id is null && Entries.Count >= 7) throw new InvalidOperationException("The experimental grid supports eight cameras including the primary.");
-        if (id is not null && !Entries.Any(entry => entry.Id == id)) throw new ArgumentException("Unknown camera registration.");
+        if (id is null && Entries.Count >= 7) throw new InvalidOperationException(L.Get("TheExperimentalGridSupportsEightCamerasIncludingThePrimary"));
+        if (id is not null && !Entries.Any(entry => entry.Id == id)) throw new ArgumentException(L.Get("UnknownCameraRegistration"));
         bool adding = id is null; id ??= Guid.NewGuid().ToString("N");
         var registration = Entries.SingleOrDefault(entry => entry.Id == id) ?? new CameraRegistration(id);
         var next = Entries.Where(entry => entry.Id != id).Append(registration).ToArray();
@@ -57,13 +57,13 @@ public sealed class CameraRegistry
     }
     public void SetEnabled(string id, bool enabled)
     {
-        if (!Entries.Any(entry => entry.Id == id)) throw new ArgumentException("Unknown camera registration.");
+        if (!Entries.Any(entry => entry.Id == id)) throw new ArgumentException(L.Get("UnknownCameraRegistration"));
         SaveIndex(Entries.Select(entry => entry.Id == id ? entry with { Enabled = enabled } : entry).ToArray());
     }
     public void Remove(string id)
     {
         string path = ProfilePath(id);
-        if (!Entries.Any(entry => entry.Id == id)) throw new ArgumentException("Unknown camera registration.");
+        if (!Entries.Any(entry => entry.Id == id)) throw new ArgumentException(L.Get("UnknownCameraRegistration"));
         SaveIndex(Entries.Where(entry => entry.Id != id).ToArray()); File.Delete(path);
     }
     void SaveIndex(IReadOnlyList<CameraRegistration> entries)

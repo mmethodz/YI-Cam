@@ -12,6 +12,7 @@ internal sealed class Preferences
     public AlarmOptions Alarm { get; set; } = new();
     public bool ExperimentalMultipleCameras { get; set; }
     public string? Microphone { get; set; }
+    public string Language { get; set; } = "en";
     public static string FilePath => Path.Combine(DeviceProfile.SettingsDirectory, "settings.json");
     public Preferences Copy() => (Preferences)MemberwiseClone();
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
@@ -24,13 +25,13 @@ internal sealed class Preferences
         try { return Read(File.ReadAllText(path), out notice); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
-            notice = "Settings could not be read: " + e.Message;
+            notice = L.Get("SettingsCouldNotBeRead") + e.Message;
             try
             {
                 if (File.Exists(path + ".bak"))
                 {
                     var recovered = Read(File.ReadAllText(path + ".bak"), out string? backupNotice);
-                    notice = "Recovered the previous settings backup. " + notice + " " + backupNotice;
+                    notice = L.Get("RecoveredThePreviousSettingsBackup") + notice + " " + backupNotice;
                     return recovered;
                 }
             }
@@ -41,7 +42,7 @@ internal sealed class Preferences
     static Preferences Read(string json, out string? notice)
     {
         using var document = JsonDocument.Parse(json);
-        if (document.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException("Expected a settings object.");
+        if (document.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException(L.Get("ExpectedASettingsObject"));
         var result = new Preferences(); var issues = new List<string>();
         // A damaged section must not discard unrelated storage/capture choices.
         void ReadSection<T>(string name, Action<T> apply)
@@ -51,21 +52,22 @@ internal sealed class Preferences
             catch (Exception e) when (e is JsonException or ArgumentException or NotSupportedException or NullReferenceException)
             { issues.Add(name + ": " + e.Message); }
         }
-        ReadSection<string>(nameof(Folder), value => { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Empty recording folder."); result.Folder = Path.GetFullPath(value); });
+        ReadSection<string>(nameof(Folder), value => { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException(L.Get("EmptyRecordingFolder")); result.Folder = Path.GetFullPath(value); });
         ReadSection<string?>(nameof(Ffmpeg), value => result.Ffmpeg = value);
         ReadSection<StoragePolicy>(nameof(Storage), value => { value.Validate(); result.Storage = value; });
         ReadSection<RecordingOptions>(nameof(Recording), value => { value.Validate(); result.Recording = value; });
         ReadSection<AlarmOptions>(nameof(Alarm), value => { value.Validate(); result.Alarm = value; });
         ReadSection<bool>(nameof(ExperimentalMultipleCameras), value => result.ExperimentalMultipleCameras = value);
         ReadSection<string?>(nameof(Microphone), value => result.Microphone = value);
-        notice = issues.Count == 0 ? null : "Some saved settings need attention: " + string.Join("; ", issues);
+        ReadSection<string?>(nameof(Language), value => result.Language = L.ResolveLanguage(value));
+        notice = issues.Count == 0 ? null : L.Get("SomeSavedSettingsNeedAttention") + string.Join("; ", issues);
         return result;
     }
     public void Save(string? path = null)
     {
         path ??= FilePath;
         Storage.Validate(); Recording.Validate(); Alarm.Validate();
-        if (string.IsNullOrWhiteSpace(Folder)) throw new ArgumentException("Choose a recording folder.");
+        if (string.IsNullOrWhiteSpace(Folder)) throw new ArgumentException(L.Get("ChooseARecordingFolder"));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try

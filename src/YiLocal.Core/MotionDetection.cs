@@ -17,7 +17,7 @@ public sealed class PixelMotionDetector
     }
     public MotionMeasurement? Analyze(ReadOnlySpan<byte> pixels, long time)
     {
-        if (pixels.Length != Width * Height) throw new ArgumentException("Expected a 160×90 grayscale frame.");
+        if (pixels.Length != Width * Height) throw new ArgumentException(L.Get("ExpectedA16090GrayscaleFrame"));
         if (lastTime != long.MinValue && time > lastTime && time - lastTime < 200) return null;
         if (time <= lastTime) { previous = null; consecutive = 0; }
         lastTime = time;

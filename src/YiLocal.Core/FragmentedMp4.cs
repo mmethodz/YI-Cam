@@ -55,7 +55,7 @@ public sealed class FragmentedMp4 : IDisposable
     static void ValidateConfiguration(int width, int height, byte[] sps, byte[] pps)
     {
         if (sps.Length is < 4 or > 65535 || pps.Length is < 1 or > 65535 || width is <= 0 or > 8192 || height is <= 0 or > 8192)
-            throw new InvalidDataException("Incomplete AVC configuration.");
+            throw new InvalidDataException(L.Get("IncompleteAVCConfiguration"));
     }
 
     /// <summary>Takes ownership of the stream. Used to feed timestamped fragments to an optional encoder.</summary>
@@ -107,10 +107,10 @@ public sealed class FragmentedMp4 : IDisposable
 
     public void WriteAudio(byte[] adts, long milliseconds)
     {
-        if (audio is null) throw new InvalidOperationException("This clip has no audio track.");
+        if (audio is null) throw new InvalidOperationException(L.Get("ThisClipHasNoAudioTrack"));
         var (format, sample) = AacConfiguration.Parse(adts);
-        if (format != audio) throw new InvalidDataException("AAC configuration changed within the clip.");
-        if (milliseconds < 0 || milliseconds <= lastAudioTime) throw new InvalidDataException("Non-monotonic audio timestamps.");
+        if (format != audio) throw new InvalidDataException(L.Get("AACConfigurationChangedWithinTheClip"));
+        if (milliseconds < 0 || milliseconds <= lastAudioTime) throw new InvalidDataException(L.Get("NonMonotonicAudioTimestamps"));
         long time = checked(milliseconds * format.SampleRate / 1000);
         byte[] Fragment(uint offset) => B("moof", F("mfhd", 0, Wire.U32(sequence + 1)), B("traf",
             F("tfhd", 0x020000, Wire.U32(2)), F("tfdt", 0x01000000, U64((ulong)time)),
@@ -127,7 +127,7 @@ public sealed class FragmentedMp4 : IDisposable
         if (pending.HasValue)
         {
             long delta = milliseconds - pending.Value.Time;
-            if (delta is < 1 or > 30000) throw new InvalidDataException("Non-monotonic video timestamps.");
+            if (delta is < 1 or > 30000) throw new InvalidDataException(L.Get("NonMonotonicVideoTimestamps"));
             lastDuration = (int)delta; FlushFrame(lastDuration);
         }
         var sample = Wire.Join(nals.Select(n => Wire.Join(Wire.U32((uint)n.Length), n)).ToArray());

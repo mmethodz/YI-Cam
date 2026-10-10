@@ -10,7 +10,7 @@ public static class PairingImport
         using var camera = new CameraClient(profile.Ip, profile.Password, profile.Uid);
         await camera.ConnectAsync(token);
         await camera.FirmwareAsync().WaitAsync(token);
-        return camera.Uid ?? throw new InvalidDataException("The camera did not return its identity.");
+        return camera.Uid ?? throw new InvalidDataException(L.Get("TheCameraDidNotReturnItsIdentity"));
     }
     /// <summary>Only replace the saved profile after the candidate key authenticates to the pinned camera.</summary>
     public static Task<DeviceProfile> VerifyAndSaveAsync(DeviceProfile candidate, CancellationToken cancellation = default) =>
@@ -25,7 +25,7 @@ public static class PairingImport
         cancellation.ThrowIfCancellationRequested();
         string uid = await verify(verified, cancellation);
         if (string.IsNullOrEmpty(uid) || verified.Uid is not null && !uid.Equals(verified.Uid, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("A different camera answered. The saved pairing was not changed.");
+            throw new InvalidDataException(L.Get("ADifferentCameraAnsweredTheSavedPairingWasNotChanged"));
         verified.Uid = uid;
         cancellation.ThrowIfCancellationRequested();
         save(verified);

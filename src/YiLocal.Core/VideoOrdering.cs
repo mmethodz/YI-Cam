@@ -62,7 +62,7 @@ public sealed class FrameClock
             if (previous.HasValue)
             {
                 long delta = uptime.Value ? (uint)(value - previous.Value) : (long)value - (long)previous.Value;
-                if (delta is < 0 or > 30000) throw new InvalidDataException("Camera timestamp jumped; reconnecting is required.");
+                if (delta is < 0 or > 30000) throw new InvalidDataException(L.Get("CameraTimestampJumpedReconnectingIsRequired"));
                 elapsed += Math.Max(1, delta);
             }
             previous = value;
@@ -77,7 +77,7 @@ public sealed class FrameClock
             if (previous is null) return null;
             long delta = uptime == true ? unchecked((int)(frame.Milliseconds - (uint)previous.Value))
                 : checked((long)frame.Seconds * 1000 + frame.Milliseconds - (long)previous.Value);
-            if (Math.Abs(delta) > 30000) throw new InvalidDataException("Audio and video clocks diverged.");
+            if (Math.Abs(delta) > 30000) throw new InvalidDataException(L.Get("AudioAndVideoClocksDiverged"));
             return elapsed + delta;
         }
     }

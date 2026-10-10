@@ -15,6 +15,11 @@ pre-enhancement version is tagged `baseline-yi-local-0.1`.
 prototype and portable reference.** The Windows application does not run Python,
 BlueStacks, or the vendor client in the background.
 
+**English and Finnish:** choose **Settings → App language / Kieli → Suomi**, then
+restart OpenYI. English remains the default. Translations use separate resource
+files with English fallback; community languages are welcome. See the
+[translation guide](docs/LOCALIZATION.md).
+
 This is an early release, initially verified with one Anyka-family camera:
 hardware **253**, firmware **6.0.24.10_202401091113**. Other cameras using the
 same app name may use different hardware and protocols. Account-free fresh

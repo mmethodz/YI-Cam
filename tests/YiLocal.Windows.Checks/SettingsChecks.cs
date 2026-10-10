@@ -17,13 +17,13 @@ static class SettingsChecks
                 Folder = Path.Combine(root, "recordings"), Ffmpeg = "ffmpeg-fixture.exe",
                 Storage = new(27, 3, 15, true, 12),
                 Recording = new(RecordingEncoding.Balanced, 5, CaptureMode.Motion, true, 17, 3),
-                ExperimentalMultipleCameras = true, Microphone = "Fixture microphone",
+                ExperimentalMultipleCameras = true, Microphone = "Fixture microphone", Language = "fi",
                 Alarm = new(true, 15, null, 12, 120, "fixture.aac", "My sound.mp3", AlarmOutput.Both, "Fixture speakers")
             };
             saved.Save(path);
             var loaded = Preferences.Load(out string? notice, path);
             Require(notice is null && loaded.Storage == saved.Storage && loaded.Recording == saved.Recording && loaded.Folder == saved.Folder &&
-                loaded.Microphone == saved.Microphone && loaded.ExperimentalMultipleCameras && loaded.Alarm == saved.Alarm, "Settings did not round-trip.");
+                loaded.Microphone == saved.Microphone && loaded.ExperimentalMultipleCameras && loaded.Alarm == saved.Alarm && loaded.Language == "fi", "Settings did not round-trip.");
             saved.Save(path); // Retain a complete prior generation.
             File.WriteAllText(path, "{truncated");
             loaded = Preferences.Load(out notice, path);
@@ -31,6 +31,16 @@ static class SettingsChecks
             loaded.Save(path);
             Require(Directory.GetFiles(root, "*.invalid-*").Length == 1, "Damaged settings were silently overwritten.");
             var document = JsonNode.Parse(File.ReadAllText(path))!;
+            foreach (var (language, expected) in new[] { ("fi-FI", "fi"), ("unsupported", "en") })
+            {
+                document["Language"] = language; File.WriteAllText(path, document.ToJsonString());
+                loaded = Preferences.Load(out notice, path);
+                Require(loaded.Language == expected && loaded.Storage == saved.Storage && loaded.Recording == saved.Recording, "Language fallback lost other settings.");
+            }
+            document["Language"] = 123; File.WriteAllText(path, document.ToJsonString());
+            loaded = Preferences.Load(out notice, path);
+            Require(loaded.Language == "en" && notice?.Contains("Language") == true && loaded.Storage == saved.Storage, "Invalid language discarded storage settings.");
+            document.AsObject().Remove("Language");
             document["Alarm"] = new JsonObject { ["ThresholdPercent"] = -4 };
             File.WriteAllText(path, document.ToJsonString());
             loaded = Preferences.Load(out notice, path);
@@ -48,7 +58,7 @@ static class SettingsChecks
             File.WriteAllText(path, "{\"Recording\":{\"Encoding\":1,\"FramesPerSecond\":5,\"Mode\":0,\"IncludeAudio\":true}}");
             loaded = Preferences.Load(out notice, path);
             Require(notice is null && loaded.Recording.PostMotionSeconds == 30 && loaded.Recording.MotionThresholdPercent == 2 &&
-                !loaded.Alarm.Enabled && loaded.Alarm.Output == AlarmOutput.Camera,
+                !loaded.Alarm.Enabled && loaded.Alarm.Output == AlarmOutput.Camera && loaded.Language == "en",
                 "Older settings lost new optional defaults.");
             Console.WriteLine("Settings persistence, backup recovery, section isolation and legacy defaults passed.");
         }

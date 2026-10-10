@@ -30,7 +30,7 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action<MotionMeasurement?>? MotionMeasured;
     public event Action? PairingRejected;
     public VideoSnapshot Snapshot() => snapshots.Take();
-    public Task MoveAsync(uint direction) => (Client ?? throw new IOException("Camera is disconnected.")).MoveAsync(profile.MapDirection(direction));
+    public Task MoveAsync(uint direction) => (Client ?? throw new IOException(L.Get("CameraIsDisconnected"))).MoveAsync(profile.MapDirection(direction));
     public CameraSession(DeviceProfile profile) { this.profile = profile; quality = profile.StreamQuality <= 2 ? profile.StreamQuality : (byte)1; }
     public async Task SetMonitoringAsync(bool enabled)
     {
@@ -47,14 +47,14 @@ public sealed class CameraSession : IAsyncDisposable
             if (wanted) await client.StartAudioAsync(); else await client.StopAudioAsync();
             audioStarted = wanted;
         }
-        catch (Exception e) { Status?.Invoke("Audio control: " + e.Message); }
+        catch (Exception e) { Status?.Invoke(L.Get("AudioControl") + e.Message); }
         finally { audioControl.Release(); }
     }
     public void Start() { if (run is not null) throw new InvalidOperationException(); run = Task.Run(RunAsync); }
     public async Task SetQualityAsync(byte value)
     {
         if (value > 2) throw new ArgumentOutOfRangeException(nameof(value));
-        await (Client ?? throw new IOException("Camera is disconnected.")).QualityAsync(value); quality = value;
+        await (Client ?? throw new IOException(L.Get("CameraIsDisconnected"))).QualityAsync(value); quality = value;
     }
     public void StartRecording(string folder, StoragePolicy selectedPolicy, RecordingOptions? options = null, string? ffmpeg = null)
     {
@@ -70,15 +70,15 @@ public sealed class CameraSession : IAsyncDisposable
                 {
                     MotionChanged?.Invoke(state);
                     if (recording) Status?.Invoke(state.Capturing
-                        ? $"Motion recording · {state.RemainingSeconds:0} s after last motion · {state.ChangedPercent:0.0}% changed"
-                        : $"Watching for motion · {state.ChangedPercent:0.0}% changed / {recordingOptions.MotionThresholdPercent:0.0}% threshold");
+                        ? L.Format("MotionRecording00SAfterLastMotion100", state.RemainingSeconds, state.ChangedPercent)
+                        : L.Format("WatchingForMotion000Changed100Threshold", state.ChangedPercent, recordingOptions.MotionThresholdPercent));
                 };
             }
             else recorder = new SegmentRecorder(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
             recordFolder = folder; policy = selectedPolicy;
             // Queue the initial status before incoming frames can report an opened clip.
-            Status?.Invoke(recordingOptions.Mode == CaptureMode.Motion ? "Motion recording armed; starting local detection." :
-                recordingOptions.IncludeAudio ? "Recording armed; waiting for AAC audio and the next keyframe." : "Recording armed; waiting for the next keyframe."); recording = true;
+            Status?.Invoke(recordingOptions.Mode == CaptureMode.Motion ? L.Get("MotionRecordingArmedStartingLocalDetection") :
+                recordingOptions.IncludeAudio ? L.Get("RecordingArmedWaitingForAACAudioAndTheNextKeyframe") : L.Get("RecordingArmedWaitingForTheNextKeyframe")); recording = true;
         }
         RecordingChanged?.Invoke(true);
         _ = UpdateAudioAsync();
@@ -105,7 +105,7 @@ public sealed class CameraSession : IAsyncDisposable
             try
             {
                 using var client = new CameraClient(profile.Ip, profile.Password, profile.Uid);
-                Status?.Invoke("Connecting over the LAN…");
+                Status?.Invoke(L.Get("ConnectingOverTheLAN"));
                 await client.ConnectAsync(stop.Token);
                 await client.FirmwareAsync();
                 if (profile.Uid is null) { profile.Uid = client.Uid; profile.Save(); }
@@ -115,7 +115,7 @@ public sealed class CameraSession : IAsyncDisposable
                 try { settings = await client.SettingsAsync(); } catch (NotSupportedException) { }
                 Settings?.Invoke(settings);
                 await client.StartVideoAsync(quality);
-                Status?.Invoke("Connected locally.");
+                Status?.Invoke(L.Get("ConnectedLocally"));
                 var order = new FrameOrder(); var clock = new FrameClock();
                 using var audioStop = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
                 var audioTask = ReadAudioAsync(client, clock, audioStop.Token);
@@ -138,7 +138,7 @@ public sealed class CameraSession : IAsyncDisposable
                                         recorder ??= new SegmentRecorder(recordFolder!, policy, recordingOptions, recordingFfmpeg, profile.Name);
                                         bool opening = recorder.Current is null;
                                         recorder.Write(frame, time, order.Epoch);
-                                        if (opening && recorder.Current is not null) Status?.Invoke("Recording to local disk · " + recordingOptions.Label + ".");
+                                        if (opening && recorder.Current is not null) Status?.Invoke(L.Get("Recording.ActivePrefix") + Localization.RecordingText.Profile(recordingOptions.Label) + ".");
                                     }
                                 }
                                 catch (Exception e)
@@ -147,7 +147,7 @@ public sealed class CameraSession : IAsyncDisposable
                                     try { recorder?.Dispose(); } catch (IOException) { }
                                     try { motionRecorder?.Dispose(); } catch (IOException) { }
                                     recorder = null; motionRecorder = null;
-                                    RecordingChanged?.Invoke(false); Status?.Invoke("Recording stopped: " + e.Message);
+                                    RecordingChanged?.Invoke(false); Status?.Invoke(L.Get("RecordingStopped") + e.Message);
                                     _ = UpdateAudioAsync();
                                 }
                         }
@@ -159,7 +159,7 @@ public sealed class CameraSession : IAsyncDisposable
                     audioStop.Cancel();
                     try { await audioTask; } catch (OperationCanceledException) { }
                 }
-                if (!stop.IsCancellationRequested) throw new IOException("Camera stream ended.");
+                if (!stop.IsCancellationRequested) throw new IOException(L.Get("CameraStreamEnded"));
             }
             catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }
             catch (CameraAuthenticationException e) when (e.Result == 1)
@@ -168,7 +168,7 @@ public sealed class CameraSession : IAsyncDisposable
                 PairingRejected?.Invoke();
                 break; // A rejected saved key needs refreshing, not an endless reconnect loop.
             }
-            catch (Exception e) { Status?.Invoke("Disconnected: " + e.Message + " Retrying in 3 seconds."); }
+            catch (Exception e) { Status?.Invoke("Disconnected: " + e.Message + L.Get("RetryingIn3Seconds")); }
             finally
             {
                 Client = null;
@@ -178,7 +178,7 @@ public sealed class CameraSession : IAsyncDisposable
                 catch (Exception e)
                 {
                     lock (recordLock) recording = false;
-                    RecordingChanged?.Invoke(false); Status?.Invoke("Could not finish clip: " + e.Message);
+                    RecordingChanged?.Invoke(false); Status?.Invoke(L.Get("CouldNotFinishClip") + e.Message);
                 }
             }
             try { await Task.Delay(3000, stop.Token); } catch (OperationCanceledException) { break; }
@@ -205,7 +205,7 @@ public sealed class CameraSession : IAsyncDisposable
                             try { recorder?.Dispose(); } catch (IOException) { }
                             try { motionRecorder?.Dispose(); } catch (IOException) { }
                             recorder = null; motionRecorder = null;
-                            RecordingChanged?.Invoke(false); Status?.Invoke("Recording stopped: " + e.Message);
+                            RecordingChanged?.Invoke(false); Status?.Invoke(L.Get("RecordingStopped") + e.Message);
                             _ = UpdateAudioAsync();
                         }
                 }
@@ -213,7 +213,7 @@ public sealed class CameraSession : IAsyncDisposable
             }
         }
         catch (Exception e) when (e is IOException or OperationCanceledException)
-        { if (!cancellation.IsCancellationRequested && client.Connected) Status?.Invoke("Audio stream: " + e.Message); }
+        { if (!cancellation.IsCancellationRequested && client.Connected) Status?.Invoke(L.Get("AudioStream") + e.Message); }
     }
     public async ValueTask DisposeAsync()
     {

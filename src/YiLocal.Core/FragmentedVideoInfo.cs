@@ -12,9 +12,9 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
     {
         for (int offset = 0; offset < data.Length;)
         {
-            if (data.Length - offset < 8) throw new InvalidDataException("Truncated MP4 box.");
+            if (data.Length - offset < 8) throw new InvalidDataException(L.Get("TruncatedMP4Box"));
             int size = checked((int)U32(data.AsSpan(offset)));
-            if (size < 8 || size > data.Length - offset) throw new InvalidDataException("Invalid nested MP4 box size.");
+            if (size < 8 || size > data.Length - offset) throw new InvalidDataException(L.Get("InvalidNestedMP4BoxSize"));
             yield return (Encoding.ASCII.GetString(data, offset + 4, 4), data[(offset + 8)..(offset + size)]);
             offset += size;
         }
@@ -32,9 +32,9 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
             string type = Encoding.ASCII.GetString(header, 4, 4);
             if (size == 1) { stream.ReadExactly(header.AsSpan(8, 8)); size = checked((long)U64(header.AsSpan(8))); headerSize = 16; }
             if (size == 0) size = stream.Length - start;
-            if (size < headerSize || size > stream.Length - start) throw new InvalidDataException("Invalid MP4 box size.");
+            if (size < headerSize || size > stream.Length - start) throw new InvalidDataException(L.Get("InvalidMP4BoxSize"));
             if (type is not ("moov" or "moof")) { stream.Position = start + size; continue; }
-            if (size > 4 * 1024 * 1024) throw new InvalidDataException("MP4 metadata exceeded its bound.");
+            if (size > 4 * 1024 * 1024) throw new InvalidDataException(L.Get("MP4MetadataExceededItsBound"));
             var data = new byte[checked((int)size - headerSize)]; stream.ReadExactly(data);
             if (type == "moov")
             {
@@ -44,7 +44,7 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
                     var mdia = Children(boxes.Single(box => box.Type == "mdia").Body).ToArray();
                     var handler = mdia.Single(box => box.Type == "hdlr").Body;
                     if (Encoding.ASCII.GetString(handler, 8, 4) != "vide") continue;
-                    if (videoTrack != 0) throw new InvalidDataException("Expected one video track.");
+                    if (videoTrack != 0) throw new InvalidDataException(L.Get("ExpectedOneVideoTrack"));
                     var tkhd = boxes.Single(box => box.Type == "tkhd").Body;
                     var mdhd = mdia.Single(box => box.Type == "mdhd").Body;
                     videoTrack = U32(tkhd.AsSpan(tkhd[0] == 1 ? 20 : 12));
@@ -58,7 +58,7 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
             {
                 foreach (var (_, traf) in Children(data).Where(box => box.Type == "traf"))
                 {
-                    if (scale == 0) throw new InvalidDataException("Missing video timescale.");
+                    if (scale == 0) throw new InvalidDataException(L.Get("MissingVideoTimescale"));
                     var boxes = Children(traf).ToArray(); var tfhd = boxes.Single(box => box.Type == "tfhd").Body;
                     if (U32(tfhd.AsSpan(4)) != videoTrack) continue;
                     uint flags = U32(tfhd) & 0xffffff; int position = 8;
@@ -70,7 +70,7 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
                     foreach (var (_, trun) in boxes.Where(box => box.Type == "trun"))
                     {
                         flags = U32(trun) & 0xffffff; uint count = U32(trun.AsSpan(4)); position = 8;
-                        if (count > 100000) throw new InvalidDataException("Too many samples in an MP4 fragment.");
+                        if (count > 100000) throw new InvalidDataException(L.Get("TooManySamplesInAnMP4Fragment"));
                         if ((flags & 1) != 0) position += 4;
                         if ((flags & 4) != 0) position += 4;
                         for (int index = 0; index < count; index++)
@@ -85,7 +85,7 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
                                 uint raw = U32(trun.AsSpan(position)); position += 4;
                                 composition = trun[0] == 1 ? unchecked((int)raw) : raw;
                             }
-                            if (position > trun.Length || sampleDuration == 0) throw new InvalidDataException("Invalid sample timing.");
+                            if (position > trun.Length || sampleDuration == 0) throw new InvalidDataException(L.Get("InvalidSampleTiming"));
                             duration = Math.Max(duration, (decode + composition + sampleDuration) / (double)scale);
                             decode += sampleDuration; frames++;
                         }
@@ -93,7 +93,7 @@ internal sealed record FragmentedVideoInfo(double Duration, long Frames)
                 }
             }
         }
-        if (frames == 0 || duration <= 0) throw new InvalidDataException("No timed video samples in the recording.");
+        if (frames == 0 || duration <= 0) throw new InvalidDataException(L.Get("NoTimedVideoSamplesInTheRecording"));
         return new(duration, frames);
     }
 }

@@ -36,7 +36,7 @@ internal sealed class RecordingPlayback : IDisposable
         Add("-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-ss", start.ToString("0.######", CultureInfo.InvariantCulture), "-noaccurate_seek", "-i", path,
             "-map", "0:v:0", "-vf", $"scale={Width}:{Height}:force_original_aspect_ratio=decrease,pad={Width}:{Height}:(ow-iw)/2:(oh-ih)/2,fps=25:start_time=0",
             "-t", remaining, "-an", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1");
-        process = Process.Start(info) ?? throw new IOException("Could not start the recording player.");
+        process = Process.Start(info) ?? throw new IOException(L.Get("CouldNotStartTheRecordingPlayer"));
         try
         {
             if (sound)
@@ -49,12 +49,12 @@ internal sealed class RecordingPlayback : IDisposable
                     "-map", "0:a:0", "-vn", "-af", "aresample=16000:async=1:first_pts=0,apad", "-t", remaining,
                     "-ac", "1", "-ar", "16000", "-f", "s16le", "-flush_packets", "1", "pipe:1");
                 audioInfo.RedirectStandardOutput = true;
-                audioProcess = Process.Start(audioInfo) ?? throw new IOException("Could not start the recording audio decoder.");
+                audioProcess = Process.Start(audioInfo) ?? throw new IOException(L.Get("CouldNotStartTheRecordingAudioDecoder"));
             }
         }
         catch { Kill(); process.Dispose(); stop.Dispose(); throw; }
-        errors = ObserveDecoder(process, "Video");
-        audioErrors = audioProcess is null ? Task.CompletedTask : ObserveDecoder(audioProcess, "Audio");
+        errors = ObserveDecoder(process, L.Get("Track.Video"));
+        audioErrors = audioProcess is null ? Task.CompletedTask : ObserveDecoder(audioProcess, L.Get("Track.Audio"));
         videoTask = Task.Run(ReadVideoAsync);
         audioTask = sound ? Task.Run(ReadAudioAsync) : Task.CompletedTask;
         completion = Task.Run(async () =>
@@ -75,7 +75,7 @@ internal sealed class RecordingPlayback : IDisposable
             while (await decoder.StandardError.ReadLineAsync(stop.Token) is { } line)
             { text += line + "\n"; if (text.Length > 2000) text = text[^2000..]; }
             await decoder.WaitForExitAsync(stop.Token);
-            if (decoder.ExitCode != 0) throw new IOException(track + " decoder: " + (text.Length > 0 ? text : "Playback failed."));
+            if (decoder.ExitCode != 0) throw new IOException(L.Format("Playback.DecoderError", track, text.Length > 0 ? text : L.Get("PlaybackFailed")));
         }
         catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException)
         { Fail(e); }

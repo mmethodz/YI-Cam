@@ -15,7 +15,7 @@ public sealed record VideoFrame(byte[] Data, ushort Sequence, int Width, int Hei
 public sealed record CameraSettings(byte Hardware, byte NightVision, byte Tracking, byte Rotation = 0);
 
 public sealed class CameraAuthenticationException(uint result) : UnauthorizedAccessException(
-    $"Camera rejected the device key ({result})." + (result == 1 ? " Refresh the saved key in Camera setup using Import from running YI IoT." : ""))
+    L.Format("CameraRejectedTheDeviceKey0", result) + (result == 1 ? L.Get("RefreshTheSavedKeyInCameraSetupUsingImportFromRunning") : ""))
 {
     public uint Result { get; } = result;
 }
@@ -50,9 +50,9 @@ public sealed class ReliableChannel
     {
         var distance = (ushort)(sequence - Expected);
         if (distance >= 32768) return [];
-        if (distance > 4096) throw new InvalidDataException("Camera packet sequence exceeds receive window.");
+        if (distance > 4096) throw new InvalidDataException(L.Get("CameraPacketSequenceExceedsReceiveWindow"));
         pending.TryAdd(sequence, data);
-        if (pending.Sum(p => p.Value.Length) > 8 * 1024 * 1024) throw new InvalidDataException("Camera receive buffer exceeded its limit.");
+        if (pending.Sum(p => p.Value.Length) > 8 * 1024 * 1024) throw new InvalidDataException(L.Get("CameraReceiveBufferExceededItsLimit"));
         while (pending.Remove(Expected, out var bytes)) { buffer.AddRange(bytes); Expected++; }
         var messages = new List<(byte, byte, byte[])>();
         while (buffer.Count >= 8)
@@ -60,7 +60,7 @@ public sealed class ReliableChannel
             var header = buffer.GetRange(0, 8).ToArray();
             int size = checked((int)Wire.U32(header.AsSpan(4)));
             if (header[0] is < 1 or > 3 || header[1] is < 1 or > 3 || size > 8 * 1024 * 1024)
-                throw new InvalidDataException("Invalid camera message header.");
+                throw new InvalidDataException(L.Get("InvalidCameraMessageHeader"));
             if (buffer.Count < 8 + size) break;
             messages.Add((header[1], header[2], buffer.GetRange(8, size).ToArray()));
             buffer.RemoveRange(0, 8 + size);
@@ -103,11 +103,11 @@ public sealed class CameraClient : IDisposable
     public CameraClient(string ip, string deviceKey, string? uid = null)
     {
         if (!IPAddress.TryParse(ip, out var parsed) || parsed.AddressFamily != AddressFamily.InterNetwork)
-            throw new ArgumentException("Enter the camera's private IPv4 address.");
+            throw new ArgumentException(L.Get("EnterTheCameraSPrivateIPv4Address"));
         var a = parsed.GetAddressBytes();
         if (!(a[0] == 10 || a[0] == 192 && a[1] == 168 || a[0] == 172 && a[1] is >= 16 and <= 31 || a[0] == 127))
-            throw new ArgumentException("Only a private LAN camera address is accepted.");
-        if (Encoding.UTF8.GetByteCount(deviceKey) != 15) throw new ArgumentException("A 15-byte device pairing key is required.");
+            throw new ArgumentException(L.Get("OnlyAPrivateLANCameraAddressIsAccepted"));
+        if (Encoding.UTF8.GetByteCount(deviceKey) != 15) throw new ArgumentException(L.Get("A15ByteDevicePairingKeyIsRequired"));
         address = parsed; password = deviceKey; expectedUid = uid;
         aes.Key = Encoding.UTF8.GetBytes(deviceKey + "0");
         socket.ReceiveBufferSize = 4 * 1024 * 1024;
@@ -132,7 +132,7 @@ public sealed class CameraClient : IDisposable
                 var uid = bytes[4..24];
                 Uid = Convert.ToHexString(uid).ToLowerInvariant();
                 if (expectedUid is not null && !string.Equals(Uid, expectedUid, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("A different camera answered at this address.");
+                    throw new InvalidDataException(L.Get("ADifferentCameraAnsweredAtThisAddress"));
                 peer = source;
                 Send(Wire.Packet(0x41, uid));
                 while (Now < deadline)
@@ -149,7 +149,7 @@ public sealed class CameraClient : IDisposable
                     }
                 }
             }
-            throw new TimeoutException("The camera did not answer LAN discovery.");
+            throw new TimeoutException(L.Get("TheCameraDidNotAnswerLANDiscovery"));
         }, cancellation);
     }
 
@@ -164,7 +164,7 @@ public sealed class CameraClient : IDisposable
     {
         lock (sendLock)
         {
-            if (peer is null) throw new InvalidOperationException("Camera is disconnected.");
+            if (peer is null) throw new InvalidOperationException(L.Get("CameraIsDisconnected"));
             socket.SendTo(packet, peer);
         }
     }
@@ -172,7 +172,7 @@ public sealed class CameraClient : IDisposable
     public async Task<CameraReply?> CommandAsync(ushort command, byte[]? data = null, ushort? response = null,
                                                 CancellationToken cancellation = default)
     {
-        if (!Connected) throw new IOException("Camera is disconnected.", Error);
+        if (!Connected) throw new IOException(L.Get("CameraIsDisconnected"), Error);
         data ??= [];
         ushort requestNumber;
         var completion = new TaskCompletionSource<CameraReply>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -193,7 +193,7 @@ public sealed class CameraClient : IDisposable
         {
             var reply = await completion.Task.WaitAsync(TimeSpan.FromSeconds(4), cancellation);
             if (reply.AuthenticationResult != 0) throw new CameraAuthenticationException(reply.AuthenticationResult);
-            if (reply.Unsupported != 0) throw new NotSupportedException($"Camera does not support command 0x{command:x4}.");
+            if (reply.Unsupported != 0) throw new NotSupportedException(L.Format("CameraDoesNotSupportCommand0x0X4", command));
             return reply;
         }
         finally { requests.TryRemove(requestNumber, out _); }
@@ -215,7 +215,7 @@ public sealed class CameraClient : IDisposable
                     switch (p[1])
                     {
                         case 0xe0: Send(Wire.Packet(0xe1)); break;
-                        case 0xf0: throw new IOException("Camera ended the session.");
+                        case 0xf0: throw new IOException(L.Get("CameraEndedTheSession"));
                         case 0xd1 when p.Length >= 8 && p[4] == 0xd1 && p[5] <= 1:
                             int count = Wire.U16(p.AsSpan(6));
                             if (p.Length == 8 + count * 2)
@@ -228,12 +228,12 @@ public sealed class CameraClient : IDisposable
                             break;
                     }
                 }
-                if (Now - lastReceived > 10000) throw new TimeoutException("Camera connection was lost.");
+                if (Now - lastReceived > 10000) throw new TimeoutException(L.Get("CameraConnectionWasLost"));
                 lock (sendLock)
                     foreach (var item in unacked.ToArray())
                         if (Now - item.Value.Sent > 300)
                         {
-                            if (item.Value.Attempts >= 12) throw new TimeoutException("Camera did not acknowledge a command.");
+                            if (item.Value.Attempts >= 12) throw new TimeoutException(L.Get("CameraDidNotAcknowledgeACommand"));
                             Send(item.Value.Packet);
                             unacked[item.Key] = (item.Value.Packet, Now, item.Value.Attempts + 1);
                         }
@@ -243,7 +243,7 @@ public sealed class CameraClient : IDisposable
         finally
         {
             Connected = false;
-            foreach (var pending in requests.Values) pending.Completion.TrySetException(Error ?? new IOException("Camera disconnected."));
+            foreach (var pending in requests.Values) pending.Completion.TrySetException(Error ?? new IOException(L.Get("CameraDisconnected")));
             video.Writer.TryComplete(Error);
             audio.Writer.TryComplete(Error);
         }
@@ -255,7 +255,7 @@ public sealed class CameraClient : IDisposable
         {
             ushort cmd = Wire.U16(body), nr = Wire.U16(body.AsSpan(2)), extra = Wire.U16(body.AsSpan(4)), size = Wire.U16(body.AsSpan(6));
             uint result = Wire.U32(body.AsSpan(8));
-            if (40 + extra + size > body.Length) throw new InvalidDataException("Truncated command response.");
+            if (40 + extra + size > body.Length) throw new InvalidDataException(L.Get("TruncatedCommandResponse"));
             if (requests.TryGetValue(nr, out var request) && (request.Response == cmd || result != 0))
                 request.Completion.TrySetResult(new(cmd, nr, result, body[(40 + extra)..(40 + extra + size)], ability));
         }
@@ -264,7 +264,7 @@ public sealed class CameraClient : IDisposable
             var data = body[24..]; int encrypted = data.Length / 16 * 16;
             if (encrypted > 0) aes.DecryptEcb(data.AsSpan(0, encrypted), PaddingMode.None).CopyTo(data, 0);
             var frame = new AudioFrame(data, Wire.U16(body.AsSpan(6)), Wire.U32(body.AsSpan(12)), Wire.U32(body.AsSpan(20)), Wire.U16(body), body[2]);
-            if (!audio.Writer.TryWrite(frame)) throw new IOException("Audio processing fell behind; reconnect to recover.");
+            if (!audio.Writer.TryWrite(frame)) throw new IOException(L.Get("AudioProcessingFellBehindReconnectToRecover"));
         }
         else if (kind == 1 && body.Length >= 24)
         {
@@ -272,21 +272,21 @@ public sealed class CameraClient : IDisposable
             if (keyframe && data.Length >= 36) aes.DecryptEcb(data.AsSpan(4, 32), PaddingMode.None).CopyTo(data, 4);
             var frame = new VideoFrame(data, Wire.U16(body.AsSpan(6)), Wire.U16(body.AsSpan(8)), Wire.U16(body.AsSpan(10)),
                 Wire.U32(body.AsSpan(12)), Wire.U32(body.AsSpan(20)), keyframe, body[5], Wire.U16(body));
-            if (!video.Writer.TryWrite(frame)) throw new IOException("Video processing fell behind; reconnect to recover.");
+            if (!video.Writer.TryWrite(frame)) throw new IOException(L.Get("VideoProcessingFellBehindReconnectToRecover"));
         }
     }
 
     public async Task<string> FirmwareAsync() => Encoding.ASCII.GetString((await CommandAsync(0x1300, response: 0x1301))!.Data).TrimEnd('\0');
     public async Task<IReadOnlyList<CameraAlert>> AlertHistoryAsync(uint from, uint to, CancellationToken cancellation = default)
     {
-        if (to < from) throw new ArgumentException("Alert time range is reversed.");
+        if (to < from) throw new ArgumentException(L.Get("AlertTimeRangeIsReversed"));
         var reply = await CommandAsync(0x5c06, Wire.Join(new byte[4], Wire.U32(from), Wire.U32(to)), 0x5c07, cancellation);
         return CameraAlert.Parse(reply!.Data);
     }
     public async Task<CameraSettings> SettingsAsync()
     {
         var data = (await CommandAsync(0x0330, new byte[4], 0x0331))!.Data;
-        if (data.Length < 92 || data[8] != 253) throw new NotSupportedException("This version supports the verified hardware-253 settings layout.");
+        if (data.Length < 92 || data[8] != 253) throw new NotSupportedException(L.Get("ThisVersionSupportsTheVerifiedHardware253SettingsLayout"));
         return new(data[8], data[91], data[68], data[54]);
     }
     public Task StartVideoAsync(byte quality = 1) => CommandAsync(0x2345, [++generation, quality, 1, 0]);
@@ -304,7 +304,7 @@ public sealed class CameraClient : IDisposable
             timeout.CancelAfter(TimeSpan.FromSeconds(4));
             try { await Frames.ReadAsync(timeout.Token); }
             catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
-            { throw new TimeoutException("Camera did not initialize the talk stream."); }
+            { throw new TimeoutException(L.Get("CameraDidNotInitializeTheTalkStream")); }
         }
         // A transport ACK precedes firmware work. Match the settling intervals of the audible probe.
         await Task.Delay(300, cancellation);
@@ -335,9 +335,9 @@ public sealed class CameraClient : IDisposable
         while (true)
         {
             cancellation.ThrowIfCancellationRequested();
-            if (!Connected) throw new IOException("Talk session disconnected.", Error);
+            if (!Connected) throw new IOException(L.Get("TalkSessionDisconnected"), Error);
             lock (sendLock) { if (!unacked.Keys.Any(key => key.Channel == 0)) return; }
-            if (Now >= deadline) throw new TimeoutException("Camera did not acknowledge speaker control.");
+            if (Now >= deadline) throw new TimeoutException(L.Get("CameraDidNotAcknowledgeSpeakerControl"));
             await Task.Delay(10, cancellation);
         }
     }
@@ -345,9 +345,9 @@ public sealed class CameraClient : IDisposable
     {
         lock (sendLock)
         {
-            if (!Connected || !speaking) throw new IOException("Camera speaker is not started.", Error);
+            if (!Connected || !speaking) throw new IOException(L.Get("CameraSpeakerIsNotStarted"), Error);
             if (unacked.Keys.Count(key => key.Channel == 1) >= 16)
-                throw new IOException("Talk transport fell behind. Stop and restart talking.");
+                throw new IOException(L.Get("TalkTransportFellBehindStopAndRestartTalking"));
             var message = TalkAudio.Message(adts, password, ++talkFrames);
             ushort seq = audioSequence++;
             var packet = Wire.Packet(0xd0, Wire.Join([0xd1, 1], Wire.U16(seq), message));
@@ -369,7 +369,7 @@ public sealed class CameraClient : IDisposable
     public async Task<uint> GimbalRestoreDelayAsync()
     {
         var data = (await CommandAsync(0x1396, new byte[4], 0x1397))!.Data;
-        if (data.Length != 4) throw new InvalidDataException("Unrecognized gimbal restore response.");
+        if (data.Length != 4) throw new InvalidDataException(L.Get("UnrecognizedGimbalRestoreResponse"));
         return Wire.U32(data);
     }
     public async Task GimbalRestoreAsync(bool enabled)
@@ -377,7 +377,7 @@ public sealed class CameraClient : IDisposable
         uint value = enabled ? 20u : 0u; // The observed mobile switch uses 20 for on, zero for off.
         await CommandAsync(0x1394, Wire.U32(value), 0x1395);
         // The reference firmware returns device info here, despite the mobile SDK's uint32 callback.
-        if (await GimbalRestoreDelayAsync() != value) throw new IOException("Camera did not confirm the gimbal restore setting.");
+        if (await GimbalRestoreDelayAsync() != value) throw new IOException(L.Get("CameraDidNotConfirmTheGimbalRestoreSetting"));
     }
     public Task StopMovingAsync() => CommandAsync(0x4013, new byte[4]);
     public async Task MoveAsync(uint direction)

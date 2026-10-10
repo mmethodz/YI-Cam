@@ -20,7 +20,7 @@ internal sealed class MicrophoneEncoder : IAsyncDisposable
             "-f", "s16le", "-ar", "16000", "-ac", "1", "-blocksize", "2048", "-i", "pipe:0",
             "-c:a", "aac", "-profile:a", "aac_low", "-b:a", "32k", "-f", "adts", "-flush_packets", "1", "pipe:1");
         info.RedirectStandardInput = info.RedirectStandardOutput = true;
-        try { process = Process.Start(info) ?? throw new IOException("Could not start the microphone encoder."); }
+        try { process = Process.Start(info) ?? throw new IOException(L.Get("CouldNotStartTheMicrophoneEncoder")); }
         catch { microphone.Dispose(); stop.Dispose(); throw; }
         writer = Task.Run(async () =>
         {
@@ -54,13 +54,13 @@ internal sealed class MicrophoneEncoder : IAsyncDisposable
     {
         while (true)
         {
-            if (writeError is { } error) throw new IOException("Microphone capture stopped: " + error.Message, error);
+            if (writeError is { } error) throw new IOException(L.Get("MicrophoneCaptureStopped") + error.Message, error);
             var header = new byte[7];
             try { await process.StandardOutput.BaseStream.ReadExactlyAsync(header, cancellation).AsTask().WaitAsync(TimeSpan.FromSeconds(3), cancellation); }
-            catch (EndOfStreamException e) { throw new IOException("Microphone encoder stopped. " + (writeError?.Message ?? lastError), e); }
+            catch (EndOfStreamException e) { throw new IOException(L.Get("MicrophoneEncoderStopped") + (writeError?.Message ?? lastError), e); }
             int length = ((header[3] & 3) << 11) | (header[4] << 3) | (header[5] >> 5);
             if (header[0] != 0xff || (header[1] & 0xf6) != 0xf0 || length is <= 7 or > TalkAudio.MaximumPacketBytes)
-                throw new InvalidDataException("Microphone encoder returned an invalid AAC frame.");
+                throw new InvalidDataException(L.Get("MicrophoneEncoderReturnedAnInvalidAACFrame"));
             var packet = new byte[length]; header.CopyTo(packet, 0);
             await process.StandardOutput.BaseStream.ReadExactlyAsync(packet.AsMemory(7), cancellation).AsTask().WaitAsync(TimeSpan.FromSeconds(3), cancellation);
             TalkAudio.Validate(packet); yield return packet;

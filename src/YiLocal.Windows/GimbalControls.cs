@@ -8,10 +8,10 @@ internal sealed class GimbalControls : FlowLayoutPanel
     readonly Func<CameraSession?> session;
     readonly Func<DeviceProfile?> profile;
     readonly Func<Func<Task>, Task> guard;
-    readonly CheckBox rotation = Choice("Rotate image 180°");
-    readonly CheckBox restore = Choice("Restore gimbal · experimental");
-    readonly CheckBox reversePan = Choice("Reverse left / right controls");
-    readonly CheckBox reverseTilt = Choice("Reverse up / down controls");
+    readonly CheckBox rotation = Choice(L.Get("RotateImage180"));
+    readonly CheckBox restore = Choice(L.Get("RestoreGimbalExperimental"));
+    readonly CheckBox reversePan = Choice(L.Get("ReverseLeftRightControls"));
+    readonly CheckBox reverseTilt = Choice(L.Get("ReverseUpDownControls"));
     int revision;
     bool rotationRead, restoreRead;
     static CheckBox Choice(string text) => new() { Text = text, AutoSize = true, MaximumSize = new Size(224, 0) };
@@ -37,7 +37,7 @@ internal sealed class GimbalControls : FlowLayoutPanel
         rotation.Enabled = settings.Rotation <= 1;
         reversePan.Checked = profile()?.ReversePanControls == true;
         reverseTilt.Checked = profile()?.ReverseTiltControls == true;
-        restore.Text = "Restore gimbal · reading…";
+        restore.Text = L.Get("RestoreGimbalReading");
         var client = session()?.Client;
         try
         {
@@ -45,18 +45,18 @@ internal sealed class GimbalControls : FlowLayoutPanel
             uint value = await client.GimbalRestoreDelayAsync();
             if (version != revision || IsDisposed || session()?.Client != client) return;
             restore.Checked = restoreRead = value != 0;
-            restore.Text = "Restore gimbal · experimental"; restore.Enabled = true;
+            restore.Text = L.Get("RestoreGimbalExperimental"); restore.Enabled = true;
         }
         catch (Exception e) when (e is IOException or TimeoutException or NotSupportedException or UnauthorizedAccessException or OperationCanceledException or ObjectDisposedException)
         {
             if (version == revision && !IsDisposed)
-            { restore.Text = "Restore gimbal · unavailable"; restore.Enabled = false; }
+            { restore.Text = L.Get("RestoreGimbalUnavailable"); restore.Enabled = false; }
         }
     }
 
     async Task ChangeCameraSetting(CheckBox control, bool gimbal)
     {
-        var client = session()?.Client ?? throw new IOException("Camera is disconnected.");
+        var client = session()?.Client ?? throw new IOException(L.Get("CameraIsDisconnected"));
         bool wanted = control.Checked, before = gimbal ? restoreRead : rotationRead;
         control.Enabled = false;
         try
@@ -67,7 +67,7 @@ internal sealed class GimbalControls : FlowLayoutPanel
             else
             { await client.RotateAsync(wanted); actual = (await client.SettingsAsync()).Rotation != 0; rotationRead = actual; }
             control.Checked = actual;
-            if (actual != wanted) throw new IOException("Camera readback differs from the requested setting.");
+            if (actual != wanted) throw new IOException(L.Get("CameraReadbackDiffersFromTheRequestedSetting"));
         }
         catch { control.Checked = before; throw; }
         finally { if (!IsDisposed) control.Enabled = session()?.Client == client; }
@@ -75,7 +75,7 @@ internal sealed class GimbalControls : FlowLayoutPanel
 
     Task SaveDirectionPreference(bool pan)
     {
-        var device = profile() ?? throw new IOException("No saved camera.");
+        var device = profile() ?? throw new IOException(L.Get("NoSavedCamera"));
         bool oldPan = device.ReversePanControls, oldTilt = device.ReverseTiltControls;
         try
         {

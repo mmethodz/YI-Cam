@@ -5,13 +5,13 @@ namespace YiLocal.Windows;
 public sealed partial class MainForm
 {
     CameraRegistry? cameraRegistry;
-    readonly CheckBox multipleCameras = new() { Text = "Enable additional cameras · experimental", AutoSize = true };
+    readonly CheckBox multipleCameras = new() { Text = L.Get("EnableAdditionalCamerasExperimental"), AutoSize = true };
     readonly TableLayoutPanel cameraGrid = new() { Dock = DockStyle.Fill, AutoScroll = true };
     readonly PictureBox primaryGridPicture = new() { Dock = DockStyle.Fill, BackColor = Color.FromArgb(26, 29, 34), SizeMode = PictureBoxSizeMode.Zoom };
-    readonly Label primaryGridTitle = new() { Text = "Primary camera", Dock = DockStyle.Top, AutoSize = true };
-    readonly Label primaryGridState = new() { Text = "Disconnected", Dock = DockStyle.Bottom, Height = 44, AutoEllipsis = true };
-    readonly Button primaryGridConnect = new() { Text = "Connect", AutoSize = true };
-    readonly Button primaryGridRecord = new() { Text = "Record", AutoSize = true, Enabled = false };
+    readonly Label primaryGridTitle = new() { Text = L.Get("PrimaryCamera"), Dock = DockStyle.Top, AutoSize = true };
+    readonly Label primaryGridState = new() { Text = L.Get("Disconnected"), Dock = DockStyle.Bottom, Height = 44, AutoEllipsis = true };
+    readonly Button primaryGridConnect = new() { Text = L.Get("Connect"), AutoSize = true };
+    readonly Button primaryGridRecord = new() { Text = L.Get("Record"), AutoSize = true, Enabled = false };
     readonly Panel primaryGridPanel = new() { Dock = DockStyle.Fill, Padding = new Padding(5), BorderStyle = BorderStyle.FixedSingle };
     readonly List<GridCamera> extraCameras = [];
     bool gridBusy;
@@ -21,18 +21,18 @@ public sealed partial class MainForm
     {
         if (extraCameras.Any(camera => string.Equals(camera.Profile.Ip, candidate.Ip, StringComparison.OrdinalIgnoreCase) ||
             candidate.Uid is not null && string.Equals(camera.Profile.Uid, candidate.Uid, StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidOperationException("This camera already has an additional-camera entry. Keep one configuration for each camera.");
+            throw new InvalidOperationException(L.Get("ThisCameraAlreadyHasAnAdditionalCameraEntryKeepOneConfiguration"));
     }
 
     void BuildCameras()
     {
-        var page = Page("Cameras · experimental"); var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3 };
+        var page = Page(L.Get("CamerasExperimental")); var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3 };
         layout.RowStyles.Add(new(SizeType.AutoSize)); layout.RowStyles.Add(new(SizeType.AutoSize)); layout.RowStyles.Add(new(SizeType.Percent, 100));
-        layout.Controls.Add(Label("Experimental: one physical camera tested. Each additional camera has an independent session, encrypted pairing and recording folder. The Storage budget applies to each camera; allow disk/CPU capacity for their combined use.", 1080), 0, 0);
+        layout.Controls.Add(Label(L.Get("ExperimentalOnePhysicalCameraTestedEachAdditionalCameraHasAnIndependent"), 1080), 0, 0);
         var actions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
         actions.Controls.Add(multipleCameras);
-        actions.Controls.Add(Button("Add camera…", () => _ = Guard(() => EditExtraCamera(null))));
-        actions.Controls.Add(Button("Connect configured cameras", () => _ = Guard(async () =>
+        actions.Controls.Add(Button(L.Get("AddCamera"), () => _ = Guard(() => EditExtraCamera(null))));
+        actions.Controls.Add(Button(L.Get("ConnectConfiguredCameras"), () => _ = Guard(async () =>
         {
             if (gridBusy || importing) return;
             if (session is null && profile is not null) await ToggleConnection();
@@ -41,16 +41,16 @@ public sealed partial class MainForm
                 { cameraRegistry!.EnsureDistinct(camera.Profile, profile, camera.Registration.Id); camera.Start(preferences.Ffmpeg); }
             UpdatePrimaryGridState();
         })));
-        actions.Controls.Add(Button("Disconnect all", () => _ = Guard(async () =>
+        actions.Controls.Add(Button(L.Get("DisconnectAll"), () => _ = Guard(async () =>
         {
             if (gridBusy) return; gridBusy = true;
             try { await StopExtraCameras(); await DisconnectAsync(); } finally { gridBusy = false; }
         })));
-        actions.Controls.Add(Button("Arrange 1 / 2 columns", () => { cameraGrid.Tag = cameraGrid.Tag is true ? false : true; ArrangeCameras(); }));
+        actions.Controls.Add(Button(L.Get("Arrange12Columns"), () => { cameraGrid.Tag = cameraGrid.Tag is true ? false : true; ArrangeCameras(); }));
         layout.Controls.Add(actions, 0, 1); layout.Controls.Add(cameraGrid, 0, 2); page.Controls.Add(layout);
         var primaryActions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true };
         primaryActions.Controls.Add(primaryGridConnect); primaryActions.Controls.Add(primaryGridRecord);
-        primaryActions.Controls.Add(Button("Live controls", () => tabs.SelectedIndex = 0));
+        primaryActions.Controls.Add(Button(L.Get("LiveControls"), () => tabs.SelectedIndex = 0));
         primaryGridConnect.Click += (_, _) => _ = Guard(async () => { if (connect.Enabled && !gridBusy) await ToggleConnection(); UpdatePrimaryGridState(); });
         primaryGridRecord.Click += (_, _) => _ = Guard(ToggleRecordingAsync);
         primaryGridPanel.Controls.Add(primaryGridPicture); primaryGridPanel.Controls.Add(primaryGridTitle); primaryGridPanel.Controls.Add(primaryGridState); primaryGridPanel.Controls.Add(primaryActions);
@@ -75,9 +75,9 @@ public sealed partial class MainForm
             cameraRegistry = new(); multipleCameras.Checked = preferences.ExperimentalMultipleCameras;
             foreach (var registration in cameraRegistry.Entries)
                 try { AddCameraTile(registration, cameraRegistry.LoadProfile(registration.Id)); }
-                catch (Exception e) { status.Text = "Additional camera could not be loaded: " + e.Message; }
+                catch (Exception e) { status.Text = L.Get("AdditionalCameraCouldNotBeLoaded") + e.Message; }
         }
-        catch (Exception e) { status.Text = "Camera registry could not be loaded: " + e.Message; }
+        catch (Exception e) { status.Text = L.Get("CameraRegistryCouldNotBeLoaded") + e.Message; }
         ArrangeCameras(); UpdatePrimaryGridState();
     }
     void ArrangeCameras()
@@ -97,7 +97,7 @@ public sealed partial class MainForm
         var camera = new GridCamera(registration, device, Ui); extraCameras.Add(camera);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true };
         actions.Controls.Add(camera.Connect); actions.Controls.Add(camera.Record);
-        var enabled = new CheckBox { Text = "Enabled", AutoSize = true, Checked = registration.Enabled }; actions.Controls.Add(enabled);
+        var enabled = new CheckBox { Text = L.Get("Enabled"), AutoSize = true, Checked = registration.Enabled }; actions.Controls.Add(enabled);
         enabled.Click += (_, _) => _ = Guard(async () =>
         {
             if (gridBusy) { enabled.Checked = camera.Registration.Enabled; return; }
@@ -111,12 +111,12 @@ public sealed partial class MainForm
             }
             finally { gridBusy = false; }
         });
-        actions.Controls.Add(Button("Controls…", () => _ = Guard(() => ShowExtraControls(camera))));
-        actions.Controls.Add(Button("Edit…", () => _ = Guard(() => EditExtraCamera(camera))));
-        actions.Controls.Add(Button("Remove…", () => _ = Guard(async () =>
+        actions.Controls.Add(Button(L.Get("Controls"), () => _ = Guard(() => ShowExtraControls(camera))));
+        actions.Controls.Add(Button(L.Get("Edit"), () => _ = Guard(() => EditExtraCamera(camera))));
+        actions.Controls.Add(Button(L.Get("Remove"), () => _ = Guard(async () =>
         {
             if (gridBusy) return;
-            if (MessageBox.Show(this, "Remove this additional camera's configuration and encrypted pairing? Its recordings will remain on disk.", "Remove camera", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+            if (MessageBox.Show(this, L.Get("RemoveThisAdditionalCameraSConfigurationAndEncryptedPairingItsRecordings"), L.Get("RemoveCamera"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
             gridBusy = true;
             try { await camera.Stop(); cameraRegistry!.Remove(registration.Id); extraCameras.Remove(camera); await camera.DisposeAsync(); ArrangeCameras(); }
             finally { gridBusy = false; }
@@ -150,7 +150,7 @@ public sealed partial class MainForm
     async Task EditExtraCamera(GridCamera? existing)
     {
         if (gridBusy || importing) return;
-        if (cameraRegistry is null) throw new IOException("Resolve the camera registry error before adding a camera.");
+        if (cameraRegistry is null) throw new IOException(L.Get("ResolveTheCameraRegistryErrorBeforeAddingACamera"));
         gridBusy = true;
         try
         {
@@ -170,37 +170,37 @@ public sealed partial class MainForm
                 added.Start(preferences.Ffmpeg);
                 if (resumeRecording) added.Session!.StartRecording(CameraRegistry.RecordingFolder(preferences.Folder, registration.Id), preferences.Storage, preferences.Recording, preferences.Ffmpeg);
             }
-            status.Text = "Additional camera verified and saved. Multi-camera hardware compatibility remains experimental.";
+            status.Text = L.Get("AdditionalCameraVerifiedAndSavedMultiCameraHardwareCompatibilityRemainsExperimental");
         }
         finally { gridBusy = false; }
     }
     async Task ShowExtraControls(GridCamera camera)
     {
         if (gridBusy) return;
-        var active = camera.Session ?? throw new IOException("Connect this camera first.");
-        var client = active.Client ?? throw new IOException("Wait for this camera to connect.");
+        var active = camera.Session ?? throw new IOException(L.Get("ConnectThisCameraFirst"));
+        var client = active.Client ?? throw new IOException(L.Get("WaitForThisCameraToConnect"));
         var settings = await client.SettingsAsync();
-        using var dialog = new Form { Text = camera.Profile.Name + " · controls", ClientSize = new Size(420, 540), StartPosition = FormStartPosition.CenterParent, Font = Font };
+        using var dialog = new Form { Text = camera.Profile.Name + L.Get("Camera.ControlsSuffix"), ClientSize = new Size(420, 540), StartPosition = FormStartPosition.CenterParent, Font = Font };
         var body = Column(); dialog.Controls.Add(new ScrollableColumn(body));
         var qualityChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 310 };
-        qualityChoice.Items.AddRange(["HD", "SD", "Automatic quality"]); qualityChoice.SelectedIndex = active.Quality switch { 2 => 1, 0 => 2, _ => 0 }; body.Controls.Add(qualityChoice);
+        qualityChoice.Items.AddRange(["HD", "SD", L.Get("AutomaticQuality")]); qualityChoice.SelectedIndex = active.Quality switch { 2 => 1, 0 => 2, _ => 0 }; body.Controls.Add(qualityChoice);
         qualityChoice.SelectionChangeCommitted += (_, _) => _ = Guard(async () =>
         {
             await active.SetQualityAsync(new byte[] { 1, 2, 0 }[qualityChoice.SelectedIndex]);
             camera.Profile.StreamQuality = active.Quality; camera.Profile.Save();
         });
         var lightChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 310 };
-        lightChoice.Items.AddRange(["Infrared in darkness", "Colour lights", "Automatic lighting"]); lightChoice.SelectedIndex = Math.Min(2, (int)settings.NightVision); body.Controls.Add(lightChoice);
+        lightChoice.Items.AddRange([L.Get("Camera.InfraredInDarkness"), L.Get("ColourLights"), L.Get("AutomaticLighting")]); lightChoice.SelectedIndex = Math.Min(2, (int)settings.NightVision); body.Controls.Add(lightChoice);
         lightChoice.SelectionChangeCommitted += (_, _) => _ = Guard(async () => { await client.NightVisionAsync((uint)lightChoice.SelectedIndex); lightChoice.SelectedIndex = (await client.SettingsAsync()).NightVision; });
-        var follow = new CheckBox { Text = "Motion tracking", Checked = settings.Tracking != 0, AutoSize = true }; body.Controls.Add(follow);
+        var follow = new CheckBox { Text = L.Get("MotionTracking"), Checked = settings.Tracking != 0, AutoSize = true }; body.Controls.Add(follow);
         follow.Click += (_, _) => _ = Guard(async () => { await client.TrackingAsync(follow.Checked); follow.Checked = (await client.SettingsAsync()).Tracking != 0; });
         var directions = new FlowLayoutPanel { AutoSize = true };
-        foreach (var (name, direction) in new[] { ("Up", 1u), ("Down", 2u), ("Left", 3u), ("Right", 4u) })
+        foreach (var (name, direction) in new[] { (L.Get("Up"), 1u), (L.Get("Down"), 2u), (L.Get("Left"), 3u), (L.Get("Right"), 4u) })
             directions.Controls.Add(Button(name, () => _ = Guard(() => active.MoveAsync(direction))));
-        directions.Controls.Add(Button("Stop", () => _ = Guard(client.StopMovingAsync))); body.Controls.Add(directions);
+        directions.Controls.Add(Button(L.Get("Stop"), () => _ = Guard(client.StopMovingAsync))); body.Controls.Add(directions);
         var orientation = new GimbalControls(() => camera.Session, () => camera.Profile, Guard);
         body.Controls.Add(orientation); orientation.Refresh(settings);
-        body.Controls.Add(Label("These controls affect this camera only. Tracking controls do not provide a recording trigger.", 340));
+        body.Controls.Add(Label(L.Get("TheseControlsAffectThisCameraOnlyTrackingControlsDoNotProvide"), 340));
         dialog.ShowDialog(this);
     }
     async Task StopExtraCameras()
@@ -209,11 +209,11 @@ public sealed partial class MainForm
     }
     void UpdatePrimaryGridState(string? message = null)
     {
-        primaryGridTitle.Text = (profile?.Name ?? "No saved camera") + " · primary";
-        primaryGridConnect.Text = session is null ? "Connect" : "Disconnect";
-        primaryGridRecord.Enabled = record.Enabled; primaryGridRecord.Text = session?.Recording == true ? "Stop recording" : "Record";
+        primaryGridTitle.Text = (profile?.Name ?? L.Get("Camera.None")) + L.Get("Primary");
+        primaryGridConnect.Text = session is null ? L.Get("Connect") : L.Get("Disconnect");
+        primaryGridRecord.Enabled = record.Enabled; primaryGridRecord.Text = session?.Recording == true ? L.Get("StopRecording") : L.Get("Record");
         if (message is not null) primaryGridState.Text = message;
-        else if (session is null) primaryGridState.Text = "Disconnected";
+        else if (session is null) primaryGridState.Text = L.Get("Disconnected");
     }
     void SetPrimaryGridImage(Image? image) => primaryGridPicture.Image = image; // Owned/disposed by the original live preview.
     void UpdateCameraGrid()

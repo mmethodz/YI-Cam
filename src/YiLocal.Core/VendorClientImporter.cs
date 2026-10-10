@@ -22,9 +22,9 @@ public static class VendorClientImporter
     static DeviceProfile ReadProfile(string ip, string name, string? expectedUid, CancellationToken cancellation)
     {
         if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess)
-            throw new PlatformNotSupportedException("Import from YI IoT requires the 64-bit Windows application.");
+            throw new PlatformNotSupportedException(L.Get("ImportFromYIIoTRequiresThe64BitWindowsApplication"));
         var processes = Process.GetProcessesByName("YIIOTHomePCClientIntl");
-        if (processes.Length == 0) throw new InvalidOperationException("Open the YI IoT PC app and this camera's live view first.");
+        if (processes.Length == 0) throw new InvalidOperationException(L.Get("OpenTheYIIoTPCAppAndThisCameraSLive"));
         var candidates = new List<DeviceProfile>(); bool supported = false, inaccessible = false;
         try
         {
@@ -49,11 +49,11 @@ public static class VendorClientImporter
             }
         }
         finally { foreach (var process in processes) process.Dispose(); }
-        if (!supported) throw new NotSupportedException($"This importer supports YI IoT PC {SupportedVersion} only. No saved pairing was changed.");
+        if (!supported) throw new NotSupportedException(L.Format("ThisImporterSupportsYIIoTPC0OnlyNoSavedPairing", SupportedVersion));
         if (candidates.Count == 0 && inaccessible)
-            throw new IOException("Could not read the running YI IoT client. Open its live view under the same Windows account, then try again.");
+            throw new IOException(L.Get("CouldNotReadTheRunningYIIoTClientOpenItsLive"));
         var selected = VendorPairingLayout.Select(candidates);
-        selected.Ip = ip; selected.Name = string.IsNullOrWhiteSpace(name) ? "Camera" : name;
+        selected.Ip = ip; selected.Name = string.IsNullOrWhiteSpace(name) ? L.Get("Camera") : name;
         return selected;
     }
 
@@ -73,7 +73,7 @@ public static class VendorClientImporter
         {
             cancellation.ThrowIfCancellationRequested();
             if (watch.Elapsed > TimeSpan.FromSeconds(15) || scanned > 512UL * 1024 * 1024)
-                throw new IOException("The YI IoT memory scan reached its limit. Close extra vendor app instances and retry.");
+                throw new IOException(L.Get("TheYIIoTMemoryScanReachedItsLimitCloseExtraVendor"));
             if (VirtualQueryEx(handle, (nuint)address, out var region, (nuint)Marshal.SizeOf<MemoryRegion>()) == 0) break;
             ulong end = Math.Min((ulong)region.BaseAddress + (ulong)region.RegionSize, 0x1_0000_0000);
             if (end <= address) break;
@@ -85,7 +85,7 @@ public static class VendorClientImporter
                 {
                     cancellation.ThrowIfCancellationRequested();
                     if (watch.Elapsed > TimeSpan.FromSeconds(15) || scanned > 512UL * 1024 * 1024)
-                        throw new IOException("The YI IoT memory scan reached its limit. Close extra vendor app instances and retry.");
+                        throw new IOException(L.Get("TheYIIoTMemoryScanReachedItsLimitCloseExtraVendor"));
                     int length = (int)Math.Min((ulong)buffer.Length, end - chunk); scanned += (ulong)length;
                     if (ReadProcessMemory(handle, (nuint)chunk, buffer, (nuint)length, out var count) && count == (nuint)length)
                     {
@@ -180,9 +180,9 @@ internal static class VendorPairingLayout
     {
         var distinct = candidates.DistinctBy(p => (p.Uid, p.Password)).Take(2).ToArray();
         if (distinct.Length == 0)
-            throw new InvalidOperationException("No matching live camera was found in YI IoT. Open the saved camera's live view and try again.");
+            throw new InvalidOperationException(L.Get("NoMatchingLiveCameraWasFoundInYIIoTOpenThe"));
         if (distinct.Length != 1)
-            throw new InvalidOperationException("More than one active pairing was found. Keep only this camera's live view open in YI IoT and try again.");
+            throw new InvalidOperationException(L.Get("MoreThanOneActivePairingWasFoundKeepOnlyThisCamera"));
         return distinct[0];
     }
 }

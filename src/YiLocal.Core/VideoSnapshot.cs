@@ -53,7 +53,7 @@ public sealed class SnapshotBuffer
     {
         lock (gate)
         {
-            if (frames.Count == 0) throw new IOException("Wait for the next camera keyframe before taking a snapshot.");
+            if (frames.Count == 0) throw new IOException(L.Get("WaitForTheNextCameraKeyframeBeforeTakingASnapshot"));
             var last = frames[^1].Frame;
             return new(last.Width, last.Height, parameters[7], parameters[8], frames.ToArray());
         }
