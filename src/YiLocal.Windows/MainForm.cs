@@ -41,6 +41,7 @@ public sealed partial class MainForm : Form
     readonly TextBox ip = new() { Width = 280 };
     readonly TextBox cameraName = new() { Width = 280 };
     readonly TextBox key = new() { Width = 280, UseSystemPasswordChar = true };
+    readonly CheckBox localPlain = new() { AutoSize = true, Text = L.Get("LocalPlainMode") };
     readonly Label pairing = new() { AutoSize = true, MaximumSize = new Size(760, 0) };
     readonly FlowLayoutPanel pairingControls = Column();
     [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
@@ -76,6 +77,7 @@ public sealed partial class MainForm : Form
         LoadCameras();
         ShowMicrophones();
         TrackPreferenceEdits();
+        if (profile is null) tabs.SelectedIndex = 4;
         timer.Tick += (_, _) =>
         {
             UpdatePlayback();
@@ -176,7 +178,7 @@ public sealed partial class MainForm : Form
             {
                 await DisconnectAsync(); status.Text = L.Get("DisconnectedRecordingsAreSaved"); return;
             }
-            if (profile is null) { tabs.SelectedIndex = 3; throw new InvalidOperationException(L.Get("ImportAPairedDeviceProfileOrEnterItsDeviceKeyFirst")); }
+            if (profile is null) { tabs.SelectedIndex = 4; status.Text = L.Get("Setup.NoSavedCamera"); return; }
             EnsurePrimaryDistinct(profile);
             preferences.Ffmpeg = ffmpeg.Text.Trim();
             var active = new CameraSession(profile); session = active;
@@ -280,22 +282,28 @@ public sealed partial class MainForm : Form
     void ShowProfile()
     {
         ip.Text = profile?.Ip ?? ""; cameraName.Text = profile?.Name ?? L.Get("Camera"); key.Clear();
+        localPlain.Checked = profile?.Protocol == CameraProtocol.LocalPlain;
+        key.Enabled = !localPlain.Checked;
         quality.SelectedIndex = profile?.StreamQuality switch { 0 => 2, 2 => 1, _ => 0 };
-        pairing.Text = profile is null ? L.Get("NoSavedCameraEnterItsLANAddressOpenItsLiveView")
-            : L.Format("SavedCamera0ItsDeviceKeyIsEncryptedForThisWindows", profile.Name);
+        pairing.Text = profile is null ? L.Get("Setup.NoSavedCamera")
+            : L.Format(localPlain.Checked ? "SavedKeylessCamera" : "SavedCamera0ItsDeviceKeyIsEncryptedForThisWindows", profile.Name);
     }
     void BuildCamera()
     {
         var body = pairingControls; Page(L.Get("CameraSetup")).Controls.Add(new ScrollableColumn(body)); body.Controls.Add(pairing);
+        body.Controls.Add(Button(L.Get("Setup.OpenOnboarding"), () => tabs.SelectedIndex = 4));
         body.Controls.Add(Label(L.Get("CameraName"))); body.Controls.Add(cameraName); body.Controls.Add(Label(L.Get("CameraIPv4AddressOnYourLAN"))); body.Controls.Add(ip);
+        body.Controls.Add(localPlain);
+        localPlain.CheckedChanged += (_, _) => key.Enabled = !localPlain.Checked;
         body.Controls.Add(Button(L.Get("ImportFromRunningYIIoT"), () => _ = Guard(() => UpdatePairingAsync(token =>
             VendorClientImporter.ReadProfileAsync(ip.Text.Trim(), cameraName.Text.Trim(), profile?.Uid, token)))));
         body.Controls.Add(Label(L.Get("OpenThisCameraSLiveViewInYIIoTFirstImport")));
         body.Controls.Add(Label(L.Get("DevicePairingKeyLeaveBlankToKeepTheSavedKey"))); body.Controls.Add(key);
         body.Controls.Add(Button(L.Get("VerifyAndSaveCamera"), () => _ = Guard(() => UpdatePairingAsync(_ =>
         {
-            string password = key.Text.Length > 0 ? key.Text : profile?.Password ?? "";
+            string password = localPlain.Checked ? "" : key.Text.Length > 0 ? key.Text : profile?.Password ?? "";
             return Task.FromResult(new DeviceProfile { Ip = ip.Text.Trim(), Name = cameraName.Text.Trim(), Password = password,
+                Protocol = localPlain.Checked ? CameraProtocol.LocalPlain : CameraProtocol.Stock,
                 Uid = key.Text.Length == 0 ? profile?.Uid : null });
         }))));
         body.Controls.Add(Button(L.Get("ImportEncryptedPairingProfile"), () => _ = Guard(async () =>
@@ -344,6 +352,7 @@ public sealed partial class MainForm : Form
         e.Cancel = true;
         if (closing) return;
         if (importing) { status.Text = L.Get("FinishingPairingVerificationPleaseWaitBeforeClosing"); return; }
+        if (localSetup?.Busy == true) { status.Text = L.Get("Setup.WaitOrCancel"); return; }
         if (gridBusy) { status.Text = L.Get("FinishingACameraOperationPleaseWaitBeforeClosing"); return; }
         if (exporting) { status.Text = L.Get("AnExportIsRunningWaitForItToFinishBeforeClosing"); return; }
         if (savingSnapshot) { status.Text = L.Get("FinishingTheSnapshotPleaseWaitBeforeClosing"); return; }

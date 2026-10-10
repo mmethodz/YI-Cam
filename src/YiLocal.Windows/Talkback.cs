@@ -23,7 +23,7 @@ internal sealed class Talkback : IAsyncDisposable
         {
             try
             {
-                using var client = new CameraClient(profile.Ip, profile.Password, profile.Uid);
+                using var client = new CameraClient(profile.Ip, profile.Password, profile.Uid, profile.Protocol);
                 await client.ConnectAsync(stop.Token);
                 await client.FirmwareAsync().WaitAsync(stop.Token);
                 stop.Token.ThrowIfCancellationRequested();

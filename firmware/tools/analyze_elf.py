@@ -30,7 +30,19 @@ class Analyzer:
                                                         'defined': symbol['st_shndx'] != 'SHN_UNDEF'}
             text = elf.get_section_by_name('.text')
             self.text_address, self.text_data = text['sh_addr'], text.data()
+            self.plt = {}
+            relocations = elf.get_section_by_name('.rel.plt')
+            plt = elf.get_section_by_name('.plt')
+            if relocations and plt:
+                symbols = elf.get_section(relocations['sh_link'])
+                # GNU ARM PLT: 20-byte resolver, then 12-byte entries. Check the
+                # actual extent so another linker layout cannot be mislabeled.
+                if plt['sh_size'] == 20 + 12 * relocations.num_relocations():
+                    for index, relocation in enumerate(relocations.iter_relocations()):
+                        name = symbols.get_symbol(relocation['r_info_sym']).name
+                        self.plt[plt['sh_addr'] + 20 + 12 * index] = name
         self.by_address = {s['address'] & ~1: name for name, s in self.symbols.items()}
+        self.by_address.update(self.plt)
         self.arm = Cs(CS_ARCH_ARM, CS_MODE_ARM)
         self.arm.detail = True
         self.arm.skipdata = True

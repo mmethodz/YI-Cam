@@ -107,7 +107,7 @@ static class MultiCameraChecks
         Console.WriteLine("Two simulated cameras passed concurrent authentication, command, video, audio and clock isolation; registry/path checks passed.");
     }
 
-    sealed class SimulatedCamera : IAsyncDisposable
+    internal sealed class SimulatedCamera : IAsyncDisposable
     {
         readonly UdpClient socket;
         readonly CancellationTokenSource stop = new();
@@ -116,6 +116,7 @@ static class MultiCameraChecks
         readonly ushort[] sequences = new ushort[6];
         readonly uint stamp;
         readonly string firmware;
+        readonly bool plain;
         readonly byte marker;
         public string Key { get; }
         public string Uid => Convert.ToHexString(uid).ToLowerInvariant();
@@ -130,9 +131,9 @@ static class MultiCameraChecks
         bool initialized, videoStopped, speaker;
         public byte[] Video => Wire.Join([0, 0, 0, 1], Enumerable.Repeat(marker, 32).ToArray());
         public byte[] Audio => Enumerable.Repeat(marker, 37).ToArray();
-        public SimulatedCamera(string address, string key, byte marker, string firmware, uint stamp)
+        public SimulatedCamera(string address, string key, byte marker, string firmware, uint stamp, bool plain = false)
         {
-            Key = key; this.marker = marker; this.firmware = firmware; this.stamp = stamp;
+            Key = key; this.marker = marker; this.firmware = firmware; this.stamp = stamp; this.plain = plain;
             uid = Enumerable.Repeat(marker, 20).ToArray(); socket = new(new IPEndPoint(IPAddress.Parse(address), 32108));
             worker = Task.Run(RunAsync);
         }
@@ -143,10 +144,13 @@ static class MultiCameraChecks
         {
             var header = new byte[24]; Wire.U16(audio ? (ushort)138 : (ushort)78).CopyTo(header, 0); header[2] = audio ? (byte)27 : (byte)1; header[5] = generation;
             Wire.U16(160).CopyTo(header, 8); Wire.U16(90).CopyTo(header, 10); Wire.U32(123).CopyTo(header, 12); Wire.U32(stamp).CopyTo(header, 20);
-            using var cipher = Aes.Create(); cipher.Key = Encoding.ASCII.GetBytes(Key + "0");
             var bytes = audio ? Audio : Video;
-            if (audio) cipher.EncryptEcb(bytes.AsSpan(0, 32), PaddingMode.None).CopyTo(bytes, 0);
-            else cipher.EncryptEcb(bytes.AsSpan(4, 32), PaddingMode.None).CopyTo(bytes, 4);
+            if (!plain)
+            {
+                using var cipher = Aes.Create(); cipher.Key = Encoding.ASCII.GetBytes(Key + "0");
+                if (audio) cipher.EncryptEcb(bytes.AsSpan(0, 32), PaddingMode.None).CopyTo(bytes, 0);
+                else cipher.EncryptEcb(bytes.AsSpan(4, 32), PaddingMode.None).CopyTo(bytes, 4);
+            }
             await Message(audio ? (byte)1 : (byte)2, audio ? (byte)2 : (byte)1, Wire.Join(header, bytes), peer);
         }
         async Task RunAsync()
@@ -165,8 +169,11 @@ static class MultiCameraChecks
                         Require(data[8] == 2 && data[9] == 2 && Wire.U16(data.AsSpan(16)) == 138 && data[18] == 2,
                             "Invalid talk channel/envelope.");
                         var audio = data[40..]; int encrypted = audio.Length / 16 * 16;
-                        using var cipher = Aes.Create(); cipher.Key = Encoding.ASCII.GetBytes(Key + "0");
-                        cipher.DecryptEcb(audio.AsSpan(0, encrypted), PaddingMode.None).CopyTo(audio, 0);
+                        if (!plain)
+                        {
+                            using var cipher = Aes.Create(); cipher.Key = Encoding.ASCII.GetBytes(Key + "0");
+                            cipher.DecryptEcb(audio.AsSpan(0, encrypted), PaddingMode.None).CopyTo(audio, 0);
+                        }
                         Require(audio.SequenceEqual(TalkChecks.Packet(marker)), "Talk audio used the wrong camera key or damaged the partial block.");
                         if (heldTalk is null)
                         {
@@ -195,8 +202,14 @@ static class MultiCameraChecks
                         await Send(Wire.Packet(0xd1, Wire.Join([0xd1, 0, 0, 1], data[6..8])), peer);
                         var body = data[16..]; ushort command = Wire.U16(body);
                         string nonce = Encoding.ASCII.GetString(body, 8, 15);
-                        bool valid = Wire.Auth(Key, nonce).SequenceEqual(body[8..40]);
-                        if (!valid) throw new Exception("Simulated camera received another camera's authentication key.");
+                        bool valid = plain
+                            ? Encoding.ASCII.GetBytes("OpenYI-LAN-v1".PadRight(32, '\0')).SequenceEqual(body[8..40])
+                            : Wire.Auth(Key, nonce).SequenceEqual(body[8..40]);
+                        if (!valid)
+                        {
+                            await Message(0, 3, Wire.Join(Wire.U16((ushort)(command + 1)), body[2..4], new byte[4], Wire.U32(1), new byte[28]), peer);
+                            continue;
+                        }
                         if (command == 0x2345) { initialized = true; videoStopped = false; await Frame(false, body[40], peer); continue; }
                         if (command == 0x02ff) { Require(body.Length == 48 && body[40..].All(b => b == 0), "Wrong video stop payload."); videoStopped = true; continue; }
                         if (command == 0x0350)

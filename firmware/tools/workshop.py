@@ -10,6 +10,7 @@ import shutil
 import stat
 import struct
 import subprocess
+import sys
 import tarfile
 import tempfile
 
@@ -17,6 +18,22 @@ from inspect_update import inspect_bytes
 
 HOME = Path(__file__).resolve().parents[1]
 CAPACITY = 3_100_672  # This board's B partition, not the whole flash.
+
+
+def execution_checks(tree, profile):
+    if 'offline_checks' not in profile:
+        return None
+    require(profile['offline_checks'] in ('local01', 'local02'), 'Unknown mandatory execution checks')
+    # An optional per-repository Linux wheel directory supports WSL without
+    # altering system Python. Never load these Linux wheels in Windows.
+    runtime = HOME / '.local' / 'python-runtime'
+    if os.name == 'posix' and runtime.is_dir():
+        sys.path.insert(0, str(runtime))
+    try:
+        from verify_local import verify_tree
+    except ImportError as error:
+        raise ValueError('Mandatory ARM verification dependencies are missing; install firmware/requirements-analysis.txt in the build Python environment') from error
+    return verify_tree(tree, profile)
 
 
 def digest(data):
@@ -258,6 +275,10 @@ def build(source, output, profile_name):
             image, original, contents, tree = compile_one(output / 'source.squashfs', stage, profile)
             copies.append(package(image, profile['target_version'], profile['epoch']))
         require(copies[0] == copies[1], 'Independent builds are not byte-identical')
+        print('Mandatory ARM execution and source assembly checks...', flush=True)
+        checks = execution_checks(tree, profile)
+        if checks is not None:
+            (output / 'execution-checks.json').write_bytes(json_bytes(checks))
         (output / 'update.tar').write_bytes(copies[0])
         (output / 'usr.sqsh4').write_bytes(image)
         (output / 'contents.json').write_bytes(json_bytes(contents))
@@ -305,6 +326,9 @@ def verify(output):
         _, expected = prepare(output / 'source.squashfs', work / 'expected', profile)
         extract(output / 'usr.sqsh4', work / 'actual')
         require(inventory(work / 'actual') == expected, 'Final image differs from independently patched source')
+        checks = execution_checks(work / 'actual', profile)
+        if checks is not None:
+            require((output / 'execution-checks.json').read_bytes() == json_bytes(checks), 'Execution verification record differs from rerun')
         require((output / 'contents.json').read_bytes() == json_bytes(expected), 'Inspection manifest differs from image')
         for name, row in expected.items():
             if row['kind'] == 'file':

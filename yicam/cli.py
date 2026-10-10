@@ -29,7 +29,7 @@ def main():
     move.add_argument('direction', choices=('up', 'down', 'left', 'right'))
     args = parser.parse_args()
     device = load_device()
-    with Camera(device['ip'], device['password'], device.get('uid')) as camera:
+    with Camera(device['ip'], device['password'], device.get('uid'), device.get('protocol', 'yi-stock')) as camera:
         if args.action == 'status':
             data = camera.device_info()
             print('Firmware:', camera.firmware())

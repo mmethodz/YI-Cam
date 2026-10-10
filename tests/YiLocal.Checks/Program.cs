@@ -11,6 +11,7 @@ static VideoFrame Frame(ushort seq, bool key = false, uint ms = 100000) => new([
 if (AudioChecks.Fixture(args)) return;
 if (MotionChecks.Fixture(args)) return;
 if (args is ["--localization"]) { LocalizationChecks.Run(); return; }
+if (args is ["--local-setup-hardware", var savedPairing, var setupOutput]) { await LocalSetupChecks.HardwareAsync(savedPairing, setupOutput); return; }
 
 if (args.Length == 2 && args[0] == "--qr-fixture")
 {
@@ -92,10 +93,12 @@ if (args.Length > 0 && args[0] == "--live")
 }
 
 await PairingChecks.RunAsync();
+await LocalSetupChecks.RunAsync();
 MotionChecks.Run();
 AlarmChecks.Run();
 TalkChecks.Run();
 await MultiCameraChecks.RunAsync();
+await PlainProtocolChecks.RunAsync();
 Check(CameraAlert.Parse(new byte[4]).Count == 0, "Empty alert history rejected.");
 Check(CameraAlert.Parse(Wire.Join(Wire.U32(1), Wire.U32(1), Wire.U32(100), Wire.U32(6))).Single() == new CameraAlert(1, 100, 6), "Alert history fields differ.");
 Reject(() => CameraAlert.Parse(Wire.U32(1)), "Truncated alert history accepted.");

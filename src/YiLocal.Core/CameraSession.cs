@@ -104,7 +104,7 @@ public sealed class CameraSession : IAsyncDisposable
         {
             try
             {
-                using var client = new CameraClient(profile.Ip, profile.Password, profile.Uid);
+                using var client = new CameraClient(profile.Ip, profile.Password, profile.Uid, profile.Protocol);
                 Status?.Invoke(L.Get("ConnectingOverTheLAN"));
                 await client.ConnectAsync(stop.Token);
                 await client.FirmwareAsync();

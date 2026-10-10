@@ -52,7 +52,7 @@ class CameraWorker(threading.Thread):
     def connect(self):
         self.emit('status', message='Connecting directly to the camera on your LAN…')
         device = load_device()
-        camera = Camera(device['ip'], device['password'], device.get('uid'))
+        camera = Camera(device['ip'], device['password'], device.get('uid'), device.get('protocol', 'yi-stock'))
         try:
             camera.connect()
             version = camera.firmware()

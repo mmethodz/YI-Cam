@@ -1,6 +1,38 @@
 using System.Diagnostics;
 using YiLocal.Windows;
 
+if (args.Length == 0) args = ["--setup-preview", "en"];
+if (args is ["--setup-preview", var language])
+{
+    var thread = new Thread(() =>
+    {
+        Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
+        using var form = new Form { Text = "OpenYI setup preview", ClientSize = new Size(1160, 640), Font = new Font("Segoe UI", 10), StartPosition = FormStartPosition.CenterScreen };
+        var pages = new TabControl { Dock = DockStyle.Fill }; form.Controls.Add(pages);
+        foreach (var code in new[] { "en", "fi" })
+        {
+            YiLocal.Core.Localization.Texts.Initialize(code);
+            var page = new TabPage(code) { Tag = code };
+            page.Controls.Add(new LocalSetupPanel(_ => throw new InvalidOperationException("Preview only: no camera profile will be saved."), () => null));
+            pages.TabPages.Add(page);
+        }
+        pages.SelectedIndexChanged += (_, _) => YiLocal.Core.Localization.Texts.Initialize((string)pages.SelectedTab!.Tag!);
+        pages.SelectedIndex = language == "fi" ? 1 : 0; YiLocal.Core.Localization.Texts.Initialize(language);
+        Application.Run(form);
+    });
+    thread.SetApartmentState(ApartmentState.STA); thread.Start(); thread.Join(); return;
+}
+if (args is ["--wifi"]) { WifiChecks.Run(); return; }
+if (args is ["--wifi-hardware"])
+{
+    try
+    {
+        var networks = WindowsWifi.ReadCurrent();
+        Console.WriteLine($"Active Windows Wi-Fi connections: {networks.Count}; password accessible: {networks.Count(n => n.Password is not null)}. No SSID/password printed or saved.");
+    }
+    catch (System.ComponentModel.Win32Exception error) { Console.WriteLine($"Windows Wi-Fi access unavailable, code {error.NativeErrorCode}; manual or camera-network fallback is available."); }
+    return;
+}
 if (args is ["--settings"])
 {
     SettingsChecks.Run();

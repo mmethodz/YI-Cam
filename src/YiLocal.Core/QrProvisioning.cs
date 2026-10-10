@@ -1,14 +1,25 @@
 using System.Text;
+using System.Security.Cryptography;
 using QRCoder;
 
 namespace YiLocal.Core;
 
-/// <summary>Observed QR composition only. This does not implement or bypass the binding service.</summary>
+/// <summary>Stock QR composition and explicit setup for the patched local firmware.</summary>
 public static class QrProvisioning
 {
     // Public, fixed obfuscation mask embedded in the vendor format; not a camera/account secret.
     const string Mask = "89JFSjo8HUbhou5776NJOMp9i90ghg7Y78G78t68899y79HY7g7y87y9ED45Ew30O0jkkl";
     static readonly Encoding Utf8 = new UTF8Encoding(false, true);
+    public static string ComposeLocal(string ssid, string password, string region = "EU")
+    {
+        if (region is not ("EU" or "US" or "CN")) throw new ArgumentException(L.Get("LocalQrRegionRequired"));
+        if (ssid.Any(char.IsControl) || password.Length != 0 &&
+            (password.Length is < 8 or > 63 || password.Any(c => c is < ' ' or > '~')))
+            throw new ArgumentException(L.Get("LocalQrNetworkLimits"));
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        string marker = region + new string(Enumerable.Range(0, 18).Select(_ => alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)]).ToArray());
+        return Compose(ssid, password, marker);
+    }
     public static string Compose(string ssid, string password, string? bindingToken, bool changeWifi = false, string? deviceId = null)
     {
         if (Utf8.GetByteCount(ssid) is < 1 or > 32 || ssid.Contains('\0'))

@@ -74,7 +74,7 @@ def preflight(ftp, profile):
     script = get(ftp, '/usr/sbin/update.sh')
     require(digest(script) == SCRIPT_SHA, 'Unqualified installed update script')
     for spec in profile['binaries']:
-        require(digest(get(ftp, '/usr/' + spec['path'])) == spec['source_sha256'], 'Live binary differs from source')
+        require(digest(get(ftp, '/usr/' + spec['path'], min(spec.get('source_size', 1024 * 1024), 3_100_672) + 1)) == spec['source_sha256'], 'Live binary differs from source')
     for path in STAGED + FORBIDDEN:
         require(absent(ftp, path), 'An update/staging file already exists: ' + path)
     mac = get(ftp, '/sys/class/net/wlan0/address').decode().strip()
@@ -297,7 +297,7 @@ def flash(host, password, directory, profile, packet, confirm, reverify):
                     ftp.close(); ftp = None
                     continue
                 for spec in profile['binaries']:
-                    require(digest(get(ftp, '/usr/' + spec['path'])) == spec['result_sha256'], 'Installed patch mismatch')
+                    require(digest(get(ftp, '/usr/' + spec['path'], min(spec.get('source_size', 1024 * 1024), 3_100_672) + 1)) == spec['result_sha256'], 'Installed patch mismatch')
                 report['installed_files_verified'] = True
                 report['post_flash_sha256'] = verify_flash_readback(ftp, busybox, members['usr.sqsh4'], directory)
                 report['B_payload_readback_verified'] = True

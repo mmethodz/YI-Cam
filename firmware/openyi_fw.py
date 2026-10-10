@@ -27,7 +27,7 @@ def linux_path(path):
     return result.stdout.strip()
 
 
-def engine(action, output, source=None, profile='ak3918e-debug01'):
+def engine(action, output, source=None, profile='ak3918e-local01'):
     if os.name == 'nt':
         argv = ['wsl.exe', '-d', 'Ubuntu', '--exec', 'fakeroot', '--', 'python3', '-B',
                 linux_path(__file__), '--engine', action, '--output', linux_path(output)]
@@ -62,6 +62,8 @@ def inspect(output):
     print('  contents.json     Complete file/link/ownership/mode/time inventory')
     print('  patches.txt       Exact before/after bytes and assembly')
     print('  verification.json + SHA256SUMS')
+    if profile.get('offline_checks'):
+        print('  execution-checks.json  Mandatory ARM/key/auth/media/network checks')
     print('\nOffline verification passed. Flashing is a separate action.')
     (HOME / '.local').mkdir(exist_ok=True)
     (HOME / '.local' / 'last-build.json').write_text(json.dumps({'path': str(output.resolve())}), encoding='utf-8')
@@ -107,16 +109,20 @@ def interactive():
     print('OpenYI firmware workshop')
     print('Build -> mandatory verification -> inspection -> explicit Wi-Fi flash')
     while True:
-        print('\n1  Build and verify\n2  Inspect / reverify a build\n3  Flash an inspected build over Wi-Fi\n0  Exit')
+        print('\n1  Build and verify\n2  Inspect / reverify a build\n3  Flash an inspected build over Wi-Fi\n4  Export local01 camera key for OpenYI (Windows)\n5  Save local setup QR (local01/local02; experimental)\n0  Exit')
         choice = input('Choose: ').strip()
         if choice == '0':
             return
         try:
             if choice == '1':
+                print('Profile: ak3918e-local01 — local key, cloud removal; hardware testing pending.')
+                print('Optional ak3918e-local02: keyless plaintext LAN; matching client mode required.')
+                profile_id = input('Profile [ak3918e-local01]: ').strip() or 'ak3918e-local01'
+                require(profile_id in ('ak3918e-local01', 'ak3918e-local02'), 'Choose local01 or local02 by full profile name')
                 source = ask_path('Original application SquashFS', HOME / '.local' / 'inputs' / 'usr-installed.squashfs')
                 stamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
                 output = ask_path('New build directory', HOME / 'build' / stamp)
-                engine('build', output, source)
+                engine('build', output, source, profile_id)
                 current = output
                 inspect(current)
             elif choice in ('2', '3'):
@@ -125,6 +131,39 @@ def interactive():
                     inspect(current)
                 else:
                     install(current)
+            elif choice == '4':
+                from wifi_install import connect, lan_host
+                from local_pairing import read_owner_profile, save_windows_profile
+                require(os.name == 'nt', 'This export uses Windows encrypted pairing files')
+                host = lan_host(input('Camera LAN address: ').strip())
+                name = input('Camera name: ').strip() or 'OpenYI Camera'
+                stamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+                target = ask_path('New encrypted pairing file', HOME / '.local' / ('camera-' + stamp + '.dpapi'))
+                require(not target.exists(), 'Choose a new export filename')
+                password = getpass.getpass('Camera root FTP password (not saved): ')
+                ftp = connect(host, password)
+                try:
+                    device = read_owner_profile(ftp, host, name)
+                finally:
+                    ftp.close()
+                save_windows_profile(device, target)
+                print('Saved encrypted pairing file: ' + str(target))
+                print('In OpenYI Camera setup, choose Import encrypted pairing profile. The key was not printed or changed.')
+            elif choice == '5':
+                from local_setup import setup_payload, save_setup_qr
+                print('For patched local01/local02. Local01 QR/reset setup passed on one camera with Internet available; local02 is untested on hardware.')
+                print('This creates a file offline; it does not reset or contact the camera.')
+                ssid = input('Wi-Fi network name (SSID): ')
+                password = getpass.getpass('Wi-Fi password (empty for an open network): ')
+                region = input('Region EU / US / CN [EU]: ').strip().upper() or 'EU'
+                payload = setup_payload(ssid, password, region)
+                stamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+                target = ask_path('New QR image', HOME / '.local' / ('setup-' + stamp + '.png'))
+                save_setup_qr(payload, target)
+                print('Saved and decode-verified: ' + str(target))
+                print('The image contains recoverable Wi-Fi credentials. Display it on your phone when testing camera setup.')
+                print('Local01: export the local camera key and import it in OpenYI.')
+                print('Local02: select keyless LAN mode in OpenYI Camera setup and verify/save its LAN address.')
         except (ValueError, OSError, ftplib.Error, subprocess.SubprocessError) as error:
             print('\nStopped: ' + str(error))
 
@@ -134,7 +173,7 @@ def main():
     parser.add_argument('--build', type=Path, metavar='SOURCE_SQUASHFS')
     parser.add_argument('--inspect', type=Path, metavar='BUILD_DIRECTORY')
     parser.add_argument('--output', type=Path)
-    parser.add_argument('--profile', default='ak3918e-debug01')
+    parser.add_argument('--profile', default='ak3918e-local01')
     parser.add_argument('--engine', choices=('build', 'verify'), help=argparse.SUPPRESS)
     parser.add_argument('--source', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()

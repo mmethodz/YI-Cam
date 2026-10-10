@@ -11,6 +11,7 @@ public sealed class DeviceProfile
     [JsonPropertyName("name")] public string Name { get; set; } = "Camera";
     [JsonPropertyName("uid")] public string? Uid { get; set; }
     [JsonPropertyName("password")] public string Password { get; set; } = "";
+    [JsonPropertyName("protocol")] public string Protocol { get; set; } = CameraProtocol.Stock;
     [JsonPropertyName("reverse_pan_controls")] public bool ReversePanControls { get; set; }
     [JsonPropertyName("reverse_tilt_controls")] public bool ReverseTiltControls { get; set; }
     [JsonPropertyName("stream_quality")] public byte StreamQuality { get; set; } = 1;

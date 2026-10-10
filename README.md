@@ -22,17 +22,22 @@ files with English fallback; community languages are welcome. See the
 
 This is an early release, initially verified with one Anyka-family camera:
 hardware **253**, firmware **6.0.24.10_202401091113**. Other cameras using the
-same app name may use different hardware and protocols. Account-free fresh
-provisioning and native 4K capture remain unverified.
+same app name may use different hardware and protocols. With the supported
+OpenYI local01 firmware, physical reset, locally generated QR setup and direct
+native key import have passed on that unit. Internet was available during the
+test; WAN-isolated provisioning and native 4K capture remain unverified.
 
 ## Windows application
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 2. Run **Build Windows.cmd**, then **Start Windows.cmd**.
-3. Open the camera's live view in the already paired YI IoT PC app. In OpenYI's
-   **Camera setup**, enter the camera's LAN address and click **Import from running
-   YI IoT**. This verifies and saves the key, then connects. You can also import an
-   existing `.dpapi` profile under the same Windows account or enter a known key.
+3. **Camera pairing → OpenYI firmware setup** is the default onboarding flow.
+   It requires the supported [OpenYI local01 firmware](firmware/README.md).
+   Use the detected Wi-Fi details (or enter them), show/save the QR, then choose
+   **Find cameras → Connect and save camera**. The app reads and verifies the
+   local key directly; no vendor account, token or device ID is needed. On a PC
+   connected by Ethernet, **Use saved camera's Wi-Fi** can copy network details
+   from an existing OpenYI camera. See [the full setup flow](firmware/docs/LOCAL_PAIRING.md).
 4. Choose an [FFmpeg executable](https://ffmpeg.org/download.html) in **Storage**
    for live preview and 4K export. Original-stream recording itself is native C#
    and does not need FFmpeg. A sibling `ffmpeg.exe` is detected automatically.
@@ -64,16 +69,30 @@ It can repeat a bundled public-domain siren or imported audio through the camera
 controls; the app always launches in Home. The bottom bar and tray show the alarm
 state and offer immediate stop/disarm. See [alarm setup and verification limits](docs/ALARM.md).
 
-No camera firmware changes or Internet port forwarding are required. The app
-makes no cloud requests and exposes no HTTP server. The camera firmware may still
-contact vendor services; this app does not change the camera's network settings.
-Router-level Internet blocking has not been tested.
+Existing stock-camera profiles remain supported through **Camera setup** and
+the advanced stock tools. Stock import can read a running, already paired YI IoT
+PC client, import a `.dpapi` file under the same Windows account, or verify a
+known key. That compatibility route does not require flashing. The default
+vendor-free setup requires OpenYI firmware. The app makes no cloud requests and
+exposes no HTTP server; no Internet port forwarding is required. Stock firmware
+may still contact vendor services. Router-level Internet blocking has not been tested.
 
 An optional [firmware research workshop](firmware/README.md) provides one
 interactive Python tool for reproducible patch builds, mandatory offline
-verification, image inspection and an experimental Wi-Fi installer. Its first
-candidate suppresses debug reports; it is not yet a qualified cloud-free firmware
-replacement. The desktop app needs no firmware patch.
+verification, image inspection and an experimental Wi-Fi installer. The recommended
+local01 candidate replaces cloud login with a persistent owner key and removes
+the identified cloud paths. An optional local02 candidate and explicit client
+mode provide keyless plaintext LAN operation. Both have offline ARM/image checks.
+Local01's [first installation, reboot and exact image readback](firmware/docs/LOCAL01_INSTALLATION.md)
+succeeded, and the owner confirmed live video with the existing saved pairing.
+The same pairing also connected after a separate power cycle without a vendor-app refresh.
+On 11 October, the owner reset the camera, scanned a locally generated QR, heard
+Wi-Fi/pairing success and reconnected. A fresh direct export and native app
+onboarding subsequently authenticated and displayed live video.
+Other camera functions and WAN isolation checks remain pending. Local02
+has not been flashed. Normal desktop use with
+stock firmware remains supported. Local01 retains the same authenticated protocol;
+the default onboarding page requires OpenYI firmware.
 
 **Cameras · experimental** adds independent camera configurations and a grid.
 The primary camera keeps its existing pairing and recording paths. Additional
@@ -84,12 +103,18 @@ for verification; two simulated cameras cover software isolation. See
 
 ## Controls
 
-**Setup QR · experimental** can save a normal PNG for display on a phone. Fresh
-setup currently requires an existing vendor binding token; a separate Wi-Fi-change
-format requires the vendor display device ID. Images are generated entirely
-locally, but neither flow has been physically verified. Account-free first-time
-provisioning is not established. See [the QR findings](PROTOCOL.md#experimental-setup-qr).
-Do not reset a working camera to test this feature.
+**Camera pairing** previews and saves a normal QR PNG for display on a phone.
+The default OpenYI setup supplies its own local marker and reads the device key
+directly after Wi-Fi setup. Current Wi-Fi detection uses Windows APIs; password
+autofill depends on Windows access permissions. Blank/unavailable passwords never
+silently select an open network. Credentials stay on the setup page unless the
+owner saves a QR image. The first camera becomes primary; additional identities
+get independent grid entries rather than replacing that camera.
+
+**Original firmware · advanced** retains the stock QR tools and their token/ID
+requirements. See [the QR findings](PROTOCOL.md#experimental-setup-qr) and
+[local firmware onboarding](firmware/docs/LOCAL_PAIRING.md). A reset is only needed
+to enter the camera's fresh setup mode; reading a local01 key does not reset it.
 
 | Control | Verified behavior on the test camera |
 | --- | --- |
@@ -236,11 +261,11 @@ saved profile is supported. The candidate key
 must authenticate before the saved profile is replaced; failed imports preserve
 it. Restart the Python app after updating its source so it loads the current importer.
 
-**Preserve an existing pairing.** Fresh QR generation is experimental; completing
-account-free provisioning has not been established. The observed
-vendor QR includes Wi-Fi information and a server-issued binding token; an
-independent provisioning flow has not been established. Do not reset a working
-camera merely to try this app.
+**Preserve an existing pairing when it works.** The stock vendor QR contains a
+server-issued binding token. OpenYI local01's independent QR setup has now passed
+one physical reset/setup test with Internet available. No reset is required to
+import its owner key or reconnect an already configured camera. Other hardware
+and WAN-isolated first setup still need qualification.
 
 ## Python reference
 

@@ -7,7 +7,7 @@ public static class PairingImport
 
     static async Task<string> VerifyCameraAsync(DeviceProfile profile, CancellationToken token)
     {
-        using var camera = new CameraClient(profile.Ip, profile.Password, profile.Uid);
+        using var camera = new CameraClient(profile.Ip, profile.Password, profile.Uid, profile.Protocol);
         await camera.ConnectAsync(token);
         await camera.FirmwareAsync().WaitAsync(token);
         return camera.Uid ?? throw new InvalidDataException(L.Get("TheCameraDidNotReturnItsIdentity"));
@@ -21,7 +21,8 @@ public static class PairingImport
     {
         // Work on a copy so a failure cannot mutate the UI's current profile.
         var verified = new DeviceProfile { Ip = candidate.Ip, Name = candidate.Name, Password = candidate.Password, Uid = candidate.Uid,
-            ReversePanControls = candidate.ReversePanControls, ReverseTiltControls = candidate.ReverseTiltControls, StreamQuality = candidate.StreamQuality };
+            Protocol = candidate.Protocol, ReversePanControls = candidate.ReversePanControls, ReverseTiltControls = candidate.ReverseTiltControls, StreamQuality = candidate.StreamQuality };
+        if (CameraProtocol.IsPlain(verified.Protocol)) verified.Password = "";
         cancellation.ThrowIfCancellationRequested();
         string uid = await verify(verified, cancellation);
         if (string.IsNullOrEmpty(uid) || verified.Uid is not null && !uid.Equals(verified.Uid, StringComparison.OrdinalIgnoreCase))

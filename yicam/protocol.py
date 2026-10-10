@@ -19,6 +19,7 @@ import threading
 import time
 
 from Crypto.Cipher import AES
+from .protocol_modes import STOCK_PROTOCOL, LOCAL_PLAIN_MARKER, LOCAL_PLAIN_FIRMWARE, is_plain
 
 
 class ProtocolError(RuntimeError):
@@ -105,16 +106,17 @@ class AudioFrame:
 
 
 class Camera:
-    def __init__(self, ip: str, password: str, uid: str | None = None):
+    def __init__(self, ip: str, password: str, uid: str | None = None, protocol=STOCK_PROTOCOL):
         # A literal LAN address prevents accidentally sending pairing credentials
         # to a DNS name or a public endpoint entered as the camera address.
         address = ipaddress.ip_address(ip)
         if address.version != 4 or not address.is_private or address.is_unspecified or address.is_multicast:
             raise ValueError('Enter the camera\'s private IPv4 address.')
-        if len(password.encode()) != 15:
+        self._plain = is_plain(protocol)
+        if not self._plain and len(password.encode()) != 15:
             raise ValueError('This camera protocol requires a 15-byte pairing key.')
         self.ip = ip
-        self._key = password
+        self._key = '' if self._plain else password
         self.expected_uid = uid
         self.uid = None
         self.peer = None
@@ -138,7 +140,7 @@ class Camera:
         self._number = 0
         self.generation = 0
         self._nonce_prefix = secrets.token_hex(4)[:7]
-        self._cipher = AES.new((password + '0').encode(), AES.MODE_ECB)
+        self._cipher = None if self._plain else AES.new((password + '0').encode(), AES.MODE_ECB)
         self._last_received = time.monotonic()
 
     def connect(self, timeout=5):
@@ -175,6 +177,8 @@ class Camera:
                         self._last_received = time.monotonic()
                         self.thread = threading.Thread(target=self._receive, daemon=True, name='YI LAN')
                         self.thread.start()
+                        if self._plain and self.firmware() != LOCAL_PLAIN_FIRMWARE:
+                            raise ProtocolError('Keyless LAN mode requires matching OpenYI local02 firmware.')
                         return self
                 break
             raise TimeoutError('The camera did not answer LAN discovery.')
@@ -195,7 +199,7 @@ class Camera:
             self._number = (self._number + 1) & 0xffff
             number = self._number
             nonce = self._nonce_prefix + secrets.token_hex(4)
-            auth = authentication(self._key, nonce)
+            auth = LOCAL_PLAIN_MARKER if self._plain else authentication(self._key, nonce)
             body = struct.pack('>HHHH', command, number, 0, len(data)) + auth + data
             message = struct.pack('>BBBBI', 2, 3, 0, 0, len(body)) + body
             waiter = queue.Queue(maxsize=1)
@@ -292,7 +296,8 @@ class Camera:
         elif kind == 2 and channel == 1 and len(body) >= 24:
             data = body[24:]
             encrypted = len(data) // 16 * 16
-            data = self._cipher.decrypt(data[:encrypted]) + data[encrypted:]
+            if not self._plain:
+                data = self._cipher.decrypt(data[:encrypted]) + data[encrypted:]
             frame = AudioFrame(data, struct.unpack_from('>H', body, 6)[0], struct.unpack_from('>I', body, 12)[0],
                                struct.unpack_from('>I', body, 20)[0], struct.unpack_from('>H', body)[0], body[2])
             try:
@@ -304,7 +309,7 @@ class Camera:
             milliseconds = struct.unpack_from('>I', body, 20)[0]
             data = body[24:]
             keyframe = channel in (2, 4)
-            if keyframe and len(data) >= 36:
+            if not self._plain and keyframe and len(data) >= 36:
                 data = data[:4] + self._cipher.decrypt(data[4:36]) + data[36:]
             frame = VideoFrame(data, sequence, width, height, seconds + milliseconds / 1000,
                 keyframe, generation, codec, body[16], channel, flags, seconds, milliseconds)
@@ -396,7 +401,7 @@ class Camera:
             # Legacy mobile TNP uses a nonzero 20-step counter here, not the video clock.
             struct.pack_into('>I', header, 12, ((self._talk_frames * 20) & 0xffffffff) or 20)
             n = len(adts) // 16 * 16
-            data = self._cipher.encrypt(adts[:n]) + adts[n:]
+            data = adts if self._plain else self._cipher.encrypt(adts[:n]) + adts[n:]
             message = struct.pack('>BBBBI', 2, 2, 0, 0, len(data) + 24) + header + data
             seq = self._audio_sequence; self._audio_sequence = (seq + 1) & 0xffff
             packet = envelope(0xD0, struct.pack('>BBH', 0xD1, 1, seq) + message)

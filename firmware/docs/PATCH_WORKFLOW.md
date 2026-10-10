@@ -1,5 +1,12 @@
 # Installed AK3918E patch workflow — 10 October 2026
 
+The current recommended default is [local01](LOCAL01.md), with a complete
+[credential map](LOCAL_KEY_MAP.md) and mandatory ARM execution checks.
+[Local02](LOCAL02.md) is a separately selected keyless candidate. Both retain
+the [documented QR parser](LOCAL_PAIRING.md) for local provisioning. The
+debug01 section below records the earlier, deliberately bounded diagnostic
+candidate; it is not the current cloud/account-removal implementation.
+
 ## Evidence boundary
 
 Target: `Cloud39EV2_AK3918E80PIN_MNBD`, GC1084, ARM926EJ-S (ARMv5TEJ),
@@ -9,8 +16,10 @@ The newer offered package has different addresses and is not this profile's sour
 The backups passed acquisition/integrity checks, not restoration tests. All
 regions agree between the original reads except 423 bytes of saved-clock
 records in C. See [the audit](BACKUP_VERIFICATION.md). Offline checks establish
-exact image contents and changes, not the modified program's behavior or
-guaranteed boot/recovery. No modified image has been installed during this work.
+exact image contents and changes. Local01 also executes selected actual ARM
+paths with modeled OS/device boundaries; this cannot establish guaranteed
+boot/recovery by itself. Local01's [first hardware installation](LOCAL01_INSTALLATION.md)
+subsequently succeeded, with a system reboot and complete B image readback.
 
 ## Located routines and dependencies
 
@@ -21,7 +30,7 @@ These virtual addresses apply **only to this binary**, using A32 instructions.
 | Routine/site | Address | Finding and decision |
 | --- | --- | --- |
 | `judge_bindkey` | `0x234dc` | QR/bind-key parsing; not proof of offline token cryptography |
-| `webapi_do_login` | `0x434bc` | Copies response/cached data into key and configuration buffers, then saves state; do not blindly return success |
+| `webapi_do_login` | `0x434bc` | Selects/refreshes a local password, registers it with the cloud, then publishes/persists it; replaced by the local key initializer in local01 |
 | `webapi_do_bindkey` | `0x43ea8` | Runs `cloudAPI` against `/v5/ipc/qr_bind`, interprets JSON code `20000`, returns 1 on success |
 | Binding call | `0x479b4` | Caller compares return to 1, then enters spoken-success and configuration-persistence path |
 | `webapi_do_event_update` | `0x443ac` | Cloud event path; separate from local detection/tracking |
@@ -31,19 +40,19 @@ These virtual addresses apply **only to this binary**, using A32 instructions.
 | `webapi_do_tnp_on_line` | `0x47000` | Calls `/v4/tnp/on_line` and populates returned state; not a proven side-effect-free heartbeat |
 | Keepalive worker | `0x478cc` | Binding/online/login work; requires state-machine tracing |
 | `is_binded` | `0x4a3cc` | Reads state; does not itself verify a cloud token |
-| `yi_p2p_on_auth` | `0x2d3e4` | Delegates local authentication to `yi_p2p_do_auth`; retained |
+| `yi_p2p_on_auth` | `0x2d3e4` | Delegates verification to unchanged `yi_p2p_do_auth`; local01 supplies the canonical key for all credential arguments |
 
 `liboss.so` contains `yi_get_token` (`0x27c90`) and `yi_oss_cloud_init`
 (`0x2c668`). `libYiP2P.so` has `yi_p2p_init` (`0xea88`). These addresses are
 relative to their respective ELF libraries. Disabling one callback does not
 establish that either library stops WAN traffic.
 
-The login routine copies 32-byte data to `0x51b1dc` and configuration offset
-`0x74` at base `0x4b1f90`, then calls `yi_save_cfg`. The meaning and initialization
-requirements of each key must be established before replacing login. Local
-device-key authentication is separate from vendor-account login.
+The login routine copies the password to `0x51b1dc` and configuration offset
+`0x74` at base `0x4b1f90`, then calls `yi_save_cfg`. The detailed reader/writer
+and session/media mapping is now documented in [LOCAL_KEY_MAP.md](LOCAL_KEY_MAP.md).
+Local device-key authentication is separate from vendor-account login.
 
-## First precise patch
+## Historical first precise patch: debug01
 
 Profile: [`ak3918e-debug01.json`](../profiles/ak3918e-debug01.json).
 
@@ -67,10 +76,9 @@ to satisfy the installed OTA version comparison.
 The binding call at `0x479b4` contains `3b f1 ff eb` (BL binding routine).
 A later isolated experiment could replace that call with `01 00 a0 e3`
 (MOV r0,#1), retaining the caller's spoken sample, state updates, Wi-Fi and
-bind-key persistence. **This is documented, not included in the active profile.**
-It skips a cloud gate but does not supply UID/media/local keys or establish
-fresh offline provisioning. Replacing login or the whole cloud initializer
-would omit unresolved initialization.
+bind-key persistence. In debug01 this was only documented. Local01 now replaces the binding routine
+and supplies explicit key/readiness initialization while preserving factory
+transport identity. Physical first-time QR setup still needs testing.
 
 BEQ→BNE reverses a condition; it does not always take success. Skipping a call
 must define the expected result and account for omitted side effects.
@@ -86,7 +94,9 @@ not complete pointer/data-flow analysis.
 
 One public entry point: `python firmware/openyi_fw.py`. Build stages run in
 temporary Linux directories under `fakeroot`, preserving ownership and links
-when Windows/NTFS hosts the input/output. Vendor programs are never executed.
+when Windows/NTFS hosts the input/output. Vendor programs are never executed
+natively on the host; local01's selected ARM instructions run in Unicorn with
+explicitly modeled OS/device boundaries and forbidden host syscalls/network.
 
 1. Require exact source filesystem/binary SHA-256, ARM ELF architecture,
    executable-segment mapping, A32 alignment, original bytes and context.
@@ -100,7 +110,11 @@ when Windows/NTFS hosts the input/output. Vendor programs are never executed.
 7. Perform a separate mandatory verification pass: reconstruct the intended
    changes from source; decompress the final image; verify the complete tree,
    package structure, padding, hashes and inspection artifacts.
-8. Stop for inspection. Flashing is a separate explicit action.
+8. For local01/local02, reassemble every patch and run all mandatory ARM checks,
+   including the selected key/authentication/media behavior, QR parsing, local
+   binding flow and guards.
+   Rerun these checks from the final extracted image during every verification.
+9. Stop for inspection. Flashing is a separate explicit action.
 
 Individual original file mtimes are preserved rather than globally clamped.
 See [squashfs-tools 4.6 usage](https://github.com/plougher/squashfs-tools/blob/master/USAGE-4.6).
@@ -113,7 +127,7 @@ All **281 entries** (85 regular files, 186 symbolic links and 10 directories)
 passed comparison. Two independent builds matched. An additional independent
 7-Zip full decompression test and PowerShell package-hash calculation passed.
 
-Forty-seven focused tests pass, covering parser/source/patch guards, upload
+At the debug01 stage, forty-seven focused tests passed, covering parser/source/patch guards, upload
 readback, cancelled review, restoration failure, ambiguous commit without retry,
 and complete post-flash payload comparison. Two additional offline adversarial
 checks rejected a changed package byte and an unreviewed filesystem edit even
@@ -165,8 +179,11 @@ of the installed B payload against the image and is retained privately. The
 worker must be restored again. A disconnect alone is never reported as success.
 
 **Qualification:** source/assembly review and focused failure-path tests have
-passed. The full Wi-Fi flash, modified-image boot, and recovery remain **untested**.
-Checksums cannot qualify those behaviors. FTP depends on working Linux/network
+passed. The first local01 Wi-Fi flash, system reboot, version/binary checks and
+full B image readback have now passed on one unit; see the
+[hardware evidence](LOCAL01_INSTALLATION.md). The owner confirmed existing-pairing
+authentication and live video; other functions and failed-boot recovery remain
+**untested** on the patched image. FTP depends on working Linux/network
 startup, so this is not a demonstrated recovery route for a non-booting image.
 
 The installed SD script accepts `/mnt/update/update.tar`, but also deletes ISP
@@ -176,9 +193,15 @@ unit. The tool emits the observed TAR, not a guessed `home.bin` wrapper.
 
 ## Remaining cloud-free work
 
-Trace startup/P2P/key state; define local identity and key provisioning; test
-reused/altered/expired/missing/random bind keys; separate WAN P2P/object-storage
-workers from LAN media; capture traffic with Internet blocked; verify video,
-recording, PTZ, night mode, tracking and two-way audio after each change.
+The pinned candidates now implement startup/key state, owner key export,
+local-marker QR generation and separation of the identified cloud paths from
+LAN media. The mandatory offline checks exercise these selected paths.
+Following the first verified installation/reboot, remaining qualification is
+physical: camera functionality, first-time provisioning, key
+persistence across repeated/Internet-blocked power cycles, recovery, and packet capture with Internet
+blocked. Verify video, recording, PTZ, night mode, tracking and two-way audio
+after each change. Stock-token reuse/expiry behavior remains a separate unknown.
+A first cold-power-cycle reconnection with the existing saved key has now passed
+by owner observation; this does not yet qualify the Internet-blocked case.
 A return stub does not establish that all telemetry has disappeared.
 Foundational research stays in OpenYI; commercial application features stay separate.

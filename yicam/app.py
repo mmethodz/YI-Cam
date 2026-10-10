@@ -375,7 +375,7 @@ class RecorderApp(tk.Tk):
         try:
             from .protocol import Camera
             device = load_device()
-            Camera(self.ip.get().strip(), device['password'], device.get('uid'))
+            Camera(self.ip.get().strip(), device['password'], device.get('uid'), device.get('protocol', 'yi-stock'))
             device.update(ip=self.ip.get().strip(), name=self.camera_name.get().strip() or 'YI Camera')
             save_device(device)
             self.pair_status.set('Name and address saved. Existing pairing key retained.')

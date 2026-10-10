@@ -73,6 +73,7 @@ public sealed class CameraClient : IDisposable
 {
     readonly IPAddress address;
     readonly string password;
+    readonly bool plain;
     readonly string? expectedUid;
     readonly Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     readonly Aes aes = Aes.Create();
@@ -100,16 +101,17 @@ public sealed class CameraClient : IDisposable
     public ChannelReader<AudioFrame> AudioFrames => audio.Reader;
     static long Now => Environment.TickCount64;
 
-    public CameraClient(string ip, string deviceKey, string? uid = null)
+    public CameraClient(string ip, string deviceKey, string? uid = null, string protocol = CameraProtocol.Stock)
     {
         if (!IPAddress.TryParse(ip, out var parsed) || parsed.AddressFamily != AddressFamily.InterNetwork)
             throw new ArgumentException(L.Get("EnterTheCameraSPrivateIPv4Address"));
         var a = parsed.GetAddressBytes();
         if (!(a[0] == 10 || a[0] == 192 && a[1] == 168 || a[0] == 172 && a[1] is >= 16 and <= 31 || a[0] == 127))
             throw new ArgumentException(L.Get("OnlyAPrivateLANCameraAddressIsAccepted"));
-        if (Encoding.UTF8.GetByteCount(deviceKey) != 15) throw new ArgumentException(L.Get("A15ByteDevicePairingKeyIsRequired"));
-        address = parsed; password = deviceKey; expectedUid = uid;
-        aes.Key = Encoding.UTF8.GetBytes(deviceKey + "0");
+        plain = CameraProtocol.IsPlain(protocol);
+        if (!plain && Encoding.UTF8.GetByteCount(deviceKey) != 15) throw new ArgumentException(L.Get("A15ByteDevicePairingKeyIsRequired"));
+        address = parsed; password = plain ? "" : deviceKey; expectedUid = uid;
+        if (!plain) aes.Key = Encoding.UTF8.GetBytes(deviceKey + "0");
         socket.ReceiveBufferSize = 4 * 1024 * 1024;
         socket.ReceiveTimeout = 150;
         socket.Bind(new IPEndPoint(IPAddress.Any, 0));
@@ -151,6 +153,11 @@ public sealed class CameraClient : IDisposable
             }
             throw new TimeoutException(L.Get("TheCameraDidNotAnswerLANDiscovery"));
         }, cancellation);
+        if (plain)
+        {
+            try { CameraProtocol.CheckPlainFirmware(await FirmwareAsync().WaitAsync(cancellation)); }
+            catch { Dispose(); throw; }
+        }
     }
 
     (byte[] Bytes, IPEndPoint Peer)? Receive(byte[] buffer)
@@ -180,7 +187,7 @@ public sealed class CameraClient : IDisposable
         {
             requestNumber = ++number;
             string nonce = noncePrefix + Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
-            var body = Wire.Join(Wire.U16(command), Wire.U16(requestNumber), [0, 0], Wire.U16(checked((ushort)data.Length)), Wire.Auth(password, nonce), data);
+            var body = Wire.Join(Wire.U16(command), Wire.U16(requestNumber), [0, 0], Wire.U16(checked((ushort)data.Length)), plain ? CameraProtocol.PlainMarker() : Wire.Auth(password, nonce), data);
             var message = Wire.Join([2, 3, 0, 0], Wire.U32((uint)body.Length), body);
             ushort seq = sequence++;
             var packet = Wire.Packet(0xd0, Wire.Join([0xd1, 0], Wire.U16(seq), message));
@@ -192,7 +199,11 @@ public sealed class CameraClient : IDisposable
         try
         {
             var reply = await completion.Task.WaitAsync(TimeSpan.FromSeconds(4), cancellation);
-            if (reply.AuthenticationResult != 0) throw new CameraAuthenticationException(reply.AuthenticationResult);
+            if (reply.AuthenticationResult != 0)
+            {
+                if (plain) throw new NotSupportedException(L.Get("LocalPlainFirmwareRequired"));
+                throw new CameraAuthenticationException(reply.AuthenticationResult);
+            }
             if (reply.Unsupported != 0) throw new NotSupportedException(L.Format("CameraDoesNotSupportCommand0x0X4", command));
             return reply;
         }
@@ -262,14 +273,14 @@ public sealed class CameraClient : IDisposable
         else if (kind == 2 && channel == 1 && body.Length >= 24)
         {
             var data = body[24..]; int encrypted = data.Length / 16 * 16;
-            if (encrypted > 0) aes.DecryptEcb(data.AsSpan(0, encrypted), PaddingMode.None).CopyTo(data, 0);
+            if (!plain && encrypted > 0) aes.DecryptEcb(data.AsSpan(0, encrypted), PaddingMode.None).CopyTo(data, 0);
             var frame = new AudioFrame(data, Wire.U16(body.AsSpan(6)), Wire.U32(body.AsSpan(12)), Wire.U32(body.AsSpan(20)), Wire.U16(body), body[2]);
             if (!audio.Writer.TryWrite(frame)) throw new IOException(L.Get("AudioProcessingFellBehindReconnectToRecover"));
         }
         else if (kind == 1 && body.Length >= 24)
         {
             byte[] data = body[24..]; bool keyframe = channel is 2 or 4;
-            if (keyframe && data.Length >= 36) aes.DecryptEcb(data.AsSpan(4, 32), PaddingMode.None).CopyTo(data, 4);
+            if (!plain && keyframe && data.Length >= 36) aes.DecryptEcb(data.AsSpan(4, 32), PaddingMode.None).CopyTo(data, 4);
             var frame = new VideoFrame(data, Wire.U16(body.AsSpan(6)), Wire.U16(body.AsSpan(8)), Wire.U16(body.AsSpan(10)),
                 Wire.U32(body.AsSpan(12)), Wire.U32(body.AsSpan(20)), keyframe, body[5], Wire.U16(body));
             if (!video.Writer.TryWrite(frame)) throw new IOException(L.Get("VideoProcessingFellBehindReconnectToRecover"));
@@ -348,7 +359,7 @@ public sealed class CameraClient : IDisposable
             if (!Connected || !speaking) throw new IOException(L.Get("CameraSpeakerIsNotStarted"), Error);
             if (unacked.Keys.Count(key => key.Channel == 1) >= 16)
                 throw new IOException(L.Get("TalkTransportFellBehindStopAndRestartTalking"));
-            var message = TalkAudio.Message(adts, password, ++talkFrames);
+            var message = TalkAudio.Message(adts, password, ++talkFrames, plain);
             ushort seq = audioSequence++;
             var packet = Wire.Packet(0xd0, Wire.Join([0xd1, 1], Wire.U16(seq), message));
             unacked[(1, seq)] = (packet, Now, 0); Send(packet);

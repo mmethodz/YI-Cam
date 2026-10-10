@@ -211,8 +211,10 @@ storage. Exploit functionality from external research is not used by this app.
 
 The inspected mobile `GenerateAndScanBarcodeActivity` composes fresh Wi-Fi setup
 as `b=<binding-token>&s=<ssid-base64>&p=<password-base64>`. The binding token is
-the result of an account-specific vendor service request. No evidence currently
-establishes acceptance of a locally invented token or account-free first pairing.
+the result of an account-specific vendor service request. Acceptance of a locally
+invented token by the unchanged stock cloud-binding flow is not established.
+For optional patched firmware, see the separate
+[local01/local02 parser and provisioning findings](firmware/docs/LOCAL_PAIRING.md).
 
 `s` is standard padded Base64 of UTF-8 SSID bytes. For `p`, XOR each UTF-16 password
 character with the corresponding character of this repeating 70-character mask:
@@ -230,11 +232,18 @@ The mobile Wi-Fi-change path instead composes
 distinct from the protocol's 20-byte wire UID. A separate cellular/APN variant
 adds `a` and `t` fields and is not implemented.
 
-OpenYI generates PNG files locally with the open source QRCoder library. It does
-not contact a service, invent binding tokens, reset the camera, or assert that QR
-generation completes pairing. Composition is covered by synthetic fixtures;
-camera acceptance, token expiry and account-free provisioning remain unverified.
-The existing working camera was deliberately not reset. Saved QR images contain
+OpenYI generates PNG files locally with the open source QRCoder library. Stock
+modes use supplied vendor tokens/IDs. The separate OpenYI local firmware mode
+generates a random region marker; it is not a valid vendor-account credential.
+The installed scanner's actual field/Base64/XOR code accepts that local payload
+in offline execution. Unlike the mobile composition above, the camera XORs
+decoded bytes; the local generator uses ASCII passwords to preserve equivalence.
+No QR generation action contacts a service or resets the camera. On 11 October
+2026, the owner reset the local01 reference camera and scanned a locally generated
+QR: optical recognition, Wi-Fi and spoken pairing success were reported, followed
+by a working OpenYI connection. Internet was available. Subsequent native direct
+key import and live video also passed. This does not qualify stock-token expiry,
+WAN-isolated provisioning or other models. Saved QR images contain
 recoverable network credentials and are never added to the source repository.
 
 ### Binding token evidence
@@ -382,3 +391,42 @@ PC microphone speech through the native Windows sender was also physically
 confirmed on 2026-10-10 after the owner unmuted the PC input. The original cause
 of that mute is unknown; no camera speaker-volume change was needed.
 See [audio documentation](docs/AUDIO.md#talk-to-camera) for provenance and limits.
+
+## Optional local firmware candidate
+
+For the exact installed AK3918E/GC1084 build, the
+[firmware credential map](firmware/docs/LOCAL_KEY_MAP.md) identifies the stock
+password generation, persistence, cloud registration, authentication fallback,
+session-cache and media-encryption paths. The 15-character client key is separate
+from the persistent factory device/TNP identity and QR account-binding token.
+The [local01 patch candidate](firmware/docs/LOCAL01.md) preserves or generates a
+durable camera-local key and exports it through the existing OpenYI pairing-file
+format. It remains the recommended firmware profile and uses the default client
+protocol. [Local02](firmware/docs/LOCAL02.md) is an explicitly selected keyless,
+plaintext candidate with matching C#/Python mode `openyi-lan-plain-v1`; absent
+profile fields continue to select authenticated `yi-stock`. There is no automatic
+fallback to keyless operation. The camera key lifecycle is independent of any
+future remote dashboard's authentication/HTTPS connection.
+
+Actual ARM authentication/media and QR parser checks pass offline. Local01's
+[first installation and system reboot](firmware/docs/LOCAL01_INSTALLATION.md)
+passed with complete B image readback. The owner then confirmed OpenYI
+authentication and live video with the previous saved pairing and vendor app
+closed, followed by successful reconnection after a separate cold power cycle
+with that pairing and no vendor-app refresh. Internet availability was not
+controlled in this test. A physical reset/local-QR test and native direct key
+import passed on 11 October with Internet available. Canonical key and transport
+identity were read again after reset and matched the pre-reset export. Native
+LAN broadcast discovery, camera Wi-Fi reuse, verified import and live video were
+checked from the installed Windows app. Other functional checks and WAN behavior on the
+patched image remain pending. The detailed streaming/control/audio measurements
+above refer to the original firmware unless specifically updated.
+
+The native onboarding reader checks `/usr/fw_version` and the exact reviewed
+`anyka_ipc` SHA-256 before reading key material. Its FTP subset uses only login,
+binary mode, passive transfer and fixed-file reads, with bounded responses and
+downloads; a passive reply cannot redirect a data connection to another host.
+Discovery broadcasts the existing `F1 30 00 00` probe on active local IPv4
+Ethernet/Wi-Fi interfaces and retains each response's UID for import verification.
+No broadcast contains a credential. Windows Wi-Fi detection uses `WlanQueryInterface`
+and `WlanGetProfile`, never a shell command or temporary plaintext profile file.

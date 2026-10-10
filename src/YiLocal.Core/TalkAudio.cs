@@ -15,12 +15,15 @@ public static class TalkAudio
         if (configuration.SampleRate != SampleRate || configuration.Channels != 1 || adts.Length > MaximumPacketBytes)
             throw new InvalidDataException(L.Get("TalkBackRequiresAACLC16KHzMonoAtMost1024"));
     }
-    internal static byte[] Message(byte[] adts, string key, uint frameNumber)
+    internal static byte[] Message(byte[] adts, string key, uint frameNumber, bool plain = false)
     {
         Validate(adts);
         var data = (byte[])adts.Clone(); int encrypted = data.Length / 16 * 16;
-        using var cipher = Aes.Create(); cipher.Key = Encoding.UTF8.GetBytes(key + "0");
-        if (encrypted > 0) cipher.EncryptEcb(data.AsSpan(0, encrypted), PaddingMode.None).CopyTo(data, 0);
+        if (!plain)
+        {
+            using var cipher = Aes.Create(); cipher.Key = Encoding.UTF8.GetBytes(key + "0");
+            if (encrypted > 0) cipher.EncryptEcb(data.AsSpan(0, encrypted), PaddingMode.None).CopyTo(data, 0);
+        }
         var header = new byte[24]; Wire.U16(138).CopyTo(header, 0); header[2] = 2;
         // The legacy mobile sender uses a nonzero counter (20 per AAC packet), with seq/ms zero.
         // The related firmware ignores this value except for rejecting zero. Pace packets at 64 ms.

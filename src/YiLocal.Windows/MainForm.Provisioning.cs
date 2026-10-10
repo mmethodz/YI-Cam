@@ -4,11 +4,20 @@ namespace YiLocal.Windows;
 
 public sealed partial class MainForm
 {
+    LocalSetupPanel? localSetup;
     void BuildProvisioning()
     {
-        var body = Column(); Page(L.Get("SetupQRExperimental")).Controls.Add(new ScrollableColumn(body));
+        var page = Page(L.Get("Setup.Title"));
+        var modes = new TabControl { Dock = DockStyle.Fill };
+        page.Controls.Add(modes);
+        var localPage = new TabPage(L.Get("Setup.LocalTab")); modes.TabPages.Add(localPage);
+        localSetup = new LocalSetupPanel(SaveOnboardedCameraAsync, () => profile);
+        localSetup.BusyChanged += busy => { foreach (TabPage other in tabs.TabPages) if (other != page) other.Enabled = !busy; };
+        localPage.Controls.Add(localSetup);
+        var stockPage = new TabPage(L.Get("Setup.StockTab")); modes.TabPages.Add(stockPage);
+        var body = Column(); stockPage.Controls.Add(new ScrollableColumn(body));
         body.Controls.Add(Label(L.Get("GenerateAQRImageLocallySaveItAsPNGAndDisplay")));
-        body.Controls.Add(Label(L.Get("TheFormatIsReverseEngineeredFreshSetupStillNeedsAVendor")));
+        body.Controls.Add(Label(L.Get("LocalQrSetupScope")));
         var mode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 470 };
         mode.Items.AddRange([L.Get("FreshSetupExistingBindingTokenRequired"), L.Get("ChangeWiFiExperimentalT1Format")]); mode.SelectedIndex = 0;
         var ssid = new TextBox { Width = 420 };

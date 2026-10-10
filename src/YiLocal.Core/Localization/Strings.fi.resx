@@ -2176,4 +2176,193 @@ Kuvausaika {2}
     <value>{0}, purkuvirhe: {1}</value>
     <comment>RecordingPlayback: diagnostic wrapping FFmpeg error output.</comment>
   </data>
+  <data name="UnknownCameraProtocol" xml:space="preserve"><value>Tuntematon kameraprotokolla. Valitse alkuperäinen laiteohjelmisto tai OpenYI local02.</value></data>
+  <data name="LocalPlainFirmwareRequired" xml:space="preserve"><value>Avaimeton lähiverkkotila vaatii yhteensopivan OpenYI local02 -laiteohjelmiston. Toiseen protokollaan ei vaihdettu automaattisesti.</value></data>
+  <data name="LocalPlainMode" xml:space="preserve"><value>OpenYI local02: avaimeton, salaamaton lähiverkko (kokeellinen)</value></data>
+  <data name="SavedKeylessCamera" xml:space="preserve"><value>Tallennettu kamera: {0}. OpenYI local02 käyttää avaimetonta, salaamatonta lähiverkkoyhteyttä. Valmistajan tiliä tai paritusavaimen tuontia ei tarvita.</value></data>
+  <data name="LocalQrRegionRequired" xml:space="preserve"><value>Valitse paikallisen käyttöönoton alueeksi EU, US tai CN.</value></data>
+  <data name="LocalQrNetworkLimits" xml:space="preserve"><value>Wi-Fi-verkon nimessä ei saa olla ohjausmerkkejä. Salasanassa on oltava 8–63 tulostettavaa ASCII-merkkiä. Jätä salasana tyhjäksi, jos verkko on avoin.</value></data>
+  <data name="LocalQrSetupScope" xml:space="preserve"><value>Alkuperäinen laiteohjelmisto vaatii valmistajan myöntämän sidontatunnisteen. Muokattu OpenYI local01/local02 -laiteohjelmisto voi käyttää paikallisesti luotua käyttöönottotunnistetta. Käyttöönotto muokatulla laiteohjelmistolla on vielä kokeellinen.</value></data>
+  <data name="LocalQrMode" xml:space="preserve"><value>OpenYI-laiteohjelmisto — käyttöönotto ilman tiliä (kokeellinen)</value></data>
+  <data name="LocalQrRegion" xml:space="preserve"><value>OpenYI:n paikallisen käyttöönoton alue</value></data>
+  <data name="Setup.Title" xml:space="preserve">
+    <value>Kameran pariliitos</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.LocalTab" xml:space="preserve">
+    <value>OpenYI-laiteohjelmiston käyttöönotto</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.StockTab" xml:space="preserve">
+    <value>Alkuperäinen laiteohjelmisto · lisäasetukset</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ManualTab" xml:space="preserve">
+    <value>Manuaalinen käyttöönotto / olemassa oleva profiili</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.LocalOnly" xml:space="preserve">
+    <value>Kameraan on asennettava OpenYI local01 -laiteohjelmisto. Valitse Wi-Fi-verkko, näytä QR-koodi käyttöönottotilassa olevalle kameralle ja yhdistä. Valmistajan tiliä tai pariliitostunnusta ei tarvita.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.StepWifi" xml:space="preserve">
+    <value>1. Yhdistä kamera Wi-Fi-verkkoon</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.StepConnect" xml:space="preserve">
+    <value>2. Etsi ja lisää kamera</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.UsePcWifi" xml:space="preserve">
+    <value>Käytä tietokoneen Wi-Fi-verkkoa</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.UseCameraWifi" xml:space="preserve">
+    <value>Käytä tallennetun kameran Wi-Fiä</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.OpenNetwork" xml:space="preserve">
+    <value>Verkossa ei ole salasanaa</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ShowPassword" xml:space="preserve">
+    <value>Näytä salasana</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ShowQr" xml:space="preserve">
+    <value>Näytä QR-koodi</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.QrPreview" xml:space="preserve">
+    <value>Wi-Fi-käyttöönoton QR-koodi</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ScanInstructions" xml:space="preserve">
+    <value>Aseta kamera QR-käyttöönottotilaan ja näytä sille tämä koodi. Kun kamera ilmoittaa Wi-Fi-yhteyden ja pariliitoksen onnistuneen, etsi kamera. Voit myös tallentaa kuvan ja näyttää sen puhelimella.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.QrPrivacy" xml:space="preserve">
+    <value>QR-koodi sisältää Wi-Fi-verkon tunnukset. Ne säilyvät vain tällä sivulla, ellet tallenna kuvaa.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.QrSaved" xml:space="preserve">
+    <value>Käyttöönoton QR-kuva tallennettu. Näytä se kameralle puhelimen näytöltä.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.FindCameras" xml:space="preserve">
+    <value>Etsi kamerat</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.FoundCameras" xml:space="preserve">
+    <value>Löytyi {0} kameraa. Valitse kamera, anna sille nimi ja yhdistä.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoneFound" xml:space="preserve">
+    <value>Kamerat eivät vastanneet. Odota Wi-Fi-käyttöönoton valmistumista ja yritä uudelleen tai kirjoita kameran lähiverkko-osoite. Tietokoneen ja kameran on oltava samassa lähiverkossa.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ConnectSave" xml:space="preserve">
+    <value>Yhdistä ja tallenna kamera</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Saved" xml:space="preserve">
+    <value>Kamera vahvistettu ja tallennettu. Sen paikallinen avain on salattu tälle Windows-käyttäjätilille.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Advanced" xml:space="preserve">
+    <value>Lisäasetukset…</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenancePassword" xml:space="preserve">
+    <value>Kameran ylläpitosalasana</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenanceScope" xml:space="preserve">
+    <value>Oletus toimii testatulla kameralla. Vaihda se vain, jos kameran ylläpitosalasanaa on muutettu. Pariliitos lukee avaimen paikallisen FTP-ylläpitoyhteyden kautta; tätä siirtoa ei salata.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Working" xml:space="preserve">
+    <value>Käsitellään…</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Cancel" xml:space="preserve">
+    <value>Peruuta</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Canceled" xml:space="preserve">
+    <value>Käyttöönoton toiminto peruttiin tai aikakatkaistiin. Voit yrittää uudelleen.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.WaitOrCancel" xml:space="preserve">
+    <value>Odota kameran käyttöönoton valmistumista tai peruuta se Kameran pariliitos -välilehdellä.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoSavedCamera" xml:space="preserve">
+    <value>Kameraa ei ole tallennettu. Lisää kamera OpenYI-laiteohjelmiston käyttöönotossa tai tuo olemassa oleva profiili alta.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.OpenOnboarding" xml:space="preserve">
+    <value>Ota OpenYI-kamera käyttöön…</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.PcWifiUnavailable" xml:space="preserve">
+    <value>Windows ei voinut lukea nykyistä Wi-Fi-yhteyttä. Kirjoita verkon tiedot tai käytä tallennetun kameran Wi-Fiä.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoPcWifi" xml:space="preserve">
+    <value>Tietokoneella ei ole aktiivista Wi-Fi-yhteyttä. Kirjoita verkon tiedot tai käytä tallennetun OpenYI-kameran Wi-Fiä.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.WifiPermission" xml:space="preserve">
+    <value>Windows esti Wi-Fi-verkon tunnistuksen. Salli työpöytäsovellusten sijaintitietojen käyttö Windowsin asetuksissa tai kirjoita verkon tiedot itse.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.EnterWifiPassword" xml:space="preserve">
+    <value>Kirjoita Wi-Fi-salasana tai valitse avoimelle verkolle erikseen ”Verkossa ei ole salasanaa”.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.PcWifiLoaded" xml:space="preserve">
+    <value>Nykyisen Wi-Fi-verkon tiedot täytetty. Tarkista, että verkko on käytettävissä kameran tukemalla Wi-Fi-taajuudella.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoExistingCamera" xml:space="preserve">
+    <value>Tallennettua kameraa ei ole käytettävissä. Tunnista tietokoneen Wi-Fi tai kirjoita verkon tiedot.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.CameraWifiLoaded" xml:space="preserve">
+    <value>Wi-Fi-verkon tiedot luettu suoraan tallennetusta OpenYI-kamerasta.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.WifiUnavailable" xml:space="preserve">
+    <value>Kameran Wi-Fi-asetuksia ei voitu lukea yksiselitteisesti. Kirjoita ne itse.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.LocalFirmwareRequired" xml:space="preserve">
+    <value>Kamera tarvitsee tuetun OpenYI local01 -laiteohjelmiston ennen paikallista käyttöönottoa. Olemassa olevia profiileja ei ole muutettu.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.FirmwareMismatch" xml:space="preserve">
+    <value>Kameran avainta käsittelevä ohjelmisto ei vastaa tarkistettua OpenYI-laiteohjelmistoa. Avainta ei tuotu.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.InvalidOwnerKey" xml:space="preserve">
+    <value>Kameran paikallinen omistaja-avain puuttuu tai on virheellinen. Profiileja ei korvattu.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.InvalidIdentity" xml:space="preserve">
+    <value>Kameran yhteystunnus puuttuu tai on ristiriitainen. Profiileja ei korvattu.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenancePasswordInvalid" xml:space="preserve">
+    <value>Kirjoita kelvollinen kameran ylläpitosalasana.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenanceLoginFailed" xml:space="preserve">
+    <value>Kameran ylläpitokirjautuminen epäonnistui. Tarkista salasana lisäasetuksista.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenanceReadFailed" xml:space="preserve">
+    <value>Kameran paikallisia käyttöönottotiedostoja ei voitu lukea. Tarkista yhteys ja laiteohjelmiston yhteensopivuus ja yritä uudelleen.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
 </root>

@@ -2176,4 +2176,193 @@ Captured {2}
     <value>{0} decoder: {1}</value>
     <comment>RecordingPlayback: diagnostic wrapping FFmpeg error output.</comment>
   </data>
+  <data name="UnknownCameraProtocol" xml:space="preserve"><value>Unknown camera protocol. Select stock firmware or OpenYI local02 explicitly.</value></data>
+  <data name="LocalPlainFirmwareRequired" xml:space="preserve"><value>Keyless LAN mode requires the matching OpenYI local02 firmware. No protocol fallback was attempted.</value></data>
+  <data name="LocalPlainMode" xml:space="preserve"><value>OpenYI local02: keyless, unencrypted LAN (experimental)</value></data>
+  <data name="SavedKeylessCamera" xml:space="preserve"><value>Saved camera: {0}. OpenYI local02 uses keyless, unencrypted LAN access. No vendor account or pairing-key import is needed.</value></data>
+  <data name="LocalQrRegionRequired" xml:space="preserve"><value>Select EU, US or CN for the local setup region.</value></data>
+  <data name="LocalQrNetworkLimits" xml:space="preserve"><value>Use a Wi-Fi name without control characters and an 8–63 character ASCII password, or leave the password empty for an open network.</value></data>
+  <data name="LocalQrSetupScope" xml:space="preserve"><value>Stock firmware requires an existing vendor binding token. Patched OpenYI local01/local02 firmware can use a locally generated setup marker. Physical setup with the patched firmware remains experimental.</value></data>
+  <data name="LocalQrMode" xml:space="preserve"><value>OpenYI local firmware — account-free setup (experimental)</value></data>
+  <data name="LocalQrRegion" xml:space="preserve"><value>Region for OpenYI local setup</value></data>
+  <data name="Setup.Title" xml:space="preserve">
+    <value>Camera pairing</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.LocalTab" xml:space="preserve">
+    <value>OpenYI firmware setup</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.StockTab" xml:space="preserve">
+    <value>Original firmware · advanced</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ManualTab" xml:space="preserve">
+    <value>Manual setup / existing profile</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.LocalOnly" xml:space="preserve">
+    <value>OpenYI local01 firmware is required. Choose the Wi-Fi network, show the QR to the camera in setup mode, then connect. No vendor account or pairing ID is needed.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.StepWifi" xml:space="preserve">
+    <value>1. Connect the camera to Wi-Fi</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.StepConnect" xml:space="preserve">
+    <value>2. Find and add the camera</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.UsePcWifi" xml:space="preserve">
+    <value>Use this PC’s Wi-Fi</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.UseCameraWifi" xml:space="preserve">
+    <value>Use saved camera’s Wi-Fi</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.OpenNetwork" xml:space="preserve">
+    <value>Network has no password</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ShowPassword" xml:space="preserve">
+    <value>Show password</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ShowQr" xml:space="preserve">
+    <value>Show QR code</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.QrPreview" xml:space="preserve">
+    <value>Wi-Fi setup QR code</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ScanInstructions" xml:space="preserve">
+    <value>Put the camera in QR setup mode and show it this code. After “Wi-Fi connected” and “pairing successful”, find the camera below. You can also save the image and display it on a phone.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.QrPrivacy" xml:space="preserve">
+    <value>The QR contains your Wi-Fi credentials. They are kept only on this page unless you save the image.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.QrSaved" xml:space="preserve">
+    <value>Setup QR image saved. Display it on your phone for the camera.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.FindCameras" xml:space="preserve">
+    <value>Find cameras</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.FoundCameras" xml:space="preserve">
+    <value>Found {0} camera(s). Choose one, give it a name and connect.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoneFound" xml:space="preserve">
+    <value>No cameras answered. Wait for Wi-Fi setup to finish and retry, or enter the camera’s LAN address. Your PC and camera must share the local network.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.ConnectSave" xml:space="preserve">
+    <value>Connect and save camera</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Saved" xml:space="preserve">
+    <value>Camera verified and saved. Its local key is encrypted for this Windows account.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Advanced" xml:space="preserve">
+    <value>Advanced settings…</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenancePassword" xml:space="preserve">
+    <value>Camera maintenance password</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenanceScope" xml:space="preserve">
+    <value>The default works with the tested camera. Change it only if the camera’s maintenance password was changed. Pairing reads the key through the local FTP maintenance interface; this transfer is not encrypted.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Working" xml:space="preserve">
+    <value>Working…</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.Canceled" xml:space="preserve">
+    <value>Setup operation canceled or timed out. You can retry.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.WaitOrCancel" xml:space="preserve">
+    <value>Wait for camera setup to finish, or cancel it on the Camera pairing tab.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoSavedCamera" xml:space="preserve">
+    <value>No camera saved. Use OpenYI firmware setup to add a camera, or import an existing profile below.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.OpenOnboarding" xml:space="preserve">
+    <value>Set up an OpenYI camera…</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.PcWifiUnavailable" xml:space="preserve">
+    <value>Windows could not read the current Wi-Fi connection. Enter the network, or use a saved camera’s Wi-Fi.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoPcWifi" xml:space="preserve">
+    <value>This PC has no active Wi-Fi connection. Enter the network, or use a saved OpenYI camera’s Wi-Fi.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.WifiPermission" xml:space="preserve">
+    <value>Windows denied Wi-Fi detection. Allow location access for desktop apps in Windows settings, or enter the network manually.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.EnterWifiPassword" xml:space="preserve">
+    <value>Enter the Wi-Fi password, or explicitly select “Network has no password” for an open network.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.PcWifiLoaded" xml:space="preserve">
+    <value>Current Wi-Fi details filled in. Check that this network is available on the camera’s supported Wi-Fi band.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.NoExistingCamera" xml:space="preserve">
+    <value>No saved camera is available. Detect the PC’s Wi-Fi or enter the network details.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.CameraWifiLoaded" xml:space="preserve">
+    <value>Wi-Fi details read directly from the saved OpenYI camera.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.WifiUnavailable" xml:space="preserve">
+    <value>The camera’s Wi-Fi settings could not be read unambiguously. Enter them manually.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.LocalFirmwareRequired" xml:space="preserve">
+    <value>This camera needs the supported OpenYI local01 firmware before local onboarding. Existing profiles have not been changed.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.FirmwareMismatch" xml:space="preserve">
+    <value>The camera’s key-handling software does not match the reviewed OpenYI firmware. No key was imported.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.InvalidOwnerKey" xml:space="preserve">
+    <value>The camera’s local owner key is missing or invalid. No profile was replaced.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.InvalidIdentity" xml:space="preserve">
+    <value>The camera’s transport identity is missing or ambiguous. No profile was replaced.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenancePasswordInvalid" xml:space="preserve">
+    <value>Enter a valid camera maintenance password.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenanceLoginFailed" xml:space="preserve">
+    <value>Camera maintenance login failed. Check the password under Advanced settings.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
+  <data name="Setup.MaintenanceReadFailed" xml:space="preserve">
+    <value>Could not read the camera’s local setup files. Check connectivity and firmware compatibility, then retry.</value>
+    <comment>Local camera onboarding</comment>
+  </data>
 </root>

@@ -157,22 +157,50 @@ public sealed partial class MainForm
             using var dialog = new CameraEditor(existing?.Profile);
             if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Verified is not { } verified)
                 return;
-            cameraRegistry.EnsureDistinct(verified, profile, existing?.Registration.Id);
-            verified.KeepControlsFrom(existing?.Profile);
-            bool resumeRecording = existing?.Recording == true;
-            if (existing is not null) await existing.Stop();
-            var registration = cameraRegistry.SaveVerified(verified, profile, existing?.Registration.Id);
-            if (existing is not null) { extraCameras.Remove(existing); await existing.DisposeAsync(); }
-            AddCameraTile(registration, verified); ArrangeCameras();
-            var added = extraCameras[^1];
-            if (multipleCameras.Checked && registration.Enabled)
-            {
-                added.Start(preferences.Ffmpeg);
-                if (resumeRecording) added.Session!.StartRecording(CameraRegistry.RecordingFolder(preferences.Folder, registration.Id), preferences.Storage, preferences.Recording, preferences.Ffmpeg);
-            }
-            status.Text = L.Get("AdditionalCameraVerifiedAndSavedMultiCameraHardwareCompatibilityRemainsExperimental");
+            await SaveExtraCameraAsync(existing, verified);
         }
         finally { gridBusy = false; }
+    }
+    async Task SaveOnboardedCameraAsync(DeviceProfile verified)
+    {
+        if (gridBusy || importing) throw new InvalidOperationException(L.Get("Setup.WaitOrCancel"));
+        if (profile is null || string.Equals(verified.Uid, profile.Uid, StringComparison.OrdinalIgnoreCase))
+        {
+            await UpdatePairingAsync(_ => Task.FromResult(verified));
+            return;
+        }
+        if (cameraRegistry is null) throw new IOException(L.Get("ResolveTheCameraRegistryErrorBeforeAddingACamera"));
+        gridBusy = true;
+        try
+        {
+            var existing = extraCameras.FirstOrDefault(c => string.Equals(c.Profile.Uid, verified.Uid, StringComparison.OrdinalIgnoreCase));
+            await SaveExtraCameraAsync(existing, verified);
+            // A newly onboarded camera joins the grid without replacing the primary camera.
+            multipleCameras.Checked = preferences.ExperimentalMultipleCameras = true; preferences.Save();
+            foreach (var camera in extraCameras) camera.Connect.Enabled = camera.Registration.Enabled;
+            var added = extraCameras[^1];
+            if (added.Registration.Enabled && added.Session is null) added.Start(preferences.Ffmpeg);
+            tabs.SelectedIndex = 7;
+        }
+        finally { gridBusy = false; }
+    }
+    async Task SaveExtraCameraAsync(GridCamera? existing, DeviceProfile verified)
+    {
+        if (cameraRegistry is null) throw new IOException(L.Get("ResolveTheCameraRegistryErrorBeforeAddingACamera"));
+        cameraRegistry.EnsureDistinct(verified, profile, existing?.Registration.Id);
+        verified.KeepControlsFrom(existing?.Profile);
+        bool resumeRecording = existing?.Recording == true;
+        if (existing is not null) await existing.Stop();
+        var registration = cameraRegistry.SaveVerified(verified, profile, existing?.Registration.Id);
+        if (existing is not null) { extraCameras.Remove(existing); await existing.DisposeAsync(); }
+        AddCameraTile(registration, verified); ArrangeCameras();
+        var added = extraCameras[^1];
+        if (multipleCameras.Checked && registration.Enabled)
+        {
+            added.Start(preferences.Ffmpeg);
+            if (resumeRecording) added.Session!.StartRecording(CameraRegistry.RecordingFolder(preferences.Folder, registration.Id), preferences.Storage, preferences.Recording, preferences.Ffmpeg);
+        }
+        status.Text = L.Get("AdditionalCameraVerifiedAndSavedMultiCameraHardwareCompatibilityRemainsExperimental");
     }
     async Task ShowExtraControls(GridCamera camera)
     {
