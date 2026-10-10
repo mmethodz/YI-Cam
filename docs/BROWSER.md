@@ -14,7 +14,7 @@ and continuous, low-rate, timelapse or motion type. The motion filter is ready
 for tagged recordings; it does not imply a qualified motion trigger exists.
 
 Select a completed recording and use Play/Pause, Stop or the seek bar. The
-embedded player uses FFmpeg, with a single decoder process for both tracks.
+embedded player uses independent FFmpeg video/audio pipes with the same seek origin.
 For sound, it maps camera timestamp gaps to silence and presents video against
 the Windows audio device's sample position. The 25 fps display conversion may
 repeat pictures from a low-rate clip; it does not change the saved recording.
@@ -41,6 +41,17 @@ the middle of a picture's two-second hold shows the correct picture rather
 than the next one. Auditory/lip-sync judgment still requires
 physical confirmation; numerical timestamps and a running audio device are not
 by themselves an end-to-end latency measurement.
+
+The initial single-process player could deadlock before its first picture on
+encoded recordings with audio: one output filled before the other could advance
+the playback clock. This was reproduced on a 5 fps CRF-28/AAC recording that
+played successfully in an external player. Independent decoder pipes remove
+that circular wait while retaining bounded buffers and the shared audio clock.
+`scripts/check_player_integration.py` exercises the actual Windows player at
+source/5/1/0.5 fps, with audio, seeking and silent playback. A paced silent audio
+sink tests the pipes without requiring a speaker device or playing fixture tones.
+The formerly stalled physical-camera 5 fps CRF-28/AAC clip subsequently advanced
+past two minutes in the Windows player; the owner also confirmed correct playback.
 
 The playback clock uses Microsoft's documented
 [waveOutGetPosition sample-time query](https://learn.microsoft.com/en-us/windows/win32/api/mmeapi/nf-mmeapi-waveoutgetposition).

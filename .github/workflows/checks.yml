@@ -24,3 +24,5 @@ jobs:
       - run: python scripts/check_media_integration.py
       - run: python scripts/check_recording_profiles.py
       - run: python scripts/check_audio_integration.py
+      - if: runner.os == 'Windows'
+        run: python scripts/check_player_integration.py

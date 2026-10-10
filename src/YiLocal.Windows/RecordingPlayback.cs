@@ -1,69 +1,89 @@
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Globalization;
-using System.IO.Pipes;
 using System.Runtime.InteropServices;
 
 namespace YiLocal.Windows;
 
-/// <summary>One decoder for both tracks. Video follows the actual speaker sample clock when sound is enabled.</summary>
+/// <summary>Independent bounded decoder pipes, sharing the seek origin and speaker sample clock.</summary>
 internal sealed class RecordingPlayback : IDisposable
 {
     public const int Width = 960, Height = 540;
     readonly Process process;
+    readonly Process? audioProcess;
     readonly CancellationTokenSource stop = new();
-    readonly NamedPipeServerStream? audioPipe;
     readonly Stopwatch clock = new();
-    readonly Task videoTask, audioTask, errors, completion;
+    readonly Task videoTask, audioTask, errors, audioErrors, completion;
     readonly TaskCompletionSource ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly double start, duration;
     readonly bool sound;
-    PcmOutput? speakers;
+    readonly Func<IPcmPlaybackOutput> audioOutput;
+    IPcmPlaybackOutput? speakers;
     Bitmap? latest;
-    string errorText = "";
+    readonly object errorLock = new();
     public string? Error { get; private set; }
     public bool Finished => completion.IsCompleted;
     public double Position => Math.Min(duration, start + (sound ? speakers?.Seconds ?? 0 : clock.Elapsed.TotalSeconds));
 
-    public RecordingPlayback(string executable, string path, double start, double duration, bool sound)
+    public RecordingPlayback(string executable, string path, double start, double duration, bool sound,
+        Func<IPcmPlaybackOutput>? audioOutput = null)
     {
         this.start = start; this.duration = duration; this.sound = sound;
-        string pipeName = "openyi-play-" + Guid.NewGuid().ToString("N");
-        if (sound) audioPipe = new(pipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        this.audioOutput = audioOutput ?? (() => new PcmOutput());
         var info = MediaTools.StartInfo(executable); info.RedirectStandardOutput = true;
         void Add(params string[] args) { foreach (string arg in args) info.ArgumentList.Add(arg); }
         string remaining = Math.Max(0.04, duration - start).ToString("0.######", CultureInfo.InvariantCulture);
         Add("-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-ss", start.ToString("0.######", CultureInfo.InvariantCulture), "-noaccurate_seek", "-i", path,
             "-map", "0:v:0", "-vf", $"scale={Width}:{Height}:force_original_aspect_ratio=decrease,pad={Width}:{Height}:(ow-iw)/2:(oh-ih)/2,fps=25:start_time=0",
             "-t", remaining, "-an", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1");
-        if (sound)
-            Add("-map", "0:a:0", "-vn", "-af", "aresample=16000:async=1:first_pts=0,apad", "-t", remaining,
-                "-ac", "1", "-ar", "16000", "-f", "s16le", "-flush_packets", "1", @"\\.\pipe\" + pipeName);
-        try { process = Process.Start(info) ?? throw new IOException("Could not start the recording player."); }
-        catch { audioPipe?.Dispose(); stop.Dispose(); throw; }
-        errors = Task.Run(async () =>
+        process = Process.Start(info) ?? throw new IOException("Could not start the recording player.");
+        try
         {
-            try
+            if (sound)
             {
-                while (await process.StandardError.ReadLineAsync(stop.Token) is { } line)
-                { errorText = (errorText + line + "\n"); if (errorText.Length > 2000) errorText = errorText[^2000..]; }
+                // A single FFmpeg process can fill its video pipe before emitting audio
+                // (or vice versa). Pacing either pipe then waits on the other forever.
+                // Separate demuxers retain the same timestamp origin without that cycle.
+                var audioInfo = MediaTools.StartInfo(executable, "-hide_banner", "-loglevel", "error", "-nostdin",
+                    "-ss", start.ToString("0.######", CultureInfo.InvariantCulture), "-noaccurate_seek", "-i", path,
+                    "-map", "0:a:0", "-vn", "-af", "aresample=16000:async=1:first_pts=0,apad", "-t", remaining,
+                    "-ac", "1", "-ar", "16000", "-f", "s16le", "-flush_packets", "1", "pipe:1");
+                audioInfo.RedirectStandardOutput = true;
+                audioProcess = Process.Start(audioInfo) ?? throw new IOException("Could not start the recording audio decoder.");
             }
-            catch (OperationCanceledException) { }
-        });
+        }
+        catch { Kill(); process.Dispose(); stop.Dispose(); throw; }
+        errors = ObserveDecoder(process, "Video");
+        audioErrors = audioProcess is null ? Task.CompletedTask : ObserveDecoder(audioProcess, "Audio");
         videoTask = Task.Run(ReadVideoAsync);
         audioTask = sound ? Task.Run(ReadAudioAsync) : Task.CompletedTask;
         completion = Task.Run(async () =>
         {
             try
             {
-                await process.WaitForExitAsync(stop.Token);
-                await errors;
-                if (process.ExitCode != 0) throw new IOException(errorText.Length > 0 ? errorText : "Playback decoder failed.");
-                await Task.WhenAll(videoTask, audioTask);
+                await Task.WhenAll(videoTask, audioTask, errors, audioErrors);
             }
             catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException)
             { if (!stop.IsCancellationRequested) Error = e.Message; stop.Cancel(); Kill(); }
         });
+    }
+    async Task ObserveDecoder(Process decoder, string track)
+    {
+        string text = "";
+        try
+        {
+            while (await decoder.StandardError.ReadLineAsync(stop.Token) is { } line)
+            { text += line + "\n"; if (text.Length > 2000) text = text[^2000..]; }
+            await decoder.WaitForExitAsync(stop.Token);
+            if (decoder.ExitCode != 0) throw new IOException(track + " decoder: " + (text.Length > 0 ? text : "Playback failed."));
+        }
+        catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException)
+        { Fail(e); }
+    }
+    void Fail(Exception error)
+    {
+        lock (errorLock) { if (!stop.IsCancellationRequested) Error ??= error.Message; stop.Cancel(); }
+        ready.TrySetResult(); Kill();
     }
     async Task ReadVideoAsync()
     {
@@ -84,15 +104,14 @@ internal sealed class RecordingPlayback : IDisposable
             }
         }
         catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException)
-        { if (!stop.IsCancellationRequested) Error = e.Message; stop.Cancel(); Kill(); }
+        { Fail(e); }
         finally { ready.TrySetResult(); }
     }
     async Task ReadAudioAsync()
     {
         try
         {
-            await audioPipe!.WaitForConnectionAsync(stop.Token);
-            using var output = new PcmOutput(); speakers = output;
+            using var output = audioOutput(); speakers = output;
             await ready.Task.WaitAsync(stop.Token);
             var buffer = new byte[2048];
             while (!stop.IsCancellationRequested)
@@ -100,7 +119,7 @@ internal sealed class RecordingPlayback : IDisposable
                 int count = 0;
                 while (count < buffer.Length)
                 {
-                    int n = await audioPipe.ReadAsync(buffer.AsMemory(count), stop.Token);
+                    int n = await audioProcess!.StandardOutput.BaseStream.ReadAsync(buffer.AsMemory(count), stop.Token);
                     if (n == 0) break;
                     count += n;
                 }
@@ -110,14 +129,19 @@ internal sealed class RecordingPlayback : IDisposable
             await output.DrainAsync(stop.Token);
         }
         catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException)
-        { if (!stop.IsCancellationRequested) Error = e.Message; stop.Cancel(); Kill(); }
+        { Fail(e); }
     }
     public Bitmap? Take() => Interlocked.Exchange(ref latest, null);
-    void Kill() { try { if (!process.HasExited) process.Kill(true); } catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { } }
+    void Kill()
+    {
+        foreach (var decoder in new[] { process, audioProcess })
+            try { if (decoder is not null && !decoder.HasExited) decoder.Kill(true); }
+            catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+    }
     public void Dispose()
     {
-        stop.Cancel(); ready.TrySetResult(); Kill(); audioPipe?.Dispose();
-        try { Task.WaitAll([videoTask, audioTask, errors, completion], 2000); } catch (AggregateException) { }
-        Interlocked.Exchange(ref latest, null)?.Dispose(); process.Dispose(); stop.Dispose();
+        stop.Cancel(); ready.TrySetResult(); Kill();
+        try { Task.WaitAll([videoTask, audioTask, errors, audioErrors, completion], 2000); } catch (AggregateException) { }
+        Interlocked.Exchange(ref latest, null)?.Dispose(); process.Dispose(); audioProcess?.Dispose(); stop.Dispose();
     }
 }

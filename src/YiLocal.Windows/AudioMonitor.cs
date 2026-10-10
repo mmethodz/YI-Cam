@@ -63,7 +63,14 @@ internal sealed class AudioMonitor : IDisposable
 }
 
 /// <summary>Windows speaker output for 16 kHz mono signed PCM; at most 640 ms queued.</summary>
-internal sealed class PcmOutput : IDisposable
+internal interface IPcmPlaybackOutput : IDisposable
+{
+    double Seconds { get; }
+    Task WriteAsync(byte[] pcm, CancellationToken cancellation);
+    Task DrainAsync(CancellationToken cancellation);
+}
+
+internal sealed class PcmOutput : IPcmPlaybackOutput
 {
     [StructLayout(LayoutKind.Sequential, Pack = 2)] struct Format
     { public ushort Tag, Channels; public uint Rate, BytesPerSecond; public ushort Align, Bits, Extra; }
