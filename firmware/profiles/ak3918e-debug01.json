@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "ak3918e-debug01",
+  "label": "AK3918E / GC1084: disable debug-report uploads (experiment 01)",
+  "qualification": "Offline patch candidate only. Does not yet remove all cloud traffic or establish offline fresh pairing. Not boot-tested.",
+  "source_version": "6.0.24.10_202401091113",
+  "target_version": "6.0.24.10_202610100001",
+  "epoch": 1704770025,
+  "source_squashfs_sha256": "1d1b57886c18d14ff74b692de109bcbcf06b19fc30693d5ab7882d009fe40993",
+  "binaries": [
+    {
+      "path": "bin/anyka_ipc",
+      "source_sha256": "4936afbacdebbbe768bd7537926b04cf1f43e3bd29135290488a214fc49e7c89",
+      "result_sha256": "0849c22507bf07039c5c08de45f921819e5452fea8094558a80e473d2db0b15e",
+      "patches": [
+        {
+          "name": "yi_report_debug_strings: return before network report",
+          "mode": "A32",
+          "address": "0x46ea8",
+          "offset": "0x3eea8",
+          "before": "0c002de9f0402de9",
+          "after": "0000a0e31eff2fe1",
+          "context_offset": "0x3ee98",
+          "context": "e6820900b4810900640c00002d9e09000c002de9f0402de9c2de4de20cd04de228508de2424e8de2",
+          "assembly": "MOV r0, #0; BX lr",
+          "reason": "The original wrapper returns 0 after reporting; entry replacement avoids its varargs prologue and preserves the caller ABI."
+        }
+      ]
+    }
+  ]
+}

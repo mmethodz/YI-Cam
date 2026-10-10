@@ -1,5 +1,11 @@
 # Observed YI TNP LAN protocol
 
+Firmware-side analysis, exact-build patches and the interactive build/verify/
+inspect/flash tool are documented separately in the
+[OpenYI firmware workshop](firmware/README.md). They do not change the verified
+desktop protocol implementation. The first offline patch candidate is not yet
+a qualified cloud-free firmware replacement.
+
 This document describes interoperability observations for an owned camera. Code
 in `yicam/protocol.py` and `src/YiLocal.Core/CameraClient.cs` implements these observations. No vendor binary or
 cloud connection is needed after obtaining the paired device key.

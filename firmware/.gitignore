@@ -1,0 +1,11 @@
+.local/
+build/
+*.bin
+*.elf
+*.sqsh4
+*.squashfs
+*.tar
+*.tgz
+*.zip
+*.partial
+__pycache__/

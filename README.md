@@ -69,6 +69,12 @@ makes no cloud requests and exposes no HTTP server. The camera firmware may stil
 contact vendor services; this app does not change the camera's network settings.
 Router-level Internet blocking has not been tested.
 
+An optional [firmware research workshop](firmware/README.md) provides one
+interactive Python tool for reproducible patch builds, mandatory offline
+verification, image inspection and an experimental Wi-Fi installer. Its first
+candidate suppresses debug reports; it is not yet a qualified cloud-free firmware
+replacement. The desktop app needs no firmware patch.
+
 **Cameras · experimental** adds independent camera configurations and a grid.
 The primary camera keeps its existing pairing and recording paths. Additional
 cameras have separate encrypted profiles, sessions, controls and catalogues, and
