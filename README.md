@@ -94,6 +94,8 @@ has not been flashed. Normal desktop use with
 stock firmware remains supported. Local01 retains the same authenticated protocol;
 the default onboarding page requires OpenYI firmware.
 
+OpenYI firmware is fully local. An Internet connection is not required for pairing, viewing, control, recording, or normal operation.
+
 **Cameras · experimental** adds independent camera configurations and a grid.
 The primary camera keeps its existing pairing and recording paths. Additional
 cameras have separate encrypted profiles, sessions, controls and catalogues, and
