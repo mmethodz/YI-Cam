@@ -171,8 +171,15 @@ The native Windows microphone path was also exercised against the real camera:
 the UI reached **Mic live**, Escape released the input and encoder, and the live
 preview continued near 15 fps. A simultaneous 77.62-second balanced 5 fps recording
 finalized and independently decoded 388 video frames and 1201 AAC frames with
-strictly increasing timestamps. Audible speech from the selected PC input remains
-an owner check; the successful tone confirmations above used the Python sender.
+strictly increasing timestamps.
+
+On 2026-10-10, the owner physically confirmed that PC microphone speech played
+through the camera speaker using the native Windows app after unmuting the PC
+microphone. Windows had reported the input as muted despite a high volume setting.
+The cause of the original mute is unknown. This confirms the native capture,
+encoding and speaker-transport path on the tested camera; the earlier tone
+confirmations above used the Python sender.
+
 Long intercom sessions, all microphone drivers, simultaneous hardware cameras and
 the effect of half-duplex speaker mode on camera microphone gain/muting remain
 unqualified. The recorder continues using the received camera AAC and timestamps;

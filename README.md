@@ -86,7 +86,7 @@ Do not reset a working camera to test this feature.
 | Infrared | IR activates automatically in darkness; red LEDs and filter click physically confirmed |
 | Colour night vision | Extra visible lights activate; physically confirmed |
 | Automatic lighting | Mode accepted and read back; trigger behavior not yet characterized |
-| Talk to camera | 16 kHz mono AAC speaker playback physically confirmed; click to start/stop the PC microphone |
+| Talk to camera | Native Windows PC microphone → camera speaker physically confirmed; 16 kHz mono AAC |
 
 Forced IR in a bright room is not established. The generic day/night command
 accepted values but had no observed physical effect on this model; the app uses

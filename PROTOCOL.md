@@ -363,4 +363,7 @@ after stopping the bootstrap video before sending audio. No volume change was
 required. SDK speaker-volume getter `1438` (one zero byte, response `1439`) timed
 out on this camera; device-info byte 17 was zero but is not qualified as a volume
 readback for this hardware. SDK setter `1333`/`1334` was **not tested or exposed**.
+PC microphone speech through the native Windows sender was also physically
+confirmed on 2026-10-10 after the owner unmuted the PC input. The original cause
+of that mute is unknown; no camera speaker-volume change was needed.
 See [audio documentation](docs/AUDIO.md#talk-to-camera) for provenance and limits.
