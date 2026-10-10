@@ -132,6 +132,9 @@ class Camera:
         self._waiters = {}
         self._unacked = {}
         self._sequence = 0
+        self._audio_sequence = 0
+        self._talk_frames = 0
+        self._speaking = False
         self._number = 0
         self.generation = 0
         self._nonce_prefix = secrets.token_hex(4)[:7]
@@ -203,7 +206,7 @@ class Camera:
                     seq = self._sequence
                     self._sequence = (seq + 1) & 0xffff
                     packet = envelope(0xD0, struct.pack('>BBH', 0xD1, 0, seq) + message)
-                    self._unacked[seq] = (packet, time.monotonic(), 0)
+                    self._unacked[(0, seq)] = (packet, time.monotonic(), 0)
                     self._send(packet)
                 if response is None:
                     return None
@@ -240,10 +243,10 @@ class Camera:
                         raise ConnectionError('Camera ended the session.')
                     elif kind == 0xD1 and size >= 4:
                         marker, channel, count = struct.unpack_from('>BBH', packet, 4)
-                        if marker == 0xD1 and channel == 0 and size == 4 + 2 * count:
+                        if marker == 0xD1 and channel in (0, 1) and size == 4 + 2 * count:
                             with self._send_lock:
                                 for offset in range(8, len(packet), 2):
-                                    self._unacked.pop(struct.unpack_from('>H', packet, offset)[0], None)
+                                    self._unacked.pop((channel, struct.unpack_from('>H', packet, offset)[0]), None)
                     elif kind == 0xD0 and size >= 4:
                         marker, channel, seq = struct.unpack_from('>BBH', packet, 4)
                         if marker == 0xD1 and channel in self.channels:
@@ -321,11 +324,81 @@ class Camera:
         self.generation = (self.generation + 1) & 0xff
         self.command(0x2345, bytes((self.generation, resolution, 1, 0)))
 
+    def stop_video(self):
+        self.command(0x02ff, bytes(8))
+
     def start_audio(self):
         self.command(0x0300, bytes(8))
 
     def stop_audio(self):
         self.command(0x0301, bytes(8))
+
+    def start_talk(self, resolution=1):
+        """Use a dedicated authenticated session; video initialization enables audio decryption."""
+        if resolution not in (0, 1, 2):
+            raise ValueError('Unsupported talk initialization quality.')
+        self.start_video(resolution)
+        try:
+            self.frames.get(timeout=4)
+        except queue.Empty as exc:
+            raise TimeoutError('Camera did not initialize the talk stream.') from exc
+        self.stop_video()
+        self._flush_commands()
+        while True:
+            try:
+                self.frames.get_nowait()
+            except queue.Empty:
+                break
+        self._talk_frames = 0
+        self.command(0x0350, bytes(4))
+        self._flush_commands()
+        self._speaking = True
+
+    def stop_talk(self):
+        with self._send_lock:
+            self._speaking = False
+            for key in [key for key in self._unacked if key[0] == 1]:
+                del self._unacked[key]
+        if not self.running:
+            return
+        self.command(0x0351, bytes(8))
+        self._flush_commands()
+
+    def _flush_commands(self):
+        deadline = time.monotonic() + 2
+        while self.running:
+            with self._send_lock:
+                if not any(channel == 0 for channel, _ in self._unacked):
+                    return
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Camera did not acknowledge speaker control.')
+            time.sleep(.01)
+        raise ConnectionError(str(self.error or 'Talk session disconnected.'))
+
+    def send_talk_audio(self, adts: bytes):
+        """Send one complete AAC-LC, 16 kHz mono ADTS frame, paced by the caller (64 ms)."""
+        if not self.running or not self._speaking:
+            raise ConnectionError(str(self.error or 'Camera speaker is not started.'))
+        if not (7 < len(adts) <= 1024 and adts[:2] in (b'\xff\xf1', b'\xff\xf9') and
+                adts[2] >> 6 == 1 and (adts[2] >> 2) & 15 == 8 and
+                ((adts[2] & 1) << 2) | (adts[3] >> 6) == 1 and
+                ((adts[3] & 3) << 11) | (adts[4] << 3) | (adts[5] >> 5) == len(adts) and adts[6] & 3 == 0):
+            raise ValueError('Expected one AAC-LC 16 kHz mono ADTS packet of at most 1024 bytes.')
+        with self._send_lock:
+            if sum(channel == 1 for channel, _ in self._unacked) >= 16:
+                raise ProtocolError('Talk-back transport fell behind; stop and reconnect the talk session.')
+            self._talk_frames += 1
+            header = bytearray(24)
+            struct.pack_into('>H', header, 0, 138); header[2] = 2
+            # Legacy mobile TNP uses a nonzero 20-step counter here, not the video clock.
+            struct.pack_into('>I', header, 12, ((self._talk_frames * 20) & 0xffffffff) or 20)
+            n = len(adts) // 16 * 16
+            data = self._cipher.encrypt(adts[:n]) + adts[n:]
+            message = struct.pack('>BBBBI', 2, 2, 0, 0, len(data) + 24) + header + data
+            seq = self._audio_sequence; self._audio_sequence = (seq + 1) & 0xffff
+            packet = envelope(0xD0, struct.pack('>BBH', 0xD1, 1, seq) + message)
+            self._unacked[(1, seq)] = (packet, time.monotonic(), 0)
+            self._send(packet)
 
     def set_resolution(self, mode):
         if mode not in (0, 1, 2, 3):

@@ -38,7 +38,7 @@ public sealed partial class MainForm
 
     void BuildCapture()
     {
-        var body = Column(); body.AccessibleName = "Recording capture settings"; Page("Capture options").Controls.Add(body);
+        var body = Column(); body.AccessibleName = "Recording capture settings"; Page("Capture options").Controls.Add(new ScrollableColumn(body));
         body.Controls.Add(Label("Recording profile"));
         recordingProfile.Items.AddRange(["Original stream · lossless (default)", "H.264 balanced · CRF 28", "H.264 smaller · CRF 32"]);
         body.Controls.Add(recordingProfile);
@@ -62,8 +62,9 @@ public sealed partial class MainForm
         body.Controls.Add(Label("A lower area threshold is more sensitive. Local detection checks up to 5 times/second, independently of saved fps. New motion restarts the timer. Camera movement and lighting can also trigger it. A short buffered lead-in is included when available (up to one keyframe interval, capped at 5 seconds)."));
         body.Controls.Add(recordingAudio);
         body.Controls.Add(Label("Audio is off by default. Original and encoded real-time profiles retain camera-timestamped AAC; accelerated timelapse has no audio."));
-        body.Controls.Add(Button("Save capture settings", () => _ = Guard(() => { SaveCaptureOptions(); status.Text = "Capture settings saved for the next recording."; return Task.CompletedTask; })));
-        body.Controls.Add(Button("Refresh measured storage estimate", UpdateStorageEstimate));
+        body.Controls.Add(Row(Button("Save capture settings", () => _ = Guard(() => { SaveCaptureOptions(); status.Text = "Capture settings saved for the next recording."; return Task.CompletedTask; })),
+            Button("Refresh measured storage estimate", UpdateStorageEstimate)));
+        body.Controls.Add(Label("Changes save automatically when no recording is running. Recording and talking always start manually."));
         body.Controls.Add(recordingEstimate);
         recordingProfile.SelectedIndexChanged += (_, _) => UpdateCaptureControls();
         recordingMode.SelectedIndexChanged += (_, _) => UpdateCaptureControls();
@@ -95,6 +96,13 @@ public sealed partial class MainForm
     void SaveCaptureOptions()
     {
         if (AnyRecording) throw new InvalidOperationException("Stop or disarm all recordings before changing the capture profile.");
+        var next = preferences.Copy(); next.Recording = ReadCaptureOptions(); next.Ffmpeg = ffmpeg.Text.Trim(); next.Save();
+        preferences = next; captureDirty = false;
+        UpdateStorageEstimate();
+        UpdateRecordLabels();
+    }
+    RecordingOptions ReadCaptureOptions()
+    {
         UpdateCaptureControls();
         var selected = new RecordingOptions((RecordingEncoding)recordingProfile.SelectedIndex,
             limitRecordingRate.Checked ? (double)recordingRate.Value : null, (CaptureMode)recordingMode.SelectedIndex, recordingAudio.Checked,
@@ -102,9 +110,7 @@ public sealed partial class MainForm
         selected.Validate();
         if ((selected.Encoding != RecordingEncoding.Original || selected.Mode == CaptureMode.Motion) && !File.Exists(ffmpeg.Text.Trim()))
             throw new IOException("Choose an FFmpeg executable in Storage for encoding profiles or local motion detection.");
-        preferences.Recording = selected; preferences.Ffmpeg = ffmpeg.Text.Trim(); preferences.Save();
-        UpdateStorageEstimate();
-        UpdateRecordLabels();
+        return selected;
     }
     void UpdateStorageEstimate()
     {

@@ -6,7 +6,7 @@ public sealed partial class MainForm
 {
     void BuildProvisioning()
     {
-        var body = Column(); Page("Setup QR · experimental").Controls.Add(body);
+        var body = Column(); Page("Setup QR · experimental").Controls.Add(new ScrollableColumn(body));
         body.Controls.Add(Label("Generate a QR image locally, save it as PNG, and display it on your phone for the camera to scan."));
         body.Controls.Add(Label("The format is reverse engineered. Fresh setup still needs a vendor-issued binding token; account-free provisioning and Wi-Fi change have not been physically verified. This tool does not reset or reconfigure your connected camera."));
         var mode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 470 };

@@ -1,4 +1,4 @@
-# Camera microphone audio
+# Camera audio and intercom
 
 Audio is optional and off by default. **Listen to camera** monitors the camera's
 microphone through the PC speakers. **Capture options → Include camera microphone
@@ -29,7 +29,8 @@ On hardware 253, firmware `6.0.24.10_202401091113`:
   and video use the same camera uptime-millisecond clock on this unit. Seconds
   plus the entire uptime field must not be added together as a timestamp.
 
-No microphone gain, speaker, talk-back, detector or cloud setting was changed.
+The receive-stream investigation did not change microphone gain, speaker volume,
+detector or cloud settings. The separate speaker investigation is documented below.
 This supports the observed AAC-LC stream; it is not a claim that every YI IoT
 model has the same codec or clock. Unsupported AAC profiles, malformed ADTS and
 codec changes do not silently become nominally synchronized recordings.
@@ -74,3 +75,85 @@ confirmation. This is a short local capture, not a long-term drift qualification
 
 The Python reference exposes `start_audio()`, `stop_audio()` and `audio_frames`;
 the Windows app uses the native C# implementation without Python or vendor DLLs.
+
+## Talk to camera
+
+Select a **PC microphone** in the live view, then click **Talk to camera**. The
+button changes to **Stop talking** and a red **Mic live** indicator appears once
+audio packets are being sent. Click again or press Escape to stop. Switching tabs,
+switching away from OpenYI, disconnecting or closing also releases the microphone.
+It never starts on launch or reconnect. Listening is paused while talking and
+resumes afterward if it was selected. This is half-duplex intercom behavior, without
+desktop acoustic echo cancellation. Windows must allow microphone access to desktop
+apps; unavailable devices and capture failures are reported in the status bar.
+
+The selected input name is stored with app preferences. A missing selected device
+requires choosing an available input; it does not silently switch microphones.
+The Windows default option follows the system default. WinMM can expose identical
+names for different devices, so distinguishing those devices remains a limitation.
+
+WinMM captures signed 16-bit PCM at 16 kHz mono. FFmpeg's open-source AAC-LC encoder
+produces one ADTS access unit per 1024 samples at 32 kbit/s. Data stays in bounded
+memory/pipes; PC microphone audio is not added to the recording catalogue. Speech
+uses a separate short-lived authenticated LAN session so its transport failure
+does not tear down the recording session. It is paced at 64 ms per packet and
+stops on capture stalls or excessive backlog instead of building a delayed queue.
+No proprietary encoder or vendor runtime is loaded. This UI currently targets
+the primary camera; additional-camera talk controls remain future work.
+
+### Observed speaker initialization
+
+On hardware 253, firmware `6.0.24.10_202401091113`:
+
+1. Connect and authenticate with the existing device key.
+2. Send video start `0x2345` with the usual generation, selected quality, `1,0`.
+   Receive one video frame before continuing.
+3. Send video stop `0x02ff` with eight zero bytes and await transport ACKs.
+   This avoids a second ongoing video stream during speech.
+4. Send speaker start `0x0350` with uint32 zero (the mobile half-duplex mode).
+5. Send encrypted AAC on reliable channel 1; acknowledge/retransmit independently
+   of commands on channel 0.
+6. Release the PC microphone, discard unsent retransmissions, send speaker stop
+   `0x0351` with eight zero bytes, then close the talk session.
+
+The audio message is TNP v2 kind 2, followed by a 24-byte header and an entire
+ADTS packet. Codec uint16 at offset 0 is **138**, flags at offset 2 are **2**,
+and offset 12 contains a nonzero big-endian uint32 counter advancing by 20 per
+packet. Sequence and millisecond fields are zero in this observed mobile path.
+The counter does not govern transmission speed or A/V recording timestamps.
+All full 16-byte payload blocks use AES-ECB with `device_key + "0"`; the final
+partial block is clear. Packets larger than 1024 bytes or codecs other than the
+verified AAC-LC mono 16 kHz format are rejected.
+
+The mobile references are `TnpCamera.ThreadRecordAudioAAC`, `ThreadSendAudio`,
+`startSpeaking`, `stopSpeaking`, `sendStopPlayVideoCommand`, `TNPFrameHead`, and
+`SFrameInfo.createAudioTimestamp`. Related **older** firmware's `yi_p2p_recv_audio_data`
+uses per-session stream state to decide whether to decrypt speaker data. That
+static observation suggested the bootstrap fix; it is not a claim that the
+current firmware has identical internals.
+
+### Verification and remaining limits
+
+Two initial Python tone probes were acknowledged but silent. After adding video
+initialization, the owner heard both low-level tones. A further test stopped the
+bootstrap video first and both tones were again heard. This physically verifies
+the speaker/codec/encryption sequence, beyond transport ACKs. Speaker volume was
+not changed. The mobile SDK exposes a volume getter/setter, but the getter timed
+out on this camera and its generic device-info field is not a validated level.
+
+Synthetic native checks cover header/encryption, exact retransmissions after
+wrong-channel ACKs, independent camera keys and speaker initialization order.
+`scripts/check_talk_integration.py` exercises the actual native FFmpeg pipe with
+paced synthetic PCM, independently decodes 24 AAC frames / 24,576 mono samples,
+and checks cancellation and capture/startup failure cleanup. It never opens a real
+microphone. These checks complement, rather than replace, physical speech tests.
+The native Windows microphone path was also exercised against the real camera:
+the UI reached **Mic live**, Escape released the input and encoder, and the live
+preview continued near 15 fps. A simultaneous 77.62-second balanced 5 fps recording
+finalized and independently decoded 388 video frames and 1201 AAC frames with
+strictly increasing timestamps. Audible speech from the selected PC input remains
+an owner check; the successful tone confirmations above used the Python sender.
+Long intercom sessions, all microphone drivers, simultaneous hardware cameras and
+the effect of half-duplex speaker mode on camera microphone gain/muting remain
+unqualified. The recorder continues using the received camera AAC and timestamps;
+it does not synthesize or record the outgoing PC microphone track.

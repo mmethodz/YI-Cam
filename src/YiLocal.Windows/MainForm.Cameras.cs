@@ -137,6 +137,7 @@ public sealed partial class MainForm
         camera.Record.Click += (_, _) => _ = Guard(async () =>
         {
             if (gridBusy || camera.Session is not { } active) return;
+            if (!AnyRecording) SavePendingPreferences();
             camera.Record.Enabled = false; gridBusy = true;
             try
             {
@@ -180,10 +181,14 @@ public sealed partial class MainForm
         var client = active.Client ?? throw new IOException("Wait for this camera to connect.");
         var settings = await client.SettingsAsync();
         using var dialog = new Form { Text = camera.Profile.Name + " · controls", ClientSize = new Size(420, 540), StartPosition = FormStartPosition.CenterParent, Font = Font };
-        var body = Column(); dialog.Controls.Add(body);
+        var body = Column(); dialog.Controls.Add(new ScrollableColumn(body));
         var qualityChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 310 };
         qualityChoice.Items.AddRange(["HD", "SD", "Automatic quality"]); qualityChoice.SelectedIndex = active.Quality switch { 2 => 1, 0 => 2, _ => 0 }; body.Controls.Add(qualityChoice);
-        qualityChoice.SelectionChangeCommitted += (_, _) => _ = Guard(() => active.SetQualityAsync(new byte[] { 1, 2, 0 }[qualityChoice.SelectedIndex]));
+        qualityChoice.SelectionChangeCommitted += (_, _) => _ = Guard(async () =>
+        {
+            await active.SetQualityAsync(new byte[] { 1, 2, 0 }[qualityChoice.SelectedIndex]);
+            camera.Profile.StreamQuality = active.Quality; camera.Profile.Save();
+        });
         var lightChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 310 };
         lightChoice.Items.AddRange(["Infrared in darkness", "Colour lights", "Automatic lighting"]); lightChoice.SelectedIndex = Math.Min(2, (int)settings.NightVision); body.Controls.Add(lightChoice);
         lightChoice.SelectionChangeCommitted += (_, _) => _ = Guard(async () => { await client.NightVisionAsync((uint)lightChoice.SelectedIndex); lightChoice.SelectedIndex = (await client.SettingsAsync()).NightVision; });

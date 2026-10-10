@@ -13,6 +13,7 @@ public sealed class DeviceProfile
     [JsonPropertyName("password")] public string Password { get; set; } = "";
     [JsonPropertyName("reverse_pan_controls")] public bool ReversePanControls { get; set; }
     [JsonPropertyName("reverse_tilt_controls")] public bool ReverseTiltControls { get; set; }
+    [JsonPropertyName("stream_quality")] public byte StreamQuality { get; set; } = 1;
     [JsonIgnore] public string? StoragePath { get; private set; }
     public static string SettingsDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "YI Local");
     public static string DefaultPath => Path.Combine(SettingsDirectory, "device.dpapi");
@@ -20,6 +21,7 @@ public sealed class DeviceProfile
     {
         path = Path.GetFullPath(path ?? DefaultPath);
         var profile = JsonSerializer.Deserialize<DeviceProfile>(Crypt(File.ReadAllBytes(path), false)) ?? throw new InvalidDataException("Empty device profile.");
+        if (profile.StreamQuality > 2) profile.StreamQuality = 1;
         profile.StoragePath = path; return profile;
     }
     public void Save(string? path = null)
@@ -43,6 +45,7 @@ public sealed class DeviceProfile
     {
         if (Uid is null || previous?.Uid is null || !Uid.Equals(previous.Uid, StringComparison.OrdinalIgnoreCase)) return;
         ReversePanControls = previous.ReversePanControls; ReverseTiltControls = previous.ReverseTiltControls;
+        StreamQuality = previous.StreamQuality;
     }
     [StructLayout(LayoutKind.Sequential)] struct Blob { public int Size; public IntPtr Data; }
     [DllImport("crypt32.dll", SetLastError = true)] static extern bool CryptProtectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);

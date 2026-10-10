@@ -77,7 +77,7 @@ public sealed class CameraClient : IDisposable
     readonly Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     readonly Aes aes = Aes.Create();
     readonly object sendLock = new();
-    readonly Dictionary<ushort, (byte[] Packet, long Sent, int Attempts)> unacked = [];
+    readonly Dictionary<(byte Channel, ushort Sequence), (byte[] Packet, long Sent, int Attempts)> unacked = [];
     readonly ConcurrentDictionary<ushort, (ushort Response, TaskCompletionSource<CameraReply> Completion)> requests = new();
     readonly ReliableChannel[] channels = Enumerable.Range(0, 6).Select(_ => new ReliableChannel()).ToArray();
     readonly CancellationTokenSource stop = new();
@@ -87,6 +87,9 @@ public sealed class CameraClient : IDisposable
     IPEndPoint? peer;
     Task? receiver;
     ushort sequence, number;
+    ushort audioSequence;
+    uint talkFrames;
+    bool speaking;
     byte generation;
     long lastReceived;
     bool disposed;
@@ -182,7 +185,7 @@ public sealed class CameraClient : IDisposable
             ushort seq = sequence++;
             var packet = Wire.Packet(0xd0, Wire.Join([0xd1, 0], Wire.U16(seq), message));
             if (response.HasValue) requests[requestNumber] = (response.Value, completion);
-            unacked[seq] = (packet, Now, 0);
+            unacked[(0, seq)] = (packet, Now, 0);
             Send(packet);
         }
         if (!response.HasValue) return null;
@@ -213,10 +216,10 @@ public sealed class CameraClient : IDisposable
                     {
                         case 0xe0: Send(Wire.Packet(0xe1)); break;
                         case 0xf0: throw new IOException("Camera ended the session.");
-                        case 0xd1 when p.Length >= 8 && p[4] == 0xd1 && p[5] == 0:
+                        case 0xd1 when p.Length >= 8 && p[4] == 0xd1 && p[5] <= 1:
                             int count = Wire.U16(p.AsSpan(6));
                             if (p.Length == 8 + count * 2)
-                                lock (sendLock) for (int i = 8; i < p.Length; i += 2) unacked.Remove(Wire.U16(p.AsSpan(i)));
+                                lock (sendLock) for (int i = 8; i < p.Length; i += 2) unacked.Remove((p[5], Wire.U16(p.AsSpan(i))));
                             break;
                         case 0xd0 when p.Length >= 8 && p[4] == 0xd1 && p[5] < 6:
                             byte channel = p[5]; ushort seq = Wire.U16(p.AsSpan(6));
@@ -287,8 +290,66 @@ public sealed class CameraClient : IDisposable
         return new(data[8], data[91], data[68], data[54]);
     }
     public Task StartVideoAsync(byte quality = 1) => CommandAsync(0x2345, [++generation, quality, 1, 0]);
+    public Task StopVideoAsync() => CommandAsync(0x02ff, new byte[8]);
     public Task StartAudioAsync() => CommandAsync(0x0300, new byte[8]);
     public Task StopAudioAsync() => CommandAsync(0x0301, new byte[8]);
+    /// <summary>Use a dedicated talk session: briefly starts/stops video to initialize firmware audio decryption.</summary>
+    public async Task StartSpeakerAsync(byte quality = 1, CancellationToken cancellation = default)
+    {
+        if (quality > 2) throw new ArgumentOutOfRangeException(nameof(quality));
+        cancellation.ThrowIfCancellationRequested();
+        await StartVideoAsync(quality);
+        using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation))
+        {
+            timeout.CancelAfter(TimeSpan.FromSeconds(4));
+            try { await Frames.ReadAsync(timeout.Token); }
+            catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
+            { throw new TimeoutException("Camera did not initialize the talk stream."); }
+        }
+        await StopVideoAsync();
+        await FlushCommandsAsync(cancellation);
+        while (Frames.TryRead(out _)) { }
+        await CommandAsync(0x0350, new byte[4], cancellation: cancellation);
+        await FlushCommandsAsync(cancellation);
+        lock (sendLock) { talkFrames = 0; speaking = true; }
+    }
+    public async Task StopSpeakerAsync()
+    {
+        lock (sendLock)
+        {
+            speaking = false;
+            // Do not retransmit stale speech after stop. This session is then closed by its owner.
+            foreach (var key in unacked.Keys.Where(key => key.Channel == 1).ToArray()) unacked.Remove(key);
+        }
+        if (!Connected) return;
+        await CommandAsync(0x0351, new byte[8]);
+        await FlushCommandsAsync();
+    }
+    async Task FlushCommandsAsync(CancellationToken cancellation = default)
+    {
+        long deadline = Now + 2000;
+        while (true)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (!Connected) throw new IOException("Talk session disconnected.", Error);
+            lock (sendLock) { if (!unacked.Keys.Any(key => key.Channel == 0)) return; }
+            if (Now >= deadline) throw new TimeoutException("Camera did not acknowledge speaker control.");
+            await Task.Delay(10, cancellation);
+        }
+    }
+    public void SendTalkAudio(byte[] adts)
+    {
+        lock (sendLock)
+        {
+            if (!Connected || !speaking) throw new IOException("Camera speaker is not started.", Error);
+            if (unacked.Keys.Count(key => key.Channel == 1) >= 16)
+                throw new IOException("Talk transport fell behind. Stop and restart talking.");
+            var message = TalkAudio.Message(adts, password, ++talkFrames);
+            ushort seq = audioSequence++;
+            var packet = Wire.Packet(0xd0, Wire.Join([0xd1, 1], Wire.U16(seq), message));
+            unacked[(1, seq)] = (packet, Now, 0); Send(packet);
+        }
+    }
     public Task QualityAsync(uint quality)
     {
         if (quality > 2) throw new ArgumentOutOfRangeException(nameof(quality));

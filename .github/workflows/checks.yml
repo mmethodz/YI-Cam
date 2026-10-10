@@ -27,3 +27,7 @@ jobs:
       - run: python scripts/check_motion_integration.py
       - if: runner.os == 'Windows'
         run: python scripts/check_player_integration.py
+      - if: runner.os == 'Windows'
+        run: dotnet run --project tests/YiLocal.Windows.Checks -c Release -- --settings
+      - if: runner.os == 'Windows'
+        run: python scripts/check_talk_integration.py

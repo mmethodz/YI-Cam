@@ -21,7 +21,6 @@ internal sealed class GimbalControls : FlowLayoutPanel
         this.session = session; this.profile = profile; this.guard = guard;
         AutoSize = true; FlowDirection = FlowDirection.TopDown; WrapContents = false; Enabled = false;
         Controls.Add(rotation); Controls.Add(restore); Controls.Add(reversePan); Controls.Add(reverseTilt);
-        Controls.Add(new Label { Text = "Direction switches swap OpenYI's arrows for this camera.", AutoSize = true, MaximumSize = new Size(224, 0) });
         rotation.Click += (_, _) => _ = guard(() => ChangeCameraSetting(rotation, false));
         restore.Click += (_, _) => _ = guard(() => ChangeCameraSetting(restore, true));
         reversePan.Click += (_, _) => _ = guard(() => SaveDirectionPreference(true));

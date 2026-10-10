@@ -1,6 +1,17 @@
 using System.Diagnostics;
 using YiLocal.Windows;
 
+if (args is ["--settings"])
+{
+    SettingsChecks.Run();
+    return;
+}
+if (args is ["--talk-encoder", var encoder, var output])
+{
+    await TalkEncoderChecks.RunAsync(encoder, output);
+    return;
+}
+
 if (args.Length < 3) throw new ArgumentException("Arguments: FFmpeg path, recording path, duration [seek seconds] [sound true/false]");
 double duration = double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture);
 double start = args.Length > 3 ? double.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture) : 0;

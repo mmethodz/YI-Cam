@@ -42,6 +42,16 @@ Build output: `dist/YI-Local/YiLocal.Windows.exe`. A standard build needs the
 powershell -NoProfile -File scripts/build-windows.ps1 -SelfContained
 ```
 
+App preferences live in `%LOCALAPPDATA%\YI Local\settings.json`, independently of
+the executable's folder or working directory. Starting from `dist/` uses the same
+settings. Storage and capture edits save automatically when recordings are stopped;
+changes made during recording wait until it stops. Path edits save after leaving
+the text box. Explicit Save buttons remain available. A previous valid version is
+kept in `settings.json.bak`; invalid sections are reported without discarding other
+settings. Camera keys, stream quality and arrow preferences stay in encrypted
+per-camera profiles. Night vision, tracking and gimbal state are read from the camera.
+Recording, listening and talking start manually each time. No registry setup is needed.
+
 No camera firmware changes or Internet port forwarding are required. The app
 makes no cloud requests and exposes no HTTP server. The camera firmware may still
 contact vendor services; this app does not change the camera's network settings.
@@ -76,6 +86,7 @@ Do not reset a working camera to test this feature.
 | Infrared | IR activates automatically in darkness; red LEDs and filter click physically confirmed |
 | Colour night vision | Extra visible lights activate; physically confirmed |
 | Automatic lighting | Mode accepted and read back; trigger behavior not yet characterized |
+| Talk to camera | 16 kHz mono AAC speaker playback physically confirmed; click to start/stop the PC microphone |
 
 Forced IR in a bright room is not established. The generic day/night command
 accepted values but had no observed physical effect on this model; the app uses
@@ -105,6 +116,12 @@ used for storage estimates. Optional **Include camera microphone audio** retains
 AAC with its camera timestamps in real-time profiles. Timelapse has no audio.
 **Listen to camera** enables local speaker monitoring using FFmpeg and Windows
 audio output. Both options start off; see [audio evidence and limits](docs/AUDIO.md).
+
+**Talk to camera** sends the selected PC microphone to the primary camera over the
+LAN using FFmpeg's AAC encoder. Click again, press Escape, switch tabs or switch
+away from OpenYI to stop. Listening pauses while talking to limit feedback; this is
+half-duplex intercom behavior. The microphone is released when talking stops and
+does not restart automatically. See [talk-back protocol and limits](docs/AUDIO.md#talk-to-camera).
 
 **Motion · local detection on this PC** records when the source image changes.
 Set the changed-area threshold (lower is more sensitive) and the seconds to record

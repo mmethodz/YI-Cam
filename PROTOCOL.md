@@ -26,7 +26,9 @@ fragment of that channel's ordered byte stream. Acknowledge received fragments,
 including duplicates, with type `D1` and payload `D1, channel, count16, seq16…`.
 Each channel has independent wrapping 16-bit sequence numbers starting at zero.
 Buffer reordered fragments; never concatenate raw UDP arrival order. Retransmit
-unacknowledged outgoing control packets with their original sequence number.
+unacknowledged outgoing control/audio packets with their original sequence number
+and payload. Track acknowledgements by **(channel, sequence)**; a channel-1 ACK
+must not clear a channel-0 command with the same numeric sequence, or vice versa.
 
 Channels: 0 commands, 1 audio, 2 live I frames, 3 live P frames, 4 recorded I frames,
 5 recorded P frames. The current app uses live video only.
@@ -339,3 +341,26 @@ and remaining synchronization tests. The inspected mobile paths are
 `TnpCamera.sendStartListeningCommand`, `ThreadRecvAudio`, `AVFrame` and
 `AntsUtil.decryptAudioFrame`; codec IDs from the separate legacy `TNP_Proto`
 class do not describe the observed stream.
+
+## Talk-back speaker stream
+
+The same hardware/firmware accepts AAC-LC 16 kHz mono ADTS on outgoing reliable
+channel 1, TNP v2 kind 2. The speaker must first be initialized in that session:
+start video (`2345`), receive a frame, stop video (`02ff`, eight zero bytes), then
+start half-duplex speaking (`0350`, four zero bytes). Stop speaking is `0351`
+with eight zero bytes. Brief video initialization is essential on the tested unit:
+authenticated speaker start and acknowledged audio alone produced silence.
+
+Use the normal 24-byte frame header with codec 138, flags 2, and a nonzero uint32
+at offset 12. The inspected legacy mobile sender increments it by 20 per packet;
+other frame fields remain zero. AAC contains 1024 samples per packet, so send at
+64 ms intervals, not at that counter's nominal rate. Encrypt all complete 16-byte
+ADTS payload blocks with the device key plus ASCII `0`; leave the partial tail
+clear. This counter is separate from camera recording timestamps.
+
+Two-tone playback was physically confirmed after video initialization, and again
+after stopping the bootstrap video before sending audio. No volume change was
+required. SDK speaker-volume getter `1438` (one zero byte, response `1439`) timed
+out on this camera; device-info byte 17 was zero but is not qualified as a volume
+readback for this hardware. SDK setter `1333`/`1334` was **not tested or exposed**.
+See [audio documentation](docs/AUDIO.md#talk-to-camera) for provenance and limits.

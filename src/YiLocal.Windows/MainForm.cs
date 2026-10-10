@@ -1,25 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using YiLocal.Core;
 
 namespace YiLocal.Windows;
-
-internal sealed class Preferences
-{
-    public string Folder { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "YI Local");
-    public string? Ffmpeg { get; set; }
-    public StoragePolicy Storage { get; set; } = new();
-    public RecordingOptions Recording { get; set; } = new();
-    public bool ExperimentalMultipleCameras { get; set; }
-    public static string FilePath => Path.Combine(DeviceProfile.SettingsDirectory, "settings.json");
-    public void Save()
-    {
-        Directory.CreateDirectory(DeviceProfile.SettingsDirectory);
-        File.WriteAllText(FilePath + ".tmp", JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(FilePath + ".tmp", FilePath, true);
-    }
-}
 
 public sealed partial class MainForm : Form
 {
@@ -43,10 +26,10 @@ public sealed partial class MainForm : Form
     readonly Label recordState = new() { Text = "Recording is off", AutoSize = true, ForeColor = Color.DarkSlateGray };
     readonly Button connect = new() { Text = "Connect camera", AutoSize = true };
     readonly Button record = new() { Text = "Start recording", AutoSize = true, Enabled = false };
-    readonly ComboBox quality = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 218 };
-    readonly ComboBox night = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 218, Enabled = false };
+    readonly ComboBox quality = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 174 };
+    readonly ComboBox night = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 174, Enabled = false };
     readonly CheckBox tracking = new() { Text = "Motion tracking", AutoSize = true, Enabled = false };
-    readonly FlowLayoutPanel cameraControls = new() { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, Enabled = false };
+    readonly FlowLayoutPanel cameraControls = new() { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty, Enabled = false };
     readonly RecordingListView clips = new() { View = View.Details, FullRowSelect = true, MultiSelect = false, Dock = DockStyle.Fill, HideSelection = false };
     readonly TextBox folder = new() { Width = 610 };
     readonly TextBox ffmpeg = new() { Width = 610 };
@@ -71,27 +54,30 @@ public sealed partial class MainForm : Form
         layout.RowStyles.Add(new(SizeType.Percent, 100)); layout.RowStyles.Add(new(SizeType.Absolute, 40));
         layout.Controls.Add(tabs, 0, 0); layout.Controls.Add(status, 0, 1); Controls.Add(layout);
         BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning(); BuildCapture(); BuildCameras();
+        preferences = Preferences.Load(out string? settingsNotice);
+        settingsMessage.Text = settingsNotice ?? "Settings save automatically. Changes apply to the next recording session.";
+        if (settingsNotice is not null) status.Text = settingsNotice;
         try
         {
-            if (File.Exists(Preferences.FilePath)) preferences = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(Preferences.FilePath)) ?? new();
-            preferences.Storage.Validate();
-            preferences.Recording.Validate();
             if (File.Exists(DeviceProfile.DefaultPath)) profile = DeviceProfile.Load();
             else
                 for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
                     if (File.Exists(Path.Combine(dir.FullName, "YiLocal.sln")) && File.Exists(Path.Combine(dir.FullName, ".local", "device.dpapi")))
                     { profile = DeviceProfile.Load(Path.Combine(dir.FullName, ".local", "device.dpapi")); profile.Save(DeviceProfile.DefaultPath); break; }
         }
-        catch (Exception e) { preferences = new(); status.Text = "Saved settings could not be loaded: " + e.Message; }
+        catch (Exception e) { status.Text = "Saved camera pairing could not be loaded: " + e.Message; }
         folder.Text = preferences.Folder; ffmpeg.Text = preferences.Ffmpeg ?? MediaTools.FindFfmpeg() ?? "";
         quota.Value = (decimal)preferences.Storage.QuotaGiB; free.Value = (decimal)preferences.Storage.MinimumFreeGiB;
         segment.Value = (decimal)preferences.Storage.SegmentMinutes; days.Value = preferences.Storage.KeepDays; recycle.Checked = preferences.Storage.Recycle;
         ShowProfile();
         ShowCaptureOptions();
         LoadCameras();
+        ShowMicrophones();
+        TrackPreferenceEdits();
         timer.Tick += (_, _) =>
         {
             UpdatePlayback();
+            UpdateTalkState();
             UpdateCameraGrid();
             Bitmap? next; lock (previewLock) next = preview?.Take();
             if (next is not null) { var prior = picture.Image; picture.Image = next; SetPrimaryGridImage(next); prior?.Dispose(); }
@@ -102,7 +88,12 @@ public sealed partial class MainForm : Form
     static NumericUpDown Number(decimal min, decimal max, decimal value, int decimals = 1) =>
         new() { Minimum = min, Maximum = max, Value = value, DecimalPlaces = decimals, Width = 140 };
     static Label Label(string text, int width = 740) => new() { Text = text, AutoSize = true, MaximumSize = new Size(width, 0), Margin = new Padding(3, 12, 3, 4) };
-    static FlowLayoutPanel Column() => new() { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(12) };
+    static FlowLayoutPanel Column() => new() { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };
+    static FlowLayoutPanel Row(params Control[] controls)
+    {
+        var row = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Margin = Padding.Empty };
+        row.Controls.AddRange(controls); return row;
+    }
     TabPage Page(string title) { var page = new TabPage(title) { Padding = new Padding(8), UseVisualStyleBackColor = true }; tabs.TabPages.Add(page); return page; }
     static Button Button(string text, Action action) { var b = new Button { Text = text, AutoSize = true, Margin = new Padding(3, 8, 3, 3) }; b.Click += (_, _) => action(); return b; }
     void Ui(Action action) { if (!IsDisposed && IsHandleCreated) try { BeginInvoke(action); } catch (InvalidOperationException) { } }
@@ -117,16 +108,22 @@ public sealed partial class MainForm : Form
         grid.ColumnStyles.Add(new(SizeType.Percent, 100)); grid.ColumnStyles.Add(new(SizeType.Absolute, 300));
         grid.RowStyles.Add(new(SizeType.Percent, 100)); grid.RowStyles.Add(new(SizeType.Absolute, 36));
         grid.Controls.Add(picture, 0, 0); grid.Controls.Add(metrics, 0, 1);
-        var side = Column(); grid.Controls.Add(side, 1, 0); grid.SetRowSpan(side, 2); page.Controls.Add(grid);
-        side.Controls.Add(connect); side.Controls.Add(record); side.Controls.Add(recordState); side.Controls.Add(cameraControls);
-        side.Controls.Add(Button("Save snapshot…", () => _ = Guard(SaveSnapshotAsync)));
-        BuildAudio(side);
+        var side = Column(); var scroll = new ScrollableColumn(side); grid.Controls.Add(scroll, 1, 0); grid.SetRowSpan(scroll, 2); page.Controls.Add(grid);
+        side.Controls.Add(Row(connect, record)); side.Controls.Add(recordState); side.Controls.Add(cameraControls);
+        var snapshot = Button("Snapshot…", () => _ = Guard(SaveSnapshotAsync)); snapshot.Margin = new Padding(3);
+        side.Controls.Add(Row(snapshot, listen)); BuildAudio(side);
         connect.Click += async (_, _) => await Guard(ToggleConnection);
         record.Click += async (_, _) => await Guard(ToggleRecordingAsync);
-        cameraControls.Controls.Add(Label("Stream quality", 218)); quality.Items.AddRange(["HD — original stream", "SD — smaller stream", "Automatic quality"]); quality.SelectedIndex = 0;
-        cameraControls.Controls.Add(quality);
-        quality.SelectionChangeCommitted += async (_, _) => await Guard(async () => { if (session is not null) await session.SetQualityAsync(new byte[] { 1, 2, 0 }[quality.SelectedIndex]); });
-        cameraControls.Controls.Add(Label("Night vision", 218)); night.Items.AddRange(["Infrared (in darkness)", "Colour — visible lights", "Automatic lighting"]); cameraControls.Controls.Add(night);
+        quality.Items.AddRange(["HD — original stream", "SD — smaller stream", "Automatic quality"]); quality.SelectedIndex = 0;
+        cameraControls.Controls.Add(Row(new Label { Text = "Quality", Width = 66, Height = 26, TextAlign = ContentAlignment.MiddleLeft }, quality));
+        quality.SelectionChangeCommitted += async (_, _) => await Guard(async () =>
+        {
+            if (session is null || profile is null) return;
+            await session.SetQualityAsync(new byte[] { 1, 2, 0 }[quality.SelectedIndex]);
+            profile.StreamQuality = session.Quality; profile.Save();
+        });
+        night.Items.AddRange(["Infrared (in darkness)", "Colour — visible lights", "Automatic lighting"]);
+        cameraControls.Controls.Add(Row(new Label { Text = "Night", Width = 66, Height = 26, TextAlign = ContentAlignment.MiddleLeft }, night));
         night.SelectionChangeCommitted += async (_, _) => await Guard(async () =>
         {
             if (session?.Client is not { } client) return;
@@ -140,18 +137,17 @@ public sealed partial class MainForm : Form
             await client.TrackingAsync(tracking.Checked); tracking.Checked = (await client.SettingsAsync()).Tracking != 0;
             status.Text = "Motion-tracking setting confirmed by the camera.";
         });
-        cameraControls.Controls.Add(Label("Move camera · short steps", 218));
-        var directions = new TableLayoutPanel { ColumnCount = 3, RowCount = 3, AutoSize = true };
+        var directions = new TableLayoutPanel { ColumnCount = 3, RowCount = 3, AutoSize = true, Margin = new Padding(3, 4, 3, 4) };
         void Move(string label, uint value, int x, int y)
         {
             var b = Button(label, () => _ = Guard(async () => { if (session is { } active) await active.MoveAsync(value); }));
-            b.MinimumSize = new Size(65, 36); directions.Controls.Add(b, x, y);
+            b.MinimumSize = new Size(68, 28); b.Margin = new Padding(2); directions.Controls.Add(b, x, y);
         }
         Move("Up", 1, 1, 0); Move("Left", 3, 0, 1); Move("Right", 4, 2, 1); Move("Down", 2, 1, 2);
-        directions.Controls.Add(Button("Stop", () => _ = Guard(async () => { if (session?.Client is { } c) await c.StopMovingAsync(); })), 1, 1);
+        var stopMoving = Button("Stop", () => _ = Guard(async () => { if (session?.Client is { } c) await c.StopMovingAsync(); }));
+        stopMoving.Margin = new Padding(2); directions.Controls.Add(stopMoving, 1, 1);
         cameraControls.Controls.Add(directions);
         gimbal = new(() => session, () => profile, Guard); cameraControls.Controls.Add(gimbal);
-        side.Controls.Add(Label("Recordings keep the original resolution. 4K export is a software upscale.", 224));
     }
     async Task ToggleRecordingAsync()
     {
@@ -162,7 +158,7 @@ public sealed partial class MainForm : Form
             if (active.Recording) { await Task.Run(active.StopRecording); status.Text = "Recording saved."; RefreshClips(); }
             else
             {
-                if (!extraCameras.Any(camera => camera.Recording)) SaveCaptureOptions();
+                if (!extraCameras.Any(camera => camera.Recording)) { SavePendingPreferences(); SaveCaptureOptions(); }
                 active.StartRecording(preferences.Folder, preferences.Storage, preferences.Recording, preferences.Ffmpeg);
             }
         }
@@ -221,12 +217,13 @@ public sealed partial class MainForm : Form
     void UpdateRecordLabels()
     {
         bool armed = session?.Recording == true, motion = preferences.Recording.Mode == CaptureMode.Motion;
-        record.Text = motion ? armed ? "Disarm motion recording" : "Arm motion recording" : armed ? "Stop recording" : "Start recording";
+        record.Text = motion ? armed ? "Disarm motion" : "Arm motion" : armed ? "Stop recording" : "Start recording";
         recordState.Text = armed ? motion ? "Watching for motion" : "● Recording to local disk" : "Recording is off";
         recordState.ForeColor = armed ? motion ? Color.DarkGreen : Color.Firebrick : Color.DarkSlateGray;
     }
     async Task DisconnectAsync()
     {
+        await StopTalkAsync();
         var previous = session; session = null;
         try { if (previous is not null) await previous.DisposeAsync(); }
         finally
@@ -261,7 +258,7 @@ public sealed partial class MainForm : Form
     }
     void BuildStorage()
     {
-        var body = Column(); Page("Storage").Controls.Add(body);
+        var body = Column(); Page("Storage").Controls.Add(new ScrollableColumn(body));
         body.Controls.Add(Label("Recording folder")); body.Controls.Add(folder);
         body.Controls.Add(Button("Choose folder…", () => { using var dialog = new FolderBrowserDialog { InitialDirectory = folder.Text }; if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; }));
         void Field(string text, Control control) { var row = new FlowLayoutPanel { AutoSize = true }; row.Controls.Add(new Label { Text = text, Width = 245, AutoSize = false, Height = 28, TextAlign = ContentAlignment.MiddleLeft }); row.Controls.Add(control); body.Controls.Add(row); }
@@ -270,23 +267,20 @@ public sealed partial class MainForm : Form
         body.Controls.Add(Label("Recycling is off by default. Only completed, unprotected recordings registered in this folder can be recycled. Changes apply to the next recording session."));
         body.Controls.Add(Label("FFmpeg executable · needed for preview, snapshots, local motion detection, encoding profiles and 4K export")); body.Controls.Add(ffmpeg);
         body.Controls.Add(Button("Choose FFmpeg…", () => { using var dialog = new OpenFileDialog { Filter = "FFmpeg executable|ffmpeg*.exe|Executable|*.exe" }; if (dialog.ShowDialog(this) == DialogResult.OK) ffmpeg.Text = dialog.FileName; }));
-        body.Controls.Add(Button("Save storage settings", () => _ = Guard(() =>
-        {
-            if (AnyRecording || exporting || gridBusy) throw new InvalidOperationException("Stop all recordings and let camera changes/exports finish before changing storage.");
-            var policy = new StoragePolicy((double)quota.Value, (double)free.Value, (double)segment.Value, recycle.Checked, (int)days.Value); policy.Validate();
-            preferences.Folder = Path.GetFullPath(folder.Text.Trim()); preferences.Ffmpeg = ffmpeg.Text.Trim(); preferences.Storage = policy;
-            StopPlayback(); Directory.CreateDirectory(preferences.Folder); preferences.Save(); ClearPreview(); status.Text = "Storage settings saved."; return Task.CompletedTask;
-        })));
+        body.Controls.Add(Button("Save storage settings", () => _ = Guard(() => { SaveStorageOptions(); return Task.CompletedTask; })));
+        body.Controls.Add(settingsMessage);
+        body.Controls.Add(Label("Settings location: " + Preferences.FilePath));
     }
     void ShowProfile()
     {
         ip.Text = profile?.Ip ?? ""; cameraName.Text = profile?.Name ?? "Camera"; key.Clear();
+        quality.SelectedIndex = profile?.StreamQuality switch { 0 => 2, 2 => 1, _ => 0 };
         pairing.Text = profile is null ? "No saved camera. Enter its LAN address, open its live view in YI IoT, and import the existing pairing below."
             : $"Saved camera: {profile.Name}. Its device key is encrypted for this Windows account. No cloud account login is used.";
     }
     void BuildCamera()
     {
-        var body = pairingControls; Page("Camera setup").Controls.Add(body); body.Controls.Add(pairing);
+        var body = pairingControls; Page("Camera setup").Controls.Add(new ScrollableColumn(body)); body.Controls.Add(pairing);
         body.Controls.Add(Label("Camera name")); body.Controls.Add(cameraName); body.Controls.Add(Label("Camera IPv4 address on your LAN")); body.Controls.Add(ip);
         body.Controls.Add(Button("Import from running YI IoT", () => _ = Guard(() => UpdatePairingAsync(token =>
             VendorClientImporter.ReadProfileAsync(ip.Text.Trim(), cameraName.Text.Trim(), profile?.Uid, token)))));
@@ -347,9 +341,9 @@ public sealed partial class MainForm : Form
         if (gridBusy) { status.Text = "Finishing a camera operation. Please wait before closing."; return; }
         if (exporting) { status.Text = "An export is running. Wait for it to finish before closing."; return; }
         if (savingSnapshot) { status.Text = "Finishing the snapshot. Please wait before closing."; return; }
-        closing = true; Enabled = false; status.Text = "Saving recording and disconnecting…";
-        try { await Task.WhenAll(StopExtraCameras(), session?.DisposeAsync().AsTask() ?? Task.CompletedTask); }
-        catch (Exception error) { MessageBox.Show(this, "The recording could not be finalized: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        closing = true; preferencesTimer.Stop(); Enabled = false; status.Text = "Saving recording and disconnecting…";
+        try { await StopTalkAsync(); await Task.WhenAll(StopExtraCameras(), session?.DisposeAsync().AsTask() ?? Task.CompletedTask); SavePendingPreferences(); }
+        catch (Exception error) { MessageBox.Show(this, "Shutdown needs attention: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {
             timer.Stop(); timer.Dispose(); StopPlayback(); thumbnailStop?.Cancel(); thumbnailStop?.Dispose(); thumbnails.Dispose(); ClearPreview(); ClearAudio(); SetThreadExecutionState(0x80000000); exportStop.Dispose(); closed = true; Close();

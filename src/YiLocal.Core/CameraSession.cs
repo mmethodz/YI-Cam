@@ -30,7 +30,7 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action? PairingRejected;
     public VideoSnapshot Snapshot() => snapshots.Take();
     public Task MoveAsync(uint direction) => (Client ?? throw new IOException("Camera is disconnected.")).MoveAsync(profile.MapDirection(direction));
-    public CameraSession(DeviceProfile profile) { this.profile = profile; }
+    public CameraSession(DeviceProfile profile) { this.profile = profile; quality = profile.StreamQuality <= 2 ? profile.StreamQuality : (byte)1; }
     public async Task SetMonitoringAsync(bool enabled)
     {
         monitoring = enabled; await UpdateAudioAsync();

@@ -15,7 +15,7 @@ internal sealed class CameraEditor : Form
     {
         this.previous = previous; Text = previous is null ? "Add camera · experimental" : "Edit camera · experimental";
         ClientSize = new Size(590, 430); MinimumSize = new Size(610, 460); StartPosition = FormStartPosition.CenterParent; Font = new Font("Segoe UI", 10);
-        var body = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(12) }; Controls.Add(body);
+        var body = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty }; Controls.Add(new ScrollableColumn(body));
         void Field(string label, TextBox box) { body.Controls.Add(new Label { Text = label, AutoSize = true, Margin = new Padding(3, 10, 3, 3) }); body.Controls.Add(box); }
         Field("Camera name", name); Field("Camera IPv4 address on your LAN", ip); Field("Device pairing key · blank keeps the existing key", key);
         name.Text = previous?.Name ?? "Camera"; ip.Text = previous?.Ip ?? "";

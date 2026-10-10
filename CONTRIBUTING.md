@@ -24,6 +24,9 @@ python scripts/check_audio_integration.py
 python scripts/check_motion_integration.py
 # Windows player, including encoded low-rate recordings with audio:
 python scripts/check_player_integration.py
+# Windows preferences and synthetic microphone encoder (no real mic is opened):
+dotnet run --project tests/YiLocal.Windows.Checks -c Release -- --settings
+python scripts/check_talk_integration.py
 ```
 
 These synthetic tests do not access a camera. Native checks also run two simulated
