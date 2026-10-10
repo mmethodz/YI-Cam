@@ -6,6 +6,11 @@ if (args is ["--settings"])
     SettingsChecks.Run();
     return;
 }
+if (args is ["--alarm-audio", var alarmEncoder, var alarmOutput])
+{
+    await AlarmAudioChecks.RunAsync(alarmEncoder, alarmOutput);
+    return;
+}
 if (args is ["--talk-encoder", var encoder, var output])
 {
     await TalkEncoderChecks.RunAsync(encoder, output);

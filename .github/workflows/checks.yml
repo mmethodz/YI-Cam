@@ -31,3 +31,5 @@ jobs:
         run: dotnet run --project tests/YiLocal.Windows.Checks -c Release -- --settings
       - if: runner.os == 'Windows'
         run: python scripts/check_talk_integration.py
+      - if: runner.os == 'Windows'
+        run: python scripts/check_alarm_integration.py

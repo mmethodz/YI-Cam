@@ -2,6 +2,11 @@
 
 The original OpenYI source is MIT licensed. Dependency licenses remain separate.
 
+- **Siren Noise**, KevanGC — Public Domain, bundled as the optional alarm default.
+  [Source/license declaration](https://soundbible.com/1577-Siren-Noise.html) and
+  [download provenance and hash](assets/alarm/LICENSE.md). The original WAV is
+  embedded in the Windows application; no runtime download is required.
+
 - [QRCoder](https://github.com/Shane32/QRCoder), version 1.8.0, MIT: local PNG setup QR generation. No vendor runtime is required.
 No vendor client, APK, firmware, or decompiled source is distributed in this repository.
 

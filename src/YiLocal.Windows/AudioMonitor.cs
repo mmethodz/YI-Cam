@@ -70,8 +70,23 @@ internal interface IPcmPlaybackOutput : IDisposable
     Task DrainAsync(CancellationToken cancellation);
 }
 
+internal sealed record PlaybackDevice(uint Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
 internal sealed class PcmOutput : IPcmPlaybackOutput
 {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] struct Capabilities
+    {
+        public ushort Manufacturer, Product; public uint Version;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string Name;
+        public uint Formats; public ushort Channels, Reserved; public uint Support;
+    }
+    [DllImport("winmm.dll")] static extern uint waveOutGetNumDevs();
+    [DllImport("winmm.dll", CharSet = CharSet.Unicode)] static extern uint waveOutGetDevCapsW(UIntPtr device, out Capabilities capabilities, uint size);
+    [DllImport("winmm.dll")] static extern uint waveOutGetVolume(IntPtr handle, out uint volume);
+    [DllImport("winmm.dll")] static extern uint waveOutSetVolume(IntPtr handle, uint volume);
     [StructLayout(LayoutKind.Sequential, Pack = 2)] struct Format
     { public ushort Tag, Channels; public uint Rate, BytesPerSecond; public ushort Align, Bits, Extra; }
     [StructLayout(LayoutKind.Sequential)] struct Header
@@ -85,6 +100,7 @@ internal sealed class PcmOutput : IPcmPlaybackOutput
     [StructLayout(LayoutKind.Sequential)] struct Position { public uint Type, Value, Padding; }
     [DllImport("winmm.dll")] static extern uint waveOutGetPosition(IntPtr handle, ref Position position, uint size);
     readonly IntPtr handle;
+    readonly uint? previousVolume;
     readonly object clockLock = new();
     double lastPosition;
     bool disposed;
@@ -105,10 +121,34 @@ internal sealed class PcmOutput : IPcmPlaybackOutput
             }
         }
     }
-    public PcmOutput()
+    public static IReadOnlyList<PlaybackDevice> Devices()
+    {
+        var result = new List<PlaybackDevice> { new(uint.MaxValue, "Windows default output") };
+        for (uint i = 0; i < waveOutGetNumDevs(); i++)
+            if (waveOutGetDevCapsW((UIntPtr)i, out var caps, (uint)Marshal.SizeOf<Capabilities>()) == 0) result.Add(new(i, caps.Name));
+        return result;
+    }
+    public static PlaybackDevice ResolveDevice(string? name)
+    {
+        if (name is null) return Devices()[0];
+        var matching = Devices().Skip(1).Where(device => device.Name == name).ToArray();
+        if (matching.Length != 1) throw new IOException("The saved alarm output is unavailable or its name is ambiguous. Select a uniquely named output device; no fallback speaker was used.");
+        return matching[0];
+    }
+    public PcmOutput(string? deviceName = null, bool fullVolume = false)
     {
         var format = new Format { Tag = 1, Channels = 1, Rate = 16000, BytesPerSecond = 32000, Align = 2, Bits = 16 };
-        Check(waveOutOpen(out handle, uint.MaxValue, ref format, IntPtr.Zero, IntPtr.Zero, 0));
+        Check(waveOutOpen(out handle, ResolveDevice(deviceName).Id, ref format, IntPtr.Zero, IntPtr.Zero, 0));
+        if (fullVolume)
+        {
+            try
+            {
+                Check(waveOutGetVolume(handle, out uint volume)); previousVolume = volume;
+                // Use the open handle: this changes this output instance, never all devices or the system master.
+                Check(waveOutSetVolume(handle, uint.MaxValue));
+            }
+            catch { waveOutClose(handle); throw; }
+        }
     }
     void Reclaim(bool all = false)
     {
@@ -145,7 +185,10 @@ internal sealed class PcmOutput : IPcmPlaybackOutput
         lock (clockLock)
         {
             if (disposed) return;
-            _ = Seconds; disposed = true; waveOutReset(handle); Reclaim(true); waveOutClose(handle);
+            _ = Seconds; disposed = true; waveOutReset(handle); Reclaim(true);
+            if (previousVolume is { } volume && waveOutGetVolume(handle, out uint current) == 0 && current == uint.MaxValue)
+                waveOutSetVolume(handle, volume);
+            waveOutClose(handle);
         }
     }
 }

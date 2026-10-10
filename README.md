@@ -52,6 +52,13 @@ settings. Camera keys, stream quality and arrow preferences stay in encrypted
 per-camera profiles. Night vision, tracking and gimbal state are read from the camera.
 Recording, listening and talking start manually each time. No registry setup is needed.
 
+**Motion alarm** adds an optional second motion threshold for the primary camera.
+It can repeat a bundled public-domain siren or imported audio through the camera
+(default), a selected computer output, or both. Home/Away, entry/exit delays,
+30-second/1-minute/5-minute/custom durations and an until-stopped option are local
+controls; the app always launches in Home. The bottom bar and tray show the alarm
+state and offer immediate stop/disarm. See [alarm setup and verification limits](docs/ALARM.md).
+
 No camera firmware changes or Internet port forwarding are required. The app
 makes no cloud requests and exposes no HTTP server. The camera firmware may still
 contact vendor services; this app does not change the camera's network settings.

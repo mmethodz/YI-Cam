@@ -9,6 +9,7 @@ internal sealed class Preferences
     public string? Ffmpeg { get; set; }
     public StoragePolicy Storage { get; set; } = new();
     public RecordingOptions Recording { get; set; } = new();
+    public AlarmOptions Alarm { get; set; } = new();
     public bool ExperimentalMultipleCameras { get; set; }
     public string? Microphone { get; set; }
     public static string FilePath => Path.Combine(DeviceProfile.SettingsDirectory, "settings.json");
@@ -54,6 +55,7 @@ internal sealed class Preferences
         ReadSection<string?>(nameof(Ffmpeg), value => result.Ffmpeg = value);
         ReadSection<StoragePolicy>(nameof(Storage), value => { value.Validate(); result.Storage = value; });
         ReadSection<RecordingOptions>(nameof(Recording), value => { value.Validate(); result.Recording = value; });
+        ReadSection<AlarmOptions>(nameof(Alarm), value => { value.Validate(); result.Alarm = value; });
         ReadSection<bool>(nameof(ExperimentalMultipleCameras), value => result.ExperimentalMultipleCameras = value);
         ReadSection<string?>(nameof(Microphone), value => result.Microphone = value);
         notice = issues.Count == 0 ? null : "Some saved settings need attention: " + string.Join("; ", issues);
@@ -62,7 +64,7 @@ internal sealed class Preferences
     public void Save(string? path = null)
     {
         path ??= FilePath;
-        Storage.Validate(); Recording.Validate();
+        Storage.Validate(); Recording.Validate(); Alarm.Validate();
         if (string.IsNullOrWhiteSpace(Folder)) throw new ArgumentException("Choose a recording folder.");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";

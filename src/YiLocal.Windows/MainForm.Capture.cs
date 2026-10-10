@@ -56,6 +56,7 @@ public sealed partial class MainForm
         var motion = new FlowLayoutPanel { AutoSize = true };
         motion.Controls.Add(Label("Seconds after last motion", 230)); motion.Controls.Add(postMotion);
         body.Controls.Add(motion);
+        body.Controls.Add(Row(Button("30 sec", () => postMotion.Value = 30), Button("1 min", () => postMotion.Value = 60), Button("5 min", () => postMotion.Value = 300)));
         var sensitivity = new FlowLayoutPanel { AutoSize = true };
         sensitivity.Controls.Add(Label("Changed image area (%)", 230)); sensitivity.Controls.Add(motionThreshold);
         motionThreshold.Increment = 0.1m; body.Controls.Add(sensitivity);

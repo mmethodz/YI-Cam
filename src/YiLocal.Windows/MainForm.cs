@@ -52,8 +52,8 @@ public sealed partial class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
         layout.RowStyles.Add(new(SizeType.Percent, 100)); layout.RowStyles.Add(new(SizeType.Absolute, 40));
-        layout.Controls.Add(tabs, 0, 0); layout.Controls.Add(status, 0, 1); Controls.Add(layout);
-        BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning(); BuildCapture(); BuildCameras();
+        layout.Controls.Add(tabs, 0, 0); layout.Controls.Add(BuildAlarmStatus(), 0, 1); Controls.Add(layout);
+        BuildLive(); BuildRecordings(); BuildStorage(); BuildCamera(); BuildProvisioning(); BuildCapture(); BuildAlarm(); BuildCameras();
         preferences = Preferences.Load(out string? settingsNotice);
         settingsMessage.Text = settingsNotice ?? "Settings save automatically. Changes apply to the next recording session.";
         if (settingsNotice is not null) status.Text = settingsNotice;
@@ -71,6 +71,7 @@ public sealed partial class MainForm : Form
         segment.Value = (decimal)preferences.Storage.SegmentMinutes; days.Value = preferences.Storage.KeepDays; recycle.Checked = preferences.Storage.Recycle;
         ShowProfile();
         ShowCaptureOptions();
+        ShowAlarmOptions();
         LoadCameras();
         ShowMicrophones();
         TrackPreferenceEdits();
@@ -78,6 +79,7 @@ public sealed partial class MainForm : Form
         {
             UpdatePlayback();
             UpdateTalkState();
+            UpdateAlarmState();
             UpdateCameraGrid();
             Bitmap? next; lock (previewLock) next = preview?.Take();
             if (next is not null) { var prior = picture.Image; picture.Image = next; SetPrimaryGridImage(next); prior?.Dispose(); }
@@ -155,7 +157,7 @@ public sealed partial class MainForm : Form
         record.Enabled = false;
         try
         {
-            if (active.Recording) { await Task.Run(active.StopRecording); status.Text = "Recording saved."; RefreshClips(); }
+            if (active.Recording) { await HomeAlarmAsync(); await Task.Run(active.StopRecording); status.Text = "Recording saved."; RefreshClips(); }
             else
             {
                 if (!extraCameras.Any(camera => camera.Recording)) { SavePendingPreferences(); SaveCaptureOptions(); }
@@ -192,6 +194,7 @@ public sealed partial class MainForm : Form
                 Ui(() =>
                 {
                     if (session != active) return;
+                    if (settings is null) { lastAlarmMeasurement = 0; _ = HomeAlarmAsync(); }
                     cameraControls.Enabled = settings is not null; night.Enabled = tracking.Enabled = settings is not null;
                     if (settings is not null) { night.SelectedIndex = settings.NightVision is <= 2 ? settings.NightVision : -1; tracking.Checked = settings.Tracking != 0; }
                     gimbal.Refresh(settings);
@@ -201,7 +204,7 @@ public sealed partial class MainForm : Form
             {
                 if (session != active) return;
                 UpdateRecordLabels();
-                if (!recordingActive) UpdatePrimaryGridState("Recording is off.");
+                if (!recordingActive) { lastAlarmMeasurement = 0; _ = HomeAlarmAsync(); UpdatePrimaryGridState("Recording is off."); }
                 UpdateKeepAwake();
             });
             session.MotionChanged += state => Ui(() =>
@@ -210,6 +213,7 @@ public sealed partial class MainForm : Form
                 recordState.Text = state.Capturing ? $"● Motion · {state.RemainingSeconds:0} s remaining" : $"Watching · {state.ChangedPercent:0.0}% changed";
                 recordState.ForeColor = state.Capturing ? Color.Firebrick : Color.DarkGreen;
             });
+            session.MotionMeasured += sample => OnAlarmMeasurement(active, sample);
             session.Audio += OnAudio; session.Frame += OnFrame; session.Start(); connect.Text = "Disconnect"; record.Enabled = true;
         }
         finally { connect.Enabled = !importing; }
@@ -223,6 +227,7 @@ public sealed partial class MainForm : Form
     }
     async Task DisconnectAsync()
     {
+        await HomeAlarmAsync(); lastAlarmMeasurement = 0;
         await StopTalkAsync();
         var previous = session; session = null;
         try { if (previous is not null) await previous.DisposeAsync(); }
@@ -342,7 +347,7 @@ public sealed partial class MainForm : Form
         if (exporting) { status.Text = "An export is running. Wait for it to finish before closing."; return; }
         if (savingSnapshot) { status.Text = "Finishing the snapshot. Please wait before closing."; return; }
         closing = true; preferencesTimer.Stop(); Enabled = false; status.Text = "Saving recording and disconnecting…";
-        try { await StopTalkAsync(); await Task.WhenAll(StopExtraCameras(), session?.DisposeAsync().AsTask() ?? Task.CompletedTask); SavePendingPreferences(); }
+        try { await HomeAlarmAsync(); await StopTalkAsync(); await Task.WhenAll(StopExtraCameras(), session?.DisposeAsync().AsTask() ?? Task.CompletedTask); SavePendingPreferences(); }
         catch (Exception error) { MessageBox.Show(this, "Shutdown needs attention: " + error.Message, "OpenYI", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         finally
         {

@@ -344,6 +344,15 @@ class do not describe the observed stream.
 
 ## Talk-back speaker stream
 
+The optional local motion alarm reuses this same speaker transport and mode-0
+initialization, sending repeated AAC-LC 16 kHz mono packets at 64 ms intervals.
+Its second threshold, entry/exit grace, Home/Away and duration are PC application
+state, not camera firmware commands. The vendor tamper alarm is not enabled.
+Computer alarm playback uses Windows audio output, with no camera command at all.
+Camera alarm playback retains the same half-duplex microphone limitation. Signal
+normalization is implemented; a camera hardware-volume override remains
+unverified. See [alarm behavior and validation](docs/ALARM.md).
+
 The same hardware/firmware accepts AAC-LC 16 kHz mono ADTS on outgoing reliable
 channel 1, TNP v2 kind 2. The speaker must first be initialized in that session:
 start video (`2345`), receive a frame, stop video (`02ff`, eight zero bytes), then

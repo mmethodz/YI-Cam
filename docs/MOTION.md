@@ -25,6 +25,9 @@ threshold is more sensitive. This is pixel motion, not person/object recognition
 Camera movement, tracking and nonuniform lighting changes can still trigger it.
 
 Every active sample restarts the post-motion timer (1–3600 seconds, default 30).
+The capture UI includes 30-second, 1-minute and 5-minute shortcuts as well as the
+custom seconds control. An [optional motion alarm](ALARM.md) uses an independent
+second threshold from the same analysis; Home/Away does not alter recording.
 The timer uses analyzed camera timestamps. Clips retain the normal catalogue,
 rotation, protection, export and storage policy. The Motion browser filter selects
 these recordings, including those encoded at reduced fps. Estimates show storage

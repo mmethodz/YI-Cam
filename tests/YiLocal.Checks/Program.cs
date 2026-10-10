@@ -92,6 +92,7 @@ if (args.Length > 0 && args[0] == "--live")
 
 await PairingChecks.RunAsync();
 MotionChecks.Run();
+AlarmChecks.Run();
 TalkChecks.Run();
 await MultiCameraChecks.RunAsync();
 Check(CameraAlert.Parse(new byte[4]).Count == 0, "Empty alert history rejected.");

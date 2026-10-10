@@ -58,10 +58,19 @@ static class MotionChecks
             audio.Add(bytes[at..(at + length)]); at += length;
         }
         var encoding = Enum.Parse<RecordingEncoding>(args[5]);
-        var events = new List<object>(); long now = 0; bool wasActive = false; int triggers = 0, tails = 0;
+        var events = new List<object>(); long now = 0; bool wasActive = false; int triggers = 0, tails = 0, samples = 0, resets = 0;
+        var alarm = new MotionAlarmGate(new(true, 100, 1, 0, 0));
         using (var recorder = new MotionRecorder(args[3], new(SegmentMinutes: 10),
             new(encoding, encoding == RecordingEncoding.Original ? null : 0.5, CaptureMode.Motion, true, 2, 2), args[4], "Synthetic motion camera"))
         {
+            recorder.Measurement += sample =>
+            {
+                if (sample is null) { resets++; alarm.Home(); return; }
+                samples++;
+                if (!alarm.Armed) alarm.Arm(sample.Milliseconds);
+                alarm.Observe(sample.ChangedPercent, sample.Milliseconds);
+                Check(alarm.Phase == AlarmPhase.Watching, "Second threshold borrowed the recording trigger.");
+            };
             recorder.State += state =>
             {
                 if (state.Capturing != wasActive)
@@ -87,6 +96,7 @@ static class MotionChecks
                 Thread.Sleep(25);
             }
             Check(triggers == 2 && tails == 2 && recorder.Current is null, $"Expected two motion bursts and expired tails; got {triggers}/{tails}.");
+            Check(samples > 90 && resets >= 2, "Alarm did not receive unthrottled samples and reset notifications.");
         }
         File.WriteAllText(Path.Combine(args[3], "events.json"), JsonSerializer.Serialize(events));
         Console.WriteLine($"{encoding}: two motion clips, quiet periods omitted and both post-motion timers expired.");

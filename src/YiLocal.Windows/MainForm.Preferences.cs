@@ -26,6 +26,8 @@ public sealed partial class MainForm
         foreach (var number in new[] { recordingRate, postMotion, motionThreshold }) number.ValueChanged += (_, _) => Changed(false);
         preferencesTimer.Tick += (_, _) =>
         {
+            if (alarmDirty && !AlarmArmed && !AlarmPlaying && alarmPreparation is null)
+                try { SaveAlarmOptions(); } catch (Exception e) { status.Text = "Alarm settings not saved: " + e.Message; }
             if (AnyRecording || importing || exporting || gridBusy || folder.ContainsFocus || ffmpeg.ContainsFocus) return;
             preferencesTimer.Stop();
             try { SavePendingPreferences(); }
@@ -35,6 +37,7 @@ public sealed partial class MainForm
     }
     void SavePendingPreferences()
     {
+        if (alarmDirty) SaveAlarmOptions();
         if (!storageDirty && !captureDirty) return;
         if (AnyRecording || exporting || gridBusy) throw new InvalidOperationException("Stop all recordings and let camera changes/exports finish before changing settings.");
         // Validate both edited sections before persisting either, and update memory only after the write succeeds.

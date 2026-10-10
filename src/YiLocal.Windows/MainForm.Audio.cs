@@ -47,7 +47,7 @@ public sealed partial class MainForm
     {
         lock (audioLock)
         {
-            if (talkback is not null || !talkStopping.IsCompleted) return;
+            if (talkback is not null || !talkStopping.IsCompleted || AlarmPlaying) return;
             try
             {
                 if (audioMonitor?.Failed == true) { audioMonitor.Dispose(); audioMonitor = null; }
@@ -85,6 +85,7 @@ public sealed partial class MainForm
     {
         if (talkback is not null) return;
         await talkStopping;
+        await HomeAlarmAsync();
         if (session?.Client is not { Connected: true } || profile is null) throw new IOException("Connect the camera before talking.");
         if (!File.Exists(ffmpeg.Text.Trim())) throw new IOException("Choose FFmpeg in Storage for two-way audio.");
         ClearAudio();
@@ -106,7 +107,7 @@ public sealed partial class MainForm
         await previous.DisposeAsync();
         if (IsDisposed) return;
         talk.Text = "Talk to camera"; talk.BackColor = SystemColors.Control;
-        talkState.Text = "Microphone off"; listen.Enabled = microphone.Enabled = true;
+        talkState.Text = "Microphone off"; listen.Enabled = !AlarmPlaying; microphone.Enabled = true;
         talk.Enabled = !closing && session?.Client is { Connected: true };
         testSpeaker.Enabled = talk.Enabled; inputLevel.Value = 0;
         inputLevelText.Text = previous.IsSpeakerTest ? "Input off" : previous.MaximumInputPeak > 0 ? $"Last: {20 * Math.Log10(previous.MaximumInputPeak):0} dB" : "Last: silent";

@@ -19,6 +19,8 @@ public sealed class MotionRecorder : IDisposable
     public string? Current => recorder.Current;
     public long Frames => recorder.Frames;
     public event Action<MotionRecordingState>? State;
+    // Every analyzed sample, before UI throttling. Null invalidates the analysis baseline.
+    public event Action<MotionMeasurement?>? Measurement;
 
     public MotionRecorder(string folder, StoragePolicy policy, RecordingOptions options, string? ffmpeg, string cameraName = "")
     {
@@ -47,6 +49,7 @@ public sealed class MotionRecorder : IDisposable
         while (decoder.Measurements.TryRead(out var sample))
         {
             if (time - sample.Milliseconds > 5000) throw new IOException("Local motion detection is more than five seconds behind. Recording has been disarmed.");
+            Measurement?.Invoke(sample);
             bool wasActive = window.Active;
             bool active = window.Observe(sample);
             if (active && !wasActive) BeginClip();
@@ -101,6 +104,7 @@ public sealed class MotionRecorder : IDisposable
 
     public void ConnectionEnded()
     {
+        Measurement?.Invoke(null);
         decoder?.Dispose(); decoder = null; identity = null;
         window.Reset(); preRoll.Clear(); audio.Clear(); audioBytes = 0;
         lastVideo = lastAudio = long.MinValue;

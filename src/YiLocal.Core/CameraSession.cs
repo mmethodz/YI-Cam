@@ -27,6 +27,7 @@ public sealed class CameraSession : IAsyncDisposable
     public event Action<AudioFrame, long>? Audio;
     public event Action<bool>? RecordingChanged;
     public event Action<MotionRecordingState>? MotionChanged;
+    public event Action<MotionMeasurement?>? MotionMeasured;
     public event Action? PairingRejected;
     public VideoSnapshot Snapshot() => snapshots.Take();
     public Task MoveAsync(uint direction) => (Client ?? throw new IOException("Camera is disconnected.")).MoveAsync(profile.MapDirection(direction));
@@ -64,6 +65,7 @@ public sealed class CameraSession : IAsyncDisposable
             if (recordingOptions.Mode == CaptureMode.Motion)
             {
                 motionRecorder = new(folder, selectedPolicy, recordingOptions, ffmpeg, profile.Name);
+                motionRecorder.Measurement += sample => MotionMeasured?.Invoke(sample);
                 motionRecorder.State += state =>
                 {
                     MotionChanged?.Invoke(state);

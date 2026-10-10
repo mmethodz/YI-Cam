@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\YiLocal.Core\YiLocal.Core.csproj" />
+    <EmbeddedResource Include="../../assets/alarm/siren-noise.wav" LogicalName="OpenYI.SirenNoise.wav" />
+    <Content Include="../../assets/alarm/LICENSE.md" Link="assets/alarm/LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>
