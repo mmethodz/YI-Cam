@@ -24,6 +24,29 @@ static class MultiCameraChecks
         await Task.WhenAll(queries);
         await Task.WhenAll(a.TrackingAsync(true), b.TrackingAsync(false));
         Require(first.Tracking && !second.Tracking, "A control command reached the wrong camera.");
+        await Task.WhenAll(a.RotateAsync(true), b.RotateAsync(false));
+        Require((await a.SettingsAsync()).Rotation == 1 && (await b.SettingsAsync()).Rotation == 0,
+            "Rotation payload/readback or camera isolation failed.");
+        Require(await a.GimbalRestoreDelayAsync() == 20, "Gimbal restore default/readback failed.");
+        await a.GimbalRestoreAsync(false);
+        Require(await a.GimbalRestoreDelayAsync() == 0 && await b.GimbalRestoreDelayAsync() == 20,
+            "Gimbal restore affected another camera or ignored off.");
+        await a.GimbalRestoreAsync(true);
+        Require(await a.GimbalRestoreDelayAsync() == 20, "Gimbal on did not use the mobile app's 20 value.");
+        first.MalformedGimbalReply = true;
+        try { await a.GimbalRestoreDelayAsync(); throw new Exception("Malformed gimbal response was accepted."); }
+        catch (InvalidDataException) { }
+        first.MalformedGimbalReply = false;
+        var controls = new DeviceProfile { Uid = first.Uid };
+        Require(Enumerable.Range(1, 4).All(d => controls.MapDirection((uint)d) == d), "Default arrows changed.");
+        controls.ReversePanControls = true;
+        Require(controls.MapDirection(3) == 4 && controls.MapDirection(4) == 3 && controls.MapDirection(1) == 1, "Pan reversal affected tilt.");
+        controls.ReverseTiltControls = true;
+        Require(controls.MapDirection(1) == 2 && controls.MapDirection(2) == 1, "Tilt reversal failed.");
+        var refreshed = new DeviceProfile { Uid = first.Uid }; refreshed.KeepControlsFrom(controls);
+        Require(refreshed.ReversePanControls && refreshed.ReverseTiltControls, "Pairing refresh lost local direction settings.");
+        var other = new DeviceProfile { Uid = second.Uid }; other.KeepControlsFrom(controls);
+        Require(!other.ReversePanControls && !other.ReverseTiltControls, "Direction settings leaked to another camera.");
         await Task.WhenAll(a.StartVideoAsync(), b.StartVideoAsync(), a.StartAudioAsync(), b.StartAudioAsync());
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         var va = await a.Frames.ReadAsync(timeout.Token); var vb = await b.Frames.ReadAsync(timeout.Token);
@@ -53,7 +76,7 @@ static class MultiCameraChecks
             if (OperatingSystem.IsWindows())
             {
                 var primary = new DeviceProfile { Ip = "127.0.0.2", Password = first.Key, Uid = first.Uid, Name = "Primary fixture" };
-                var additional = new DeviceProfile { Ip = "127.0.0.3", Password = second.Key, Uid = second.Uid, Name = "Additional fixture" };
+                var additional = new DeviceProfile { Ip = "127.0.0.3", Password = second.Key, Uid = second.Uid, Name = "Additional fixture", ReversePanControls = true };
                 Reject(() => registry.SaveVerified(primary, primary));
                 var entry = registry.SaveVerified(additional, primary);
                 Require(registry.Entries.Count == 1 && entry.Id.Length == 32, "Registry did not save an independent entry.");
@@ -61,6 +84,7 @@ static class MultiCameraChecks
                 var loaded = new CameraRegistry(folder).LoadProfile(entry.Id);
                 Require(loaded.SavePath() == registry.ProfilePath(entry.Id), "Reloaded additional profile would overwrite the primary profile.");
                 Require(loaded.Uid == second.Uid && loaded.Password == second.Key, "Encrypted additional pairing changed.");
+                Require(loaded.ReversePanControls && !loaded.ReverseTiltControls, "Encrypted profile lost independent control preferences.");
                 registry.SetEnabled(entry.Id, false); Require(!new CameraRegistry(folder).Entries[0].Enabled, "Per-camera enable setting was lost.");
                 Require(!File.Exists(Path.Combine(folder, "device.dpapi")), "Registry wrote a primary profile.");
                 registry.Remove(entry.Id); Require(registry.Entries.Count == 0 && !File.Exists(registry.ProfilePath(entry.Id)), "Registry removal retained its key.");
@@ -83,6 +107,9 @@ static class MultiCameraChecks
         public string Key { get; }
         public string Uid => Convert.ToHexString(uid).ToLowerInvariant();
         public bool Tracking { get; private set; }
+        public bool Rotation { get; private set; }
+        public uint GimbalRestore { get; private set; } = 20;
+        public bool MalformedGimbalReply { get; set; }
         public byte[] Video => Wire.Join([0, 0, 0, 1], Enumerable.Repeat(marker, 32).ToArray());
         public byte[] Audio => Enumerable.Repeat(marker, 37).ToArray();
         public SimulatedCamera(string address, string key, byte marker, string firmware, uint stamp)
@@ -125,6 +152,13 @@ static class MultiCameraChecks
                         if (command == 0x0300) { await Frame(true, 0, peer); continue; }
                         byte[] reply = command == 0x1300 ? Encoding.ASCII.GetBytes(firmware) : [];
                         if (command == 0x400b) Tracking = Wire.U32(body.AsSpan(40)) != 0;
+                        if (command is 0x131f or 0x1394 or 0x1396)
+                            Require(body.Length == 44, "Orientation command payload must be four bytes.");
+                        if (command == 0x131f) Rotation = Wire.U32(body.AsSpan(40)) != 0;
+                        if (command == 0x1394) GimbalRestore = Wire.U32(body.AsSpan(40));
+                        if (command == 0x1396) reply = MalformedGimbalReply ? [0] : Wire.U32(GimbalRestore);
+                        if (command is 0x0330 or 0x131f or 0x1394)
+                        { reply = new byte[344]; reply[8] = 253; reply[54] = Rotation ? (byte)1 : (byte)0; reply[68] = Tracking ? (byte)1 : (byte)0; }
                         ushort response = command == 0x400b ? (ushort)0x400c : (ushort)(command + 1);
                         await Message(0, 3, Wire.Join(Wire.U16(response), body[2..4], new byte[2], Wire.U16((ushort)reply.Length), new byte[32], reply), peer);
                     }

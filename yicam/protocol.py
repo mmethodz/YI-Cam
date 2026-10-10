@@ -342,6 +342,23 @@ class Camera:
     def set_tracking(self, enabled):
         return self.command(0x400B, struct.pack('>I', int(bool(enabled))), response=0x400C)
 
+    def set_rotation(self, enabled):
+        """Camera-side 180-degree image rotation; hardware-253 device-info byte 54 is readback."""
+        return self.command(0x131f, struct.pack('>I', int(bool(enabled))), response=0x1320)
+
+    def gimbal_restore_delay(self):
+        data = self.command(0x1396, bytes(4), response=0x1397).data
+        if len(data) != 4:
+            raise ProtocolError('Unrecognized gimbal restore response.')
+        return struct.unpack('>I', data)[0]
+
+    def set_gimbal_restore(self, enabled):
+        """Observed mobile switch: 20 for on, 0 for off; physical timing is model-dependent."""
+        value = 20 if enabled else 0
+        self.command(0x1394, struct.pack('>I', value), response=0x1395)
+        if self.gimbal_restore_delay() != value:
+            raise ProtocolError('Camera did not confirm the gimbal restore setting.')
+
     def set_night_vision(self, mode):
         if mode not in (0, 1, 2):
             raise ValueError('Choose infrared, colour, or automatic lighting.')

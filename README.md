@@ -70,6 +70,9 @@ Do not reset a working camera to test this feature.
 | Automatic quality | Camera-selected stream; dimensions may change |
 | Pan/tilt | Short direction commands followed by stop; left/right physically checked |
 | Motion tracking | Commands/readback verified; the owner also confirms local physical tracking works |
+| Rotate image 180° | Camera readback and visibly rotated/restored live image verified |
+| Restore gimbal | Off/on readback verified; reads the existing setting on connection; physical return behavior remains experimental |
+| Reverse left/right or up/down controls | Per-camera local arrow preferences; do not disable motor axes |
 | Infrared | IR activates automatically in darkness; red LEDs and filter click physically confirmed |
 | Colour night vision | Extra visible lights activate; physically confirmed |
 | Automatic lighting | Mode accepted and read back; trigger behavior not yet characterized |

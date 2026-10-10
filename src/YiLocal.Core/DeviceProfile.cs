@@ -11,6 +11,8 @@ public sealed class DeviceProfile
     [JsonPropertyName("name")] public string Name { get; set; } = "Camera";
     [JsonPropertyName("uid")] public string? Uid { get; set; }
     [JsonPropertyName("password")] public string Password { get; set; } = "";
+    [JsonPropertyName("reverse_pan_controls")] public bool ReversePanControls { get; set; }
+    [JsonPropertyName("reverse_tilt_controls")] public bool ReverseTiltControls { get; set; }
     [JsonIgnore] public string? StoragePath { get; private set; }
     public static string SettingsDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "YI Local");
     public static string DefaultPath => Path.Combine(SettingsDirectory, "device.dpapi");
@@ -29,6 +31,19 @@ public sealed class DeviceProfile
         StoragePath = path;
     }
     internal string SavePath(string? path = null) => Path.GetFullPath(path ?? StoragePath ?? DefaultPath);
+    public uint MapDirection(uint direction) => direction switch
+    {
+        1 => ReverseTiltControls ? 2u : 1u,
+        2 => ReverseTiltControls ? 1u : 2u,
+        3 => ReversePanControls ? 4u : 3u,
+        4 => ReversePanControls ? 3u : 4u,
+        _ => throw new ArgumentOutOfRangeException(nameof(direction))
+    };
+    public void KeepControlsFrom(DeviceProfile? previous)
+    {
+        if (Uid is null || previous?.Uid is null || !Uid.Equals(previous.Uid, StringComparison.OrdinalIgnoreCase)) return;
+        ReversePanControls = previous.ReversePanControls; ReverseTiltControls = previous.ReverseTiltControls;
+    }
     [StructLayout(LayoutKind.Sequential)] struct Blob { public int Size; public IntPtr Data; }
     [DllImport("crypt32.dll", SetLastError = true)] static extern bool CryptProtectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);
     [DllImport("crypt32.dll", SetLastError = true)] static extern bool CryptUnprotectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, uint flags, out Blob output);

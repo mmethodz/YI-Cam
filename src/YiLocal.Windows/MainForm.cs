@@ -26,6 +26,7 @@ public sealed partial class MainForm : Form
     Preferences preferences = new();
     DeviceProfile? profile;
     CameraSession? session;
+    GimbalControls gimbal = null!;
     readonly object previewLock = new();
     VideoPreview? preview;
     string? previewIdentity;
@@ -113,7 +114,7 @@ public sealed partial class MainForm : Form
     {
         var page = Page("Live camera");
         var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2 };
-        grid.ColumnStyles.Add(new(SizeType.Percent, 100)); grid.ColumnStyles.Add(new(SizeType.Absolute, 270));
+        grid.ColumnStyles.Add(new(SizeType.Percent, 100)); grid.ColumnStyles.Add(new(SizeType.Absolute, 300));
         grid.RowStyles.Add(new(SizeType.Percent, 100)); grid.RowStyles.Add(new(SizeType.Absolute, 36));
         grid.Controls.Add(picture, 0, 0); grid.Controls.Add(metrics, 0, 1);
         var side = Column(); grid.Controls.Add(side, 1, 0); grid.SetRowSpan(side, 2); page.Controls.Add(grid);
@@ -143,12 +144,13 @@ public sealed partial class MainForm : Form
         var directions = new TableLayoutPanel { ColumnCount = 3, RowCount = 3, AutoSize = true };
         void Move(string label, uint value, int x, int y)
         {
-            var b = Button(label, () => _ = Guard(async () => { if (session?.Client is { } c) await c.MoveAsync(value); }));
+            var b = Button(label, () => _ = Guard(async () => { if (session is { } active) await active.MoveAsync(value); }));
             b.MinimumSize = new Size(65, 36); directions.Controls.Add(b, x, y);
         }
         Move("Up", 1, 1, 0); Move("Left", 3, 0, 1); Move("Right", 4, 2, 1); Move("Down", 2, 1, 2);
         directions.Controls.Add(Button("Stop", () => _ = Guard(async () => { if (session?.Client is { } c) await c.StopMovingAsync(); })), 1, 1);
         cameraControls.Controls.Add(directions);
+        gimbal = new(() => session, () => profile, Guard); cameraControls.Controls.Add(gimbal);
         side.Controls.Add(Label("Recordings keep the original resolution. 4K export is a software upscale.", 224));
     }
     async Task ToggleRecordingAsync()
@@ -196,6 +198,7 @@ public sealed partial class MainForm : Form
                     if (session != active) return;
                     cameraControls.Enabled = settings is not null; night.Enabled = tracking.Enabled = settings is not null;
                     if (settings is not null) { night.SelectedIndex = settings.NightVision is <= 2 ? settings.NightVision : -1; tracking.Checked = settings.Tracking != 0; }
+                    gimbal.Refresh(settings);
                 });
             };
             session.RecordingChanged += recordingActive => Ui(() =>
@@ -320,6 +323,7 @@ public sealed partial class MainForm : Form
                 status.Text = "Checking the imported key against the LAN camera…";
                 var verified = await PairingImport.VerifyAsync(candidate, timeout.Token);
                 EnsurePrimaryDistinct(verified);
+                verified.KeepControlsFrom(profile);
                 verified.Save(DeviceProfile.DefaultPath); profile = verified;
             }
             catch (Exception e)

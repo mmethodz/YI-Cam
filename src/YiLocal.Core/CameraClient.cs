@@ -12,7 +12,7 @@ namespace YiLocal.Core;
 public sealed record CameraReply(ushort Command, ushort Number, uint AuthenticationResult, byte[] Data, byte Unsupported);
 public sealed record VideoFrame(byte[] Data, ushort Sequence, int Width, int Height, uint Seconds,
     uint Milliseconds, bool Keyframe, byte Generation, ushort Codec);
-public sealed record CameraSettings(byte Hardware, byte NightVision, byte Tracking);
+public sealed record CameraSettings(byte Hardware, byte NightVision, byte Tracking, byte Rotation = 0);
 
 public sealed class CameraAuthenticationException(uint result) : UnauthorizedAccessException(
     $"Camera rejected the device key ({result})." + (result == 1 ? " Refresh the saved key in Camera setup using Import from running YI IoT." : ""))
@@ -284,7 +284,7 @@ public sealed class CameraClient : IDisposable
     {
         var data = (await CommandAsync(0x0330, new byte[4], 0x0331))!.Data;
         if (data.Length < 92 || data[8] != 253) throw new NotSupportedException("This version supports the verified hardware-253 settings layout.");
-        return new(data[8], data[91], data[68]);
+        return new(data[8], data[91], data[68], data[54]);
     }
     public Task StartVideoAsync(byte quality = 1) => CommandAsync(0x2345, [++generation, quality, 1, 0]);
     public Task StartAudioAsync() => CommandAsync(0x0300, new byte[8]);
@@ -300,6 +300,20 @@ public sealed class CameraClient : IDisposable
         return CommandAsync(0x1380, Wire.U32(mode), 0x1381);
     }
     public Task TrackingAsync(bool enabled) => CommandAsync(0x400b, Wire.U32(enabled ? 1u : 0u), 0x400c);
+    public Task RotateAsync(bool enabled) => CommandAsync(0x131f, Wire.U32(enabled ? 1u : 0u), 0x1320);
+    public async Task<uint> GimbalRestoreDelayAsync()
+    {
+        var data = (await CommandAsync(0x1396, new byte[4], 0x1397))!.Data;
+        if (data.Length != 4) throw new InvalidDataException("Unrecognized gimbal restore response.");
+        return Wire.U32(data);
+    }
+    public async Task GimbalRestoreAsync(bool enabled)
+    {
+        uint value = enabled ? 20u : 0u; // The observed mobile switch uses 20 for on, zero for off.
+        await CommandAsync(0x1394, Wire.U32(value), 0x1395);
+        // The reference firmware returns device info here, despite the mobile SDK's uint32 callback.
+        if (await GimbalRestoreDelayAsync() != value) throw new IOException("Camera did not confirm the gimbal restore setting.");
+    }
     public Task StopMovingAsync() => CommandAsync(0x4013, new byte[4]);
     public async Task MoveAsync(uint direction)
     {

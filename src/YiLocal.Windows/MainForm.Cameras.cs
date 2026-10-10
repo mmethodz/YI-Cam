@@ -157,6 +157,7 @@ public sealed partial class MainForm
             if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Verified is not { } verified)
                 return;
             cameraRegistry.EnsureDistinct(verified, profile, existing?.Registration.Id);
+            verified.KeepControlsFrom(existing?.Profile);
             bool resumeRecording = existing?.Recording == true;
             if (existing is not null) await existing.Stop();
             var registration = cameraRegistry.SaveVerified(verified, profile, existing?.Registration.Id);
@@ -178,7 +179,7 @@ public sealed partial class MainForm
         var active = camera.Session ?? throw new IOException("Connect this camera first.");
         var client = active.Client ?? throw new IOException("Wait for this camera to connect.");
         var settings = await client.SettingsAsync();
-        using var dialog = new Form { Text = camera.Profile.Name + " · controls", ClientSize = new Size(400, 340), StartPosition = FormStartPosition.CenterParent, Font = Font };
+        using var dialog = new Form { Text = camera.Profile.Name + " · controls", ClientSize = new Size(420, 540), StartPosition = FormStartPosition.CenterParent, Font = Font };
         var body = Column(); dialog.Controls.Add(body);
         var qualityChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 310 };
         qualityChoice.Items.AddRange(["HD", "SD", "Automatic quality"]); qualityChoice.SelectedIndex = active.Quality switch { 2 => 1, 0 => 2, _ => 0 }; body.Controls.Add(qualityChoice);
@@ -190,8 +191,10 @@ public sealed partial class MainForm
         follow.Click += (_, _) => _ = Guard(async () => { await client.TrackingAsync(follow.Checked); follow.Checked = (await client.SettingsAsync()).Tracking != 0; });
         var directions = new FlowLayoutPanel { AutoSize = true };
         foreach (var (name, direction) in new[] { ("Up", 1u), ("Down", 2u), ("Left", 3u), ("Right", 4u) })
-            directions.Controls.Add(Button(name, () => _ = Guard(() => client.MoveAsync(direction))));
+            directions.Controls.Add(Button(name, () => _ = Guard(() => active.MoveAsync(direction))));
         directions.Controls.Add(Button("Stop", () => _ = Guard(client.StopMovingAsync))); body.Controls.Add(directions);
+        var orientation = new GimbalControls(() => camera.Session, () => camera.Profile, Guard);
+        body.Controls.Add(orientation); orientation.Refresh(settings);
         body.Controls.Add(Label("These controls affect this camera only. Tracking controls do not provide a recording trigger.", 340));
         dialog.ShowDialog(this);
     }

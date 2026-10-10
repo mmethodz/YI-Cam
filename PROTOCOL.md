@@ -105,7 +105,7 @@ with the same executable hash guard; normal native operation does not use it.
 ## Verified command formats
 
 All listed integers are big-endian. A returned settings structure has light mode
-at byte 91 and tracking mode at byte 68 for hardware 253. These offsets are not
+at byte 91, tracking mode at byte 68 and image rotation at byte 54 for hardware 253. These offsets are not
 claimed to apply to all camera models.
 
 | Request / response | Payload / behavior |
@@ -116,11 +116,45 @@ claimed to apply to all camera models.
 | `1311 / 1312` | Resolution32, use-count32; HD=1, SD=2, auto=0 |
 | `1380 / 1381` | Light mode32: 0 infrared in darkness; 1 colour with extra lighting; 2 automatic lighting |
 | `400B / 400C` | Tracking32: 0 off, 1 motion tracking; readback verified and physical tracking confirmed by owner |
+| `131F / 1320` | Image rotation32: 0 normal, 1 rotated 180°; returns device info |
+| `1396 / 1397` | Read gimbal restore parameter; request four zero bytes, response uint32 |
+| `1394 / 1395` | Set gimbal restore parameter32: mobile app sends 20 for on, 0 for off; reference firmware returns device info; verify with `1396` |
 | `4012` | Direction32, speed32=0; 1 up, 2 down, 3 left, 4 right |
 | `4013` | Stop movement; four zero bytes |
 
 PTZ calls are short pulses with a stop in a `finally` block. An unreliable network
 can still delay a stop command; the app does not implement indefinite press-to-move.
+
+### Orientation and gimbal switches
+
+The mobile SDK's `setReverse` maps to `131F`, with a four-byte switch value.
+On the reference hardware, the native UI's 0 → 1 transition changed device-info
+byte 54 and visibly rotated the live image through 180°. Returning to 0 restored
+the image. The camera's date/time overlay remained upright. This is a camera
+stream setting, not a transform applied only to OpenYI's preview.
+
+The mobile `getPtzResetLength` / `setPtzResetLength` methods map to `1396` and
+`1394`. The settings screen reads nonzero as checked and writes **20**, not 1,
+for checked; unchecked writes zero. The reference camera's initial read was 20,
+matching the owner's default-on observation. OpenYI reads the current value and
+does not write defaults on connection. The native UI's off write read back as 0;
+on read back as 20. The setter returned **344 bytes of device info**, rather than
+the single integer interpreted by the mobile callback. OpenYI therefore verifies
+the write with the separate getter and never treats the settings header as an
+echoed value. The original on setting was restored. The exact timing, return target and
+relationship to tracking remain experimental; the name alone does not establish
+startup calibration or a factory reset.
+
+The mobile left/right and up/down switches are **app-local preferences**, keyed
+per camera. `PTZControlFragment` swaps the direction codes before sending PTZ.
+There is no motor-axis enable/disable command in this switch path. OpenYI stores
+independent direction-reversal booleans in the camera's encrypted profile: pan
+swaps 3 ↔ 4, tilt swaps 1 ↔ 2, and stop is unchanged. Existing profiles default
+to unchanged arrows. A pairing-key refresh for the same pinned identity retains
+these preferences. These switches do not change image rotation or other apps.
+
+The distinct SDK `getReverse2`/`setReverse2` and `getReverse3`/`setReverse3`
+commands were not substituted for these app-local controls.
 
 The generic `1321 / 1322` day/night command accepted values and changed readback,
 but did not force physical IR operation on this unit. `2352 / 2353` did not change

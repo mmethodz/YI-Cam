@@ -100,7 +100,10 @@ The owner prefers PC-side detection for direct control of the trigger and timer.
 OpenYI therefore uses the local detector above rather than these camera events.
 
 The owner's mobile UI offers motion detection, Low/Medium/High detection
-frequency, a 24/7 or custom schedule, and reports tampering detection unsupported.
+frequency and a 24/7 or custom schedule. Although the UI initially reported
+tampering detection unsupported, the owner later confirmed that enabling it
+produced a loud horn during movement. Audible/tampering alarms are deliberately
+outside OpenYI's requested feature set; local recording does not enable them.
 Static mobile-code inspection ties frequency to an app/cloud `push_interval`
 setting. It is not established as pixel sensitivity or a refresh interval for
 local events. The separate SDK sensitivity command is `0x1335` / `0x1336` with a

@@ -3,6 +3,8 @@ import hashlib
 import hmac
 import struct
 import unittest
+from unittest.mock import Mock, call
+from types import SimpleNamespace
 
 from yicam.protocol import Camera, Channel, ProtocolError, VideoFrame, authentication
 from Crypto.Cipher import AES
@@ -14,6 +16,28 @@ def frame(sequence, key=False, milliseconds=10000):
 
 
 class TransportTests(unittest.TestCase):
+    def test_camera_rotation_and_gimbal_restore_wire_payloads(self):
+        camera = Camera('127.0.0.1', '123456789012345')
+        camera.command = Mock(return_value=SimpleNamespace(data=struct.pack('>I', 20)))
+        camera.set_rotation(True)
+        camera.command.assert_called_once_with(0x131f, b'\0\0\0\1', response=0x1320)
+        camera.command.reset_mock()
+        self.assertEqual(camera.gimbal_restore_delay(), 20)
+        camera.command.assert_called_once_with(0x1396, bytes(4), response=0x1397)
+        camera.command.reset_mock()
+        camera.command.side_effect = [SimpleNamespace(data=bytes(344)), SimpleNamespace(data=struct.pack('>I', 20))]
+        camera.set_gimbal_restore(True)
+        self.assertEqual(camera.command.call_args_list, [call(0x1394, b'\0\0\0\x14', response=0x1395), call(0x1396, bytes(4), response=0x1397)])
+        camera.command.side_effect = None
+        camera.command.return_value.data = bytes(4)
+        camera.set_gimbal_restore(False)
+        camera.command.assert_any_call(0x1394, bytes(4), response=0x1395)
+        camera.command.return_value.data = b'\0'
+        with self.assertRaises(ProtocolError):
+            camera.gimbal_restore_delay()
+        with self.assertRaises(ProtocolError):
+            camera.set_gimbal_restore(True)
+
     def test_audio_decrypts_complete_blocks_and_keeps_tail(self):
         camera = Camera('127.0.0.1', '123456789012345')
         clear = bytes(range(37))

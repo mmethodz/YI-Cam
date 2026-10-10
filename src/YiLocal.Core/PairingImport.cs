@@ -20,7 +20,8 @@ public static class PairingImport
         Func<DeviceProfile, CancellationToken, Task<string>> verify, Action<DeviceProfile> save, CancellationToken cancellation = default)
     {
         // Work on a copy so a failure cannot mutate the UI's current profile.
-        var verified = new DeviceProfile { Ip = candidate.Ip, Name = candidate.Name, Password = candidate.Password, Uid = candidate.Uid };
+        var verified = new DeviceProfile { Ip = candidate.Ip, Name = candidate.Name, Password = candidate.Password, Uid = candidate.Uid,
+            ReversePanControls = candidate.ReversePanControls, ReverseTiltControls = candidate.ReverseTiltControls };
         cancellation.ThrowIfCancellationRequested();
         string uid = await verify(verified, cancellation);
         if (string.IsNullOrEmpty(uid) || verified.Uid is not null && !uid.Equals(verified.Uid, StringComparison.OrdinalIgnoreCase))

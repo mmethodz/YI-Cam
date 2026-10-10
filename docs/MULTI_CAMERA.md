@@ -15,7 +15,8 @@ The app rejects duplicate IP addresses or wire identities, including the primary
 The initial implementation supports a primary plus up to seven additional
 configurations. Each can be enabled, connected/disconnected, recorded, edited or
 removed independently. Additional-camera Controls provides quality, night mode,
-tracking and bounded PTZ steps. Removing a configuration removes its encrypted
+tracking, image rotation, gimbal restore, local direction reversal and bounded
+PTZ steps. Removing a configuration removes its encrypted
 pairing file but leaves its recordings on disk and in the browser. No camera
 connects automatically at startup. **Connect configured cameras** starts the enabled entries; disabling
 the experimental option disconnects additional sessions and finishes their clips.
