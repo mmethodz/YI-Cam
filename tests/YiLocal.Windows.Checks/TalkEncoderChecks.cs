@@ -10,7 +10,8 @@ static class TalkEncoderChecks
         var source = new SyntheticInput(); var clock = Stopwatch.StartNew();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         var packets = new List<byte[]>(); double first = 0;
-        await using (var encoder = new MicrophoneEncoder(executable, source))
+        double maximumPeak = 0;
+        await using (var encoder = new MicrophoneEncoder(executable, source, peak => maximumPeak = Math.Max(maximumPeak, peak)))
         {
             await foreach (var packet in encoder.Packets(timeout.Token))
             {
@@ -20,7 +21,17 @@ static class TalkEncoderChecks
             }
         }
         Require(first < 3 && source.Disposed && packets.Count == 24, "Live encoder stalled or retained the microphone.");
+        Require(maximumPeak is > .030 and < .031 && MicrophoneEncoder.Peak(new byte[2048]) == 0 &&
+            MicrophoneEncoder.Peak([0, 128]) == 1, "Input meter does not reflect the signed PCM samples.");
         await File.WriteAllBytesAsync(output, packets.SelectMany(p => p).ToArray());
+
+        var tones = new List<byte[]>();
+        await using (var encoder = new MicrophoneEncoder(executable, new SpeakerTestInput()))
+        {
+            await foreach (var packet in encoder.Packets(timeout.Token))
+            { tones.Add(packet); if (tones.Count == 41) break; }
+        }
+        await File.WriteAllBytesAsync(output + ".test.aac", tones.SelectMany(p => p).ToArray());
 
         var missing = new SyntheticInput();
         try { await using var _ = new MicrophoneEncoder(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".exe"), missing); throw new Exception("Invalid FFmpeg started."); }

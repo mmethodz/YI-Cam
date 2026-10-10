@@ -306,11 +306,15 @@ public sealed class CameraClient : IDisposable
             catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
             { throw new TimeoutException("Camera did not initialize the talk stream."); }
         }
+        // A transport ACK precedes firmware work. Match the settling intervals of the audible probe.
+        await Task.Delay(300, cancellation);
         await StopVideoAsync();
         await FlushCommandsAsync(cancellation);
+        await Task.Delay(300, cancellation);
         while (Frames.TryRead(out _)) { }
         await CommandAsync(0x0350, new byte[4], cancellation: cancellation);
         await FlushCommandsAsync(cancellation);
+        await Task.Delay(200, cancellation);
         lock (sendLock) { talkFrames = 0; speaking = true; }
     }
     public async Task StopSpeakerAsync()

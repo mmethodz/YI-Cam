@@ -342,8 +342,10 @@ class Camera:
             self.frames.get(timeout=4)
         except queue.Empty as exc:
             raise TimeoutError('Camera did not initialize the talk stream.') from exc
+        time.sleep(.3)  # Transport ACKs precede firmware work; match the audible probe.
         self.stop_video()
         self._flush_commands()
+        time.sleep(.3)
         while True:
             try:
                 self.frames.get_nowait()
@@ -352,6 +354,7 @@ class Camera:
         self._talk_frames = 0
         self.command(0x0350, bytes(4))
         self._flush_commands()
+        time.sleep(.2)
         self._speaking = True
 
     def stop_talk(self):

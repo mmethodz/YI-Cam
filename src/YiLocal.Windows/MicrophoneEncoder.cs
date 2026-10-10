@@ -13,7 +13,7 @@ internal sealed class MicrophoneEncoder : IAsyncDisposable
     readonly Task writer, errors;
     Exception? writeError;
     string lastError = "";
-    public MicrophoneEncoder(string executable, IPcmCaptureInput microphone)
+    public MicrophoneEncoder(string executable, IPcmCaptureInput microphone, Action<double>? inputLevel = null)
     {
         this.microphone = microphone;
         var info = MediaTools.StartInfo(executable, "-hide_banner", "-loglevel", "error", "-probesize", "32", "-analyzeduration", "0",
@@ -29,6 +29,7 @@ internal sealed class MicrophoneEncoder : IAsyncDisposable
                 while (!stop.IsCancellationRequested)
                 {
                     var pcm = await microphone.ReadAsync(stop.Token);
+                    inputLevel?.Invoke(Peak(pcm));
                     await process.StandardInput.BaseStream.WriteAsync(pcm, stop.Token);
                     await process.StandardInput.BaseStream.FlushAsync(stop.Token);
                 }
@@ -41,6 +42,13 @@ internal sealed class MicrophoneEncoder : IAsyncDisposable
             try { while (await process.StandardError.ReadLineAsync(stop.Token) is { } line) lastError = line.Length > 600 ? line[..600] : line; }
             catch (Exception e) when (e is OperationCanceledException or IOException or ObjectDisposedException) { }
         });
+    }
+    internal static double Peak(byte[] pcm)
+    {
+        int maximum = 0;
+        for (int offset = 0; offset + 1 < pcm.Length; offset += 2)
+            maximum = Math.Max(maximum, Math.Abs((int)System.Buffers.Binary.BinaryPrimitives.ReadInt16LittleEndian(pcm.AsSpan(offset))));
+        return maximum / 32768.0;
     }
     public async IAsyncEnumerable<byte[]> Packets([EnumeratorCancellation] CancellationToken cancellation)
     {

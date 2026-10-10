@@ -87,6 +87,20 @@ resumes afterward if it was selected. This is half-duplex intercom behavior, wit
 desktop acoustic echo cancellation. Windows must allow microphone access to desktop
 apps; unavailable devices and capture failures are reported in the status bar.
 
+The input meter shows actual PCM peaks before encoding, in dB relative to full
+scale; **Silent** means zero samples. **Last** retains the highest input level
+after stopping. **Test speaker** sends two short, quiet tones through the same
+native encoder and network session, without opening a microphone. Use it to
+separate an input-device problem from camera playback. Neither control changes
+Windows volume, microphone gain or camera speaker-volume settings.
+
+If speech is silent, check both the selected microphone's **Input volume** and
+its separate mute state in Windows; a high volume value does not mean it is
+unmuted. The Windows app mixer groups device selectors with a volume slider, but
+that layout alone does not identify the microphone's effective level. OpenYI's
+meter measures the samples actually received, after Windows/driver processing.
+It does not apply software attenuation to the microphone samples.
+
 The selected input name is stored with app preferences. A missing selected device
 requires choosing an available input; it does not silently switch microphones.
 The Windows default option follows the system default. WinMM can expose identical
@@ -115,6 +129,10 @@ On hardware 253, firmware `6.0.24.10_202401091113`:
    of commands on channel 0.
 6. Release the PC microphone, discard unsent retransmissions, send speaker stop
    `0x0351` with eight zero bytes, then close the talk session.
+
+Transport ACKs do not prove that a firmware transition has finished. The sender
+allows 300 ms before and after stopping the bootstrap stream, and 200 ms after
+speaker start, matching the successful Python probe's settling intervals.
 
 The audio message is TNP v2 kind 2, followed by a 24-byte header and an entire
 ADTS packet. Codec uint16 at offset 0 is **138**, flags at offset 2 are **2**,
@@ -146,7 +164,9 @@ wrong-channel ACKs, independent camera keys and speaker initialization order.
 `scripts/check_talk_integration.py` exercises the actual native FFmpeg pipe with
 paced synthetic PCM, independently decodes 24 AAC frames / 24,576 mono samples,
 and checks cancellation and capture/startup failure cleanup. It never opens a real
-microphone. These checks complement, rather than replace, physical speech tests.
+microphone. It also checks input peak measurement and independently decodes the
+41-packet speaker-test fixture, including both quiet 600 Hz and 900 Hz tones.
+These checks complement, rather than replace, physical speech tests.
 The native Windows microphone path was also exercised against the real camera:
 the UI reached **Mic live**, Escape released the input and encoder, and the live
 preview continued near 15 fps. A simultaneous 77.62-second balanced 5 fps recording
